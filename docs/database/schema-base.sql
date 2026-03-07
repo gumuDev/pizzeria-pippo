@@ -1,0 +1,195 @@
+-- ============================================================
+-- schema-base.sql
+-- Schema real de la base de datos — Pizzería Pippo
+-- Exportado desde Supabase. Solo para referencia/contexto.
+-- NO ejecutar directamente (el orden y las FK pueden no ser válidos).
+-- Para aplicar cambios usar los archivos en migrations/
+-- ============================================================
+
+CREATE TABLE public.branches (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  address text,
+  created_at timestamp with time zone DEFAULT now(),
+  is_active boolean DEFAULT true,
+  CONSTRAINT branches_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE public.profiles (
+  id uuid NOT NULL,
+  role text NOT NULL CHECK (role = ANY (ARRAY['admin'::text, 'cajero'::text, 'cocinero'::text])),
+  branch_id uuid,
+  full_name text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
+  CONSTRAINT profiles_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id)
+);
+
+CREATE TABLE public.products (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  category text NOT NULL CHECK (category = ANY (ARRAY['pizza'::text, 'bebida'::text, 'otro'::text])),
+  description text,
+  image_url text,
+  created_at timestamp with time zone DEFAULT now(),
+  is_active boolean DEFAULT true,
+  CONSTRAINT products_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE public.product_variants (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  product_id uuid NOT NULL,
+  name text NOT NULL CHECK (name = ANY (ARRAY['Personal'::text, 'Mediana'::text, 'Familiar'::text])),
+  base_price numeric NOT NULL CHECK (base_price >= 0::numeric),
+  created_at timestamp with time zone DEFAULT now(),
+  is_active boolean DEFAULT true,
+  CONSTRAINT product_variants_pkey PRIMARY KEY (id),
+  CONSTRAINT product_variants_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id)
+);
+
+CREATE TABLE public.branch_prices (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  branch_id uuid NOT NULL,
+  variant_id uuid NOT NULL,
+  price numeric NOT NULL CHECK (price >= 0::numeric),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT branch_prices_pkey PRIMARY KEY (id),
+  CONSTRAINT branch_prices_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
+  CONSTRAINT branch_prices_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.product_variants(id)
+);
+
+CREATE TABLE public.ingredients (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  unit text NOT NULL CHECK (unit = ANY (ARRAY['g'::text, 'kg'::text, 'ml'::text, 'l'::text, 'unidad'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  is_active boolean DEFAULT true,
+  CONSTRAINT ingredients_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE public.branch_stock (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  branch_id uuid NOT NULL,
+  ingredient_id uuid NOT NULL,
+  quantity numeric NOT NULL DEFAULT 0 CHECK (quantity >= 0::numeric),
+  min_quantity numeric NOT NULL DEFAULT 0 CHECK (min_quantity >= 0::numeric),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT branch_stock_pkey PRIMARY KEY (id),
+  CONSTRAINT branch_stock_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
+  CONSTRAINT branch_stock_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id)
+);
+
+CREATE TABLE public.recipes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  variant_id uuid NOT NULL,
+  ingredient_id uuid NOT NULL,
+  quantity numeric NOT NULL CHECK (quantity > 0::numeric),
+  CONSTRAINT recipes_pkey PRIMARY KEY (id),
+  CONSTRAINT recipes_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.product_variants(id),
+  CONSTRAINT recipes_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id)
+);
+
+CREATE TABLE public.stock_movements (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  branch_id uuid NOT NULL,
+  ingredient_id uuid NOT NULL,
+  quantity numeric NOT NULL,
+  type text NOT NULL CHECK (type = ANY (ARRAY['compra'::text, 'venta'::text, 'ajuste'::text])),
+  origin text CHECK (origin = ANY (ARRAY['transferencia'::text, 'venta'::text, 'ajuste'::text])),
+  notes text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT stock_movements_pkey PRIMARY KEY (id),
+  CONSTRAINT stock_movements_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
+  CONSTRAINT stock_movements_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id),
+  CONSTRAINT stock_movements_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
+);
+
+CREATE TABLE public.promotions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  type text NOT NULL CHECK (type = ANY (ARRAY['BUY_X_GET_Y'::text, 'PERCENTAGE'::text, 'COMBO'::text])),
+  days_of_week integer[] NOT NULL DEFAULT '{}',
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  branch_id uuid,
+  -- Nota: existen dos columnas de estado por migración incremental.
+  -- `active` es la original; `is_active` fue agregada para consistencia con el resto del sistema.
+  -- El código usa `active` para leer/escribir. `is_active` puede usarse indistintamente.
+  active boolean DEFAULT true,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT promotions_pkey PRIMARY KEY (id),
+  CONSTRAINT promotions_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id)
+);
+
+CREATE TABLE public.promotion_rules (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  promotion_id uuid NOT NULL,
+  variant_id uuid,
+  buy_qty integer CHECK (buy_qty > 0),
+  get_qty integer CHECK (get_qty > 0),
+  discount_percent numeric CHECK (discount_percent > 0::numeric AND discount_percent <= 100::numeric),
+  combo_price numeric CHECK (combo_price >= 0::numeric),
+  CONSTRAINT promotion_rules_pkey PRIMARY KEY (id),
+  CONSTRAINT promotion_rules_promotion_id_fkey FOREIGN KEY (promotion_id) REFERENCES public.promotions(id),
+  CONSTRAINT promotion_rules_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.product_variants(id)
+);
+
+CREATE TABLE public.orders (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  branch_id uuid NOT NULL,
+  cashier_id uuid NOT NULL,
+  total numeric NOT NULL CHECK (total >= 0::numeric),
+  created_at timestamp with time zone DEFAULT now(),
+  kitchen_status character varying DEFAULT 'pending'::character varying,
+  daily_number integer NOT NULL DEFAULT 0,
+  payment_method text CHECK (payment_method = ANY (ARRAY['efectivo'::text, 'qr'::text])),
+  CONSTRAINT orders_pkey PRIMARY KEY (id),
+  CONSTRAINT orders_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
+  CONSTRAINT orders_cashier_id_fkey FOREIGN KEY (cashier_id) REFERENCES auth.users(id)
+);
+
+CREATE INDEX idx_orders_branch_date ON public.orders (branch_id, created_at);
+
+CREATE TABLE public.warehouse_stock (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  ingredient_id uuid NOT NULL,
+  quantity numeric NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+  min_quantity numeric NOT NULL DEFAULT 0 CHECK (min_quantity >= 0),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT warehouse_stock_pkey PRIMARY KEY (id),
+  CONSTRAINT warehouse_stock_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id),
+  CONSTRAINT warehouse_stock_ingredient_unique UNIQUE (ingredient_id)
+);
+
+CREATE TABLE public.warehouse_movements (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  ingredient_id uuid NOT NULL,
+  quantity numeric NOT NULL,
+  type text NOT NULL CHECK (type = ANY (ARRAY['compra'::text, 'transferencia'::text, 'ajuste'::text])),
+  branch_id uuid,
+  notes text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT warehouse_movements_pkey PRIMARY KEY (id),
+  CONSTRAINT warehouse_movements_ingredient_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id),
+  CONSTRAINT warehouse_movements_branch_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
+  CONSTRAINT warehouse_movements_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
+);
+
+CREATE INDEX idx_warehouse_movements_ingredient ON public.warehouse_movements (ingredient_id, created_at);
+
+CREATE TABLE public.order_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  order_id uuid NOT NULL,
+  variant_id uuid NOT NULL,
+  qty integer NOT NULL CHECK (qty > 0),
+  unit_price numeric NOT NULL CHECK (unit_price >= 0::numeric),
+  discount_applied numeric NOT NULL DEFAULT 0 CHECK (discount_applied >= 0::numeric),
+  qty_physical integer NOT NULL DEFAULT 1,
+  CONSTRAINT order_items_pkey PRIMARY KEY (id),
+  CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT order_items_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.product_variants(id)
+);

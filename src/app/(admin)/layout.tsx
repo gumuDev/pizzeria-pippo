@@ -1,0 +1,134 @@
+"use client";
+
+import { Refine, Authenticated } from "@refinedev/core";
+import { RefineKbar, RefineKbarProvider } from "@refinedev/kbar";
+import {
+  ThemedLayout,
+  ThemedSider,
+  useNotificationProvider,
+} from "@refinedev/antd";
+import { dataProvider, liveProvider } from "@refinedev/supabase";
+import routerProvider from "@refinedev/nextjs-router";
+import "@refinedev/antd/dist/reset.css";
+import { AntdRegistry } from "@ant-design/nextjs-registry";
+import { supabase } from "@/lib/supabase";
+import { authProvider } from "@/lib/authProvider";
+import Image from "next/image";
+import {
+  DashboardOutlined,
+  BankOutlined,
+  ShopOutlined,
+  InboxOutlined,
+  DatabaseOutlined,
+  GiftOutlined,
+  TeamOutlined,
+  BarChartOutlined,
+  HomeOutlined,
+} from "@ant-design/icons";
+
+function SiderTitle({ collapsed }: { collapsed: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <Image
+        src="/pippo.jpg"
+        alt="Pippo Pizza"
+        width={36}
+        height={36}
+        style={{ borderRadius: "50%", flexShrink: 0 }}
+      />
+      {!collapsed && (
+        <span style={{ fontWeight: 700, fontSize: 14, color: "#f97316", lineHeight: 1.2, whiteSpace: "nowrap" }}>
+          Pippo Pizza
+        </span>
+      )}
+    </div>
+  );
+}
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <AntdRegistry>
+      <RefineKbarProvider>
+        <Refine
+          dataProvider={dataProvider(supabase)}
+          liveProvider={liveProvider(supabase)}
+          routerProvider={routerProvider}
+          authProvider={authProvider}
+          notificationProvider={useNotificationProvider}
+          resources={[
+            {
+              name: "dashboard",
+              list: "/dashboard",
+              meta: { label: "Dashboard", icon: <DashboardOutlined /> },
+            },
+            {
+              name: "branches",
+              list: "/branches",
+              create: "/branches/create",
+              edit: "/branches/edit/:id",
+              meta: { label: "Sucursales", icon: <BankOutlined /> },
+            },
+            {
+              name: "products",
+              list: "/products",
+              create: "/products/create",
+              edit: "/products/edit/:id",
+              meta: { label: "Productos", icon: <ShopOutlined /> },
+            },
+            {
+              name: "ingredients",
+              list: "/ingredients",
+              create: "/ingredients/create",
+              edit: "/ingredients/edit/:id",
+              meta: { label: "Insumos", icon: <InboxOutlined /> },
+            },
+            {
+              name: "stock",
+              list: "/stock",
+              meta: { label: "Stock", icon: <DatabaseOutlined /> },
+            },
+            {
+              name: "warehouse",
+              list: "/warehouse",
+              meta: { label: "Bodega", icon: <HomeOutlined /> },
+            },
+            {
+              name: "promotions",
+              list: "/promotions",
+              create: "/promotions/create",
+              edit: "/promotions/edit/:id",
+              meta: { label: "Promociones", icon: <GiftOutlined /> },
+            },
+            {
+              name: "users",
+              list: "/users",
+              create: "/users/create",
+              edit: "/users/edit/:id",
+              meta: { label: "Usuarios", icon: <TeamOutlined /> },
+            },
+            {
+              name: "reports",
+              list: "/reports",
+              meta: { label: "Reportes", icon: <BarChartOutlined /> },
+            },
+          ]}
+          options={{
+            syncWithLocation: true,
+            warnWhenUnsavedChanges: true,
+          }}
+        >
+          <Authenticated key="admin-auth" redirectOnFail="/login">
+            <ThemedLayout Sider={() => <ThemedSider fixed Title={SiderTitle} />}>
+              {children}
+            </ThemedLayout>
+          </Authenticated>
+          <RefineKbar />
+        </Refine>
+      </RefineKbarProvider>
+    </AntdRegistry>
+  );
+}
