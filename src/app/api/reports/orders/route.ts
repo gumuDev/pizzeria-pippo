@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       id, total, created_at, branch_id, cashier_id, payment_method,
       branches:branch_id ( name ),
       order_items (
-        qty, unit_price, discount_applied,
+        qty, unit_price, discount_applied, promo_label,
         product_variants (
           name,
           products ( name, category )
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Fetch profiles separately — no direct FK between orders.cashier_id and profiles
-  const cashierIds = [...new Set((data ?? []).map((o) => o.cashier_id).filter(Boolean))];
+  const cashierIds = Array.from(new Set((data ?? []).map((o) => o.cashier_id).filter(Boolean)));
   const profileMap: Record<string, string> = {};
   if (cashierIds.length > 0) {
     const { data: profiles } = await supabase

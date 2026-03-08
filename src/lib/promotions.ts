@@ -151,11 +151,14 @@ function applyCombo(items: DiscountedItem[], promo: Promotion) {
   if (!allPresent) return;
 
   const comboPrice = promo.promotion_rules[0]?.combo_price;
-  if (comboPrice == null) return;
+  if (comboPrice == null) {
+    console.warn(`[Combo] "${promo.name}" no tiene combo_price definido en regla 0`);
+    return;
+  }
 
   // Calculate total original price of combo items
   const comboItems = items.filter((i) => requiredVariants.includes(i.variant_id));
-  const originalTotal = comboItems.reduce((sum, i) => sum + i.unit_price, 0);
+  const originalTotal = comboItems.reduce((sum, i) => sum + i.unit_price * i.qty, 0);
   const totalDiscount = originalTotal - comboPrice;
 
   if (totalDiscount <= 0) return;

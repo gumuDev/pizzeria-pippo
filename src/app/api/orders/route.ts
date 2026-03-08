@@ -18,7 +18,8 @@ function getServiceClient() {
   );
 }
 
-async function getNextDailyNumber(supabase: ReturnType<typeof createClient>, branchId: string): Promise<number> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getNextDailyNumber(supabase: any, branchId: string): Promise<number> {
   const today = todayInBolivia();
   const { data } = await supabase
     .from("orders")
@@ -28,7 +29,7 @@ async function getNextDailyNumber(supabase: ReturnType<typeof createClient>, bra
     .lte("created_at", dateRangeTo(today))
     .order("daily_number", { ascending: false })
     .limit(1)
-    .single();
+    .single() as { data: { daily_number: number } | null };
 
   return (data?.daily_number ?? 0) + 1;
 }
@@ -65,13 +66,14 @@ export async function POST(request: NextRequest) {
 
   // 3. Create order items
   const { error: itemsError } = await supabase.from("order_items").insert(
-    items.map((i: { variant_id: string; qty: number; qty_physical: number; unit_price: number; discount_applied: number }) => ({
+    items.map((i: { variant_id: string; qty: number; qty_physical: number; unit_price: number; discount_applied: number; promo_label?: string | null }) => ({
       order_id: order.id,
       variant_id: i.variant_id,
       qty: i.qty,
       qty_physical: i.qty_physical ?? i.qty,
       unit_price: i.unit_price,
       discount_applied: i.discount_applied,
+      promo_label: i.promo_label ?? null,
     }))
   );
 

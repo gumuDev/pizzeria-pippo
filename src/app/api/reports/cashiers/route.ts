@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Fetch profiles for all cashier IDs found in orders
-  const cashierIds = [...new Set((data ?? []).map((o) => o.cashier_id).filter(Boolean))];
+  const cashierIds = Array.from(new Set((data ?? []).map((o) => o.cashier_id).filter(Boolean)));
   const profileMap: Record<string, string> = {};
   if (cashierIds.length > 0) {
     const { data: profiles } = await supabase
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     cashierMap[cid].orders += 1;
     cashierMap[cid].total += Number(order.total);
 
-    for (const item of (order.order_items as any[]) ?? []) {
+    for (const item of (order.order_items as unknown as { qty: number; unit_price: number; discount_applied: number; product_variants: { id: string; name: string; products: { name: string; category: string } | null } | null }[]) ?? []) {
       const variant = item.product_variants;
       if (!variant) continue;
       const existing = cashierMap[cid].items.find((i) => i.variant_id === variant.id);

@@ -26,11 +26,6 @@ const CATEGORY_BG: Record<string, string> = {
   otro: "#f0fdf4",
 };
 
-const CATEGORY_ICON_COLOR: Record<string, string> = {
-  pizza: "#f97316",
-  bebida: "#3b82f6",
-  otro: "#22c55e",
-};
 
 const CATEGORY_EMOJI: Record<string, string> = {
   pizza: "🍕",

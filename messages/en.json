@@ -1,0 +1,146 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading...",
+    "confirm": "Confirm",
+    "back": "Back",
+    "actions": "Actions",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "loginError": "Invalid credentials"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "products": "Products",
+    "ingredients": "Ingredients",
+    "stock": "Stock",
+    "promotions": "Promotions",
+    "reports": "Reports"
+  },
+  "products": {
+    "title": "Products",
+    "new": "New product",
+    "name": "Name",
+    "category": "Category",
+    "description": "Description",
+    "image": "Image",
+    "categories": {
+      "pizza": "Pizza",
+      "drink": "Drink",
+      "other": "Other"
+    },
+    "variants": {
+      "title": "Variants & prices",
+      "personal": "Personal",
+      "medium": "Medium",
+      "family": "Family",
+      "basePrice": "Base price",
+      "addVariant": "Add variant"
+    },
+    "recipe": {
+      "title": "Recipe",
+      "ingredient": "Ingredient",
+      "quantity": "Quantity",
+      "addIngredient": "Add ingredient"
+    }
+  },
+  "ingredients": {
+    "title": "Ingredients",
+    "new": "New ingredient",
+    "name": "Name",
+    "unit": "Unit",
+    "units": {
+      "g": "Grams",
+      "kg": "Kilograms",
+      "ml": "Milliliters",
+      "l": "Liters",
+      "unit": "Units"
+    }
+  },
+  "stock": {
+    "title": "Stock",
+    "current": "Current stock",
+    "minimum": "Minimum stock",
+    "lowStock": "Low stock",
+    "purchase": "Register purchase",
+    "adjust": "Manual adjustment",
+    "movements": "Movements",
+    "types": {
+      "purchase": "Purchase",
+      "sale": "Sale",
+      "adjustment": "Adjustment"
+    }
+  },
+  "promotions": {
+    "title": "Promotions",
+    "new": "New promotion",
+    "name": "Name",
+    "type": "Type",
+    "days": "Applicable days",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "branch": "Branch",
+    "types": {
+      "buyXGetY": "Buy X Get Y",
+      "percentage": "Percentage discount",
+      "combo": "Combo"
+    },
+    "daysOfWeek": {
+      "0": "Sunday",
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday"
+    }
+  },
+  "pos": {
+    "title": "Point of Sale",
+    "allCategories": "All",
+    "addToCart": "Add",
+    "cart": "Order",
+    "total": "Total",
+    "confirmSale": "Confirm sale",
+    "cancelOrder": "Cancel order",
+    "selectVariant": "Select size",
+    "newSale": "New sale",
+    "orderComplete": "Sale completed!"
+  },
+  "display": {
+    "menu": "Menu",
+    "orderTotal": "Total",
+    "thankYou": "Thank you for your purchase!"
+  },
+  "reports": {
+    "title": "Reports",
+    "period": "Period",
+    "branch": "Branch",
+    "allBranches": "All branches",
+    "today": "Today",
+    "thisWeek": "This week",
+    "thisMonth": "This month",
+    "custom": "Custom",
+    "totalSales": "Total sales",
+    "totalOrders": "Orders",
+    "averageTicket": "Average ticket",
+    "topProducts": "Top products",
+    "salesByCategory": "Sales by category",
+    "dailySales": "Daily sales"
+  },
+  "branches": {
+    "branchA": "Branch A",
+    "branchB": "Branch B"
+  }
+}

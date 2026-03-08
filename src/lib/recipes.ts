@@ -31,7 +31,7 @@ export async function deductStock(
   // 2. Aggregate total deduction per ingredient using qty_physical
   const deductions: Record<string, number> = {};
   for (const item of orderItems) {
-    const recipes = (item.product_variants as { recipes: { ingredient_id: string; quantity: number }[] })?.recipes ?? [];
+    const recipes = (item.product_variants as unknown as { recipes: { ingredient_id: string; quantity: number }[] })?.recipes ?? [];
     const physicalQty = (item as { qty_physical?: number }).qty_physical ?? item.qty;
     for (const recipe of recipes) {
       deductions[recipe.ingredient_id] = (deductions[recipe.ingredient_id] ?? 0) + recipe.quantity * physicalQty;

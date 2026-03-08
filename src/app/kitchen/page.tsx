@@ -162,7 +162,7 @@ export default function KitchenPage() {
       .eq("kitchen_status", "pending")
       .order("created_at", { ascending: true });
 
-    if (data) setOrders(data as KitchenOrder[]);
+    if (data) setOrders(data as unknown as KitchenOrder[]);
   }, [branchId]);
 
   // Initial load

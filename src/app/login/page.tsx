@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Form, Input, Button, Card, Alert, Typography } from "antd";
 import { signIn, getUserProfile } from "@/lib/auth";
 
@@ -13,7 +12,6 @@ interface LoginForm {
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 

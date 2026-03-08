@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const to = searchParams.get("to");
 
   // Get order_items joined with orders (for branch filter) and variants+products
-  let query = supabase
+  const query = supabase
     .from("order_items")
     .select(`
       qty, unit_price, discount_applied,
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
   // Filter by branch and date range client-side (Supabase doesn't support nested filters easily)
   // Use Bolivia UTC-4 offset for date comparisons
   const filtered = (data ?? []).filter((item) => {
-    const order = item.orders as { branch_id: string; created_at: string } | null;
+    const order = item.orders as unknown as { branch_id: string; created_at: string } | null;
     if (!order) return false;
     if (branchId && order.branch_id !== branchId) return false;
     if (from && order.created_at < dateRangeFrom(from)) return false;
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
   }> = {};
 
   for (const item of filtered) {
-    const variant = item.product_variants as { id: string; name: string; products: { id: string; name: string; category: string } | null } | null;
+    const variant = item.product_variants as unknown as { id: string; name: string; products: { id: string; name: string; category: string } | null } | null;
     if (!variant) continue;
     const key = variant.id;
     if (!map[key]) {

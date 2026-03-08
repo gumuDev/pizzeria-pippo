@@ -1,0 +1,146 @@
+{
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "search": "Buscar",
+    "loading": "Cargando...",
+    "confirm": "Confirmar",
+    "back": "Volver",
+    "actions": "Acciones",
+    "yes": "Sí",
+    "no": "No"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "loginError": "Credenciales incorrectas"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "products": "Productos",
+    "ingredients": "Insumos",
+    "stock": "Stock",
+    "promotions": "Promociones",
+    "reports": "Reportes"
+  },
+  "products": {
+    "title": "Productos",
+    "new": "Nuevo producto",
+    "name": "Nombre",
+    "category": "Categoría",
+    "description": "Descripción",
+    "image": "Imagen",
+    "categories": {
+      "pizza": "Pizza",
+      "drink": "Bebida",
+      "other": "Otro"
+    },
+    "variants": {
+      "title": "Variantes y precios",
+      "personal": "Personal",
+      "medium": "Mediana",
+      "family": "Familiar",
+      "basePrice": "Precio base",
+      "addVariant": "Agregar variante"
+    },
+    "recipe": {
+      "title": "Receta",
+      "ingredient": "Insumo",
+      "quantity": "Cantidad",
+      "addIngredient": "Agregar insumo"
+    }
+  },
+  "ingredients": {
+    "title": "Insumos",
+    "new": "Nuevo insumo",
+    "name": "Nombre",
+    "unit": "Unidad",
+    "units": {
+      "g": "Gramos",
+      "kg": "Kilogramos",
+      "ml": "Mililitros",
+      "l": "Litros",
+      "unit": "Unidades"
+    }
+  },
+  "stock": {
+    "title": "Stock",
+    "current": "Stock actual",
+    "minimum": "Stock mínimo",
+    "lowStock": "Stock bajo",
+    "purchase": "Registrar compra",
+    "adjust": "Ajuste manual",
+    "movements": "Movimientos",
+    "types": {
+      "purchase": "Compra",
+      "sale": "Venta",
+      "adjustment": "Ajuste"
+    }
+  },
+  "promotions": {
+    "title": "Promociones",
+    "new": "Nueva promoción",
+    "name": "Nombre",
+    "type": "Tipo",
+    "days": "Días de aplicación",
+    "startDate": "Fecha inicio",
+    "endDate": "Fecha fin",
+    "branch": "Sucursal",
+    "types": {
+      "buyXGetY": "Compra X llévate Y",
+      "percentage": "Descuento porcentual",
+      "combo": "Combo"
+    },
+    "daysOfWeek": {
+      "0": "Domingo",
+      "1": "Lunes",
+      "2": "Martes",
+      "3": "Miércoles",
+      "4": "Jueves",
+      "5": "Viernes",
+      "6": "Sábado"
+    }
+  },
+  "pos": {
+    "title": "Punto de Venta",
+    "allCategories": "Todos",
+    "addToCart": "Agregar",
+    "cart": "Pedido",
+    "total": "Total",
+    "confirmSale": "Confirmar venta",
+    "cancelOrder": "Cancelar pedido",
+    "selectVariant": "Seleccionar tamaño",
+    "newSale": "Nueva venta",
+    "orderComplete": "¡Venta completada!"
+  },
+  "display": {
+    "menu": "Menú",
+    "orderTotal": "Total",
+    "thankYou": "¡Gracias por su compra!"
+  },
+  "reports": {
+    "title": "Reportes",
+    "period": "Período",
+    "branch": "Sucursal",
+    "allBranches": "Todas las sucursales",
+    "today": "Hoy",
+    "thisWeek": "Esta semana",
+    "thisMonth": "Este mes",
+    "custom": "Personalizado",
+    "totalSales": "Ventas totales",
+    "totalOrders": "Órdenes",
+    "averageTicket": "Ticket promedio",
+    "topProducts": "Productos más vendidos",
+    "salesByCategory": "Ventas por categoría",
+    "dailySales": "Ventas por día"
+  },
+  "branches": {
+    "branchA": "Sucursal A",
+    "branchB": "Sucursal B"
+  }
+}

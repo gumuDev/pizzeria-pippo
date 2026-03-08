@@ -1,0 +1,49 @@
+"use client";
+
+import { Card } from "antd";
+import dayjs from "dayjs";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer,
+} from "recharts";
+import type { DailyData } from "../types/reports.types";
+
+interface Props {
+  dailyData: DailyData[];
+}
+
+export function DailySalesChart({ dailyData }: Props) {
+  return (
+    <Card title="Ventas por día" size="small">
+      {dailyData.length > 0 ? (
+        <ResponsiveContainer width="100%" height={220}>
+          <LineChart data={dailyData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="date"
+              tickFormatter={(d) => dayjs(d).format("DD/MM")}
+              tick={{ fontSize: 11 }}
+            />
+            <YAxis tick={{ fontSize: 11 }} />
+            <Tooltip
+              formatter={(v) => [`Bs ${Number(v).toFixed(2)}`, "Ventas"]}
+              labelFormatter={(d) => dayjs(d).format("DD/MM/YYYY")}
+            />
+            <Line
+              type="monotone"
+              dataKey="total"
+              stroke="#f97316"
+              strokeWidth={2}
+              dot={{ r: 3 }}
+              activeDot={{ r: 5 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="flex items-center justify-center h-48 text-gray-400">
+          Sin datos para el período
+        </div>
+      )}
+    </Card>
+  );
+}

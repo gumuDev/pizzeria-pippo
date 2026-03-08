@@ -282,6 +282,83 @@ docs/database/
 
 ---
 
+## Arquitectura de Código — Feature-Based
+
+Todo nuevo feature debe seguir esta estructura. **Nunca agregar lógica directamente en `page.tsx`.**
+
+```
+src/features/<nombre>/
+├── components/   ← UI pura, sin queries ni lógica de negocio
+├── hooks/        ← estado, lógica, llamadas a services
+├── services/     ← API calls y queries a Supabase
+├── types/        ← interfaces TypeScript
+└── constants/    ← config estática (opciones de select, colores, etc.)
+```
+
+### Reglas de tamaño obligatorias
+
+| Archivo | Máximo |
+|---|---|
+| `page.tsx` | 100 líneas |
+| `components/` | 200 líneas |
+| `hooks/` | 200 líneas |
+| `services/` | 150 líneas |
+
+> Si un archivo supera **300 líneas**, debe dividirse antes de continuar.
+
+### Responsabilidades
+
+- **`page.tsx`** — solo layout: importa componentes y hooks, sin lógica ni queries
+- **`hooks/`** — estado y lógica de negocio, llama a services
+- **`services/`** — comunicación con backend y Supabase, sin estado
+- **`components/`** — UI, recibe props, sin queries directas a Supabase
+
+### Ejemplo de estructura para una feature
+
+Usar `branches` como referencia al implementar cualquier feature nuevo:
+
+```
+src/features/branches/
+├── components/
+│   ├── BranchesTable.tsx         ← tabla con columnas y acciones
+│   ├── BranchModal.tsx           ← modal crear/editar
+│   └── BranchBlockedModal.tsx    ← modal de bloqueo con cajeros asignados
+│
+├── hooks/
+│   └── useBranches.ts            ← fetch, crear, editar, toggle activo
+│
+├── services/
+│   └── branches.service.ts       ← getBranches(), createBranch(), updateBranch()
+│
+└── types/
+    └── branch.types.ts           ← Branch, Cashier
+```
+
+`page.tsx` resultado esperado (~25 líneas):
+```tsx
+"use client";
+import { BranchesTable } from "@/features/branches/components/BranchesTable";
+import { BranchModal } from "@/features/branches/components/BranchModal";
+import { useBranches } from "@/features/branches/hooks/useBranches";
+
+export default function BranchesPage() {
+  const { branches, loading, modalOpen, editing, openCreate, openEdit, closeModal } = useBranches();
+  return (
+    <div className="p-6">
+      <BranchesTable branches={branches} loading={loading} onCreate={openCreate} onEdit={openEdit} />
+      <BranchModal open={modalOpen} editing={editing} onClose={closeModal} />
+    </div>
+  );
+}
+```
+
+### Plan de refactor del código existente
+
+Los módulos actuales aún no siguen esta arquitectura. El plan de refactor está documentado en:
+`docs/improves/refactor-architecture/` — un archivo por módulo, en orden de prioridad.
+
+---
+
 ## Reglas de Trabajo
 
 - El usuario ejecuta manualmente `npm run dev` y `npm run build` — Claude nunca ejecuta estos dos comandos
