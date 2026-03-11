@@ -24,6 +24,7 @@ import {
   TeamOutlined,
   BarChartOutlined,
   HomeOutlined,
+  TagsOutlined,
 } from "@ant-design/icons";
 
 function SiderTitle({ collapsed }: { collapsed: boolean }) {
@@ -78,6 +79,11 @@ export default function AdminLayout({
               create: "/products/create",
               edit: "/products/edit/:id",
               meta: { label: "Productos", icon: <ShopOutlined /> },
+            },
+            {
+              name: "variant-types",
+              list: "/variant-types",
+              meta: { label: "Tipos de variante", icon: <TagsOutlined /> },
             },
             {
               name: "ingredients",

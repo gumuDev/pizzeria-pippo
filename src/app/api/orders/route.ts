@@ -43,10 +43,13 @@ export async function POST(request: NextRequest) {
   if (authError || !user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
   const body = await request.json();
-  const { branch_id, items, total, payment_method } = body;
+  const { branch_id, items, total, payment_method, order_type } = body;
 
   if (!branch_id) return NextResponse.json({ error: "branch_id requerido" }, { status: 400 });
   if (!items?.length) return NextResponse.json({ error: "items requeridos" }, { status: 400 });
+  if (!order_type || !["dine_in", "takeaway"].includes(order_type)) {
+    return NextResponse.json({ error: "order_type requerido: 'dine_in' o 'takeaway'" }, { status: 400 });
+  }
 
   // Use service role for writes — avoids RLS issues with cashier role
   const supabase = getServiceClient();
@@ -58,7 +61,7 @@ export async function POST(request: NextRequest) {
   // 2. Create order
   const { data: order, error: orderError } = await supabase
     .from("orders")
-    .insert({ branch_id, cashier_id, total, daily_number, payment_method: payment_method ?? null })
+    .insert({ branch_id, cashier_id, total, daily_number, payment_method: payment_method ?? null, order_type })
     .select()
     .single();
 
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest) {
   if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 });
 
   // 4. Deduct stock based on recipes
-  const { success, error: stockError } = await deductStock(order.id, branch_id, token, cashier_id);
+  const { success, error: stockError } = await deductStock(order.id, branch_id, token, cashier_id, order_type);
   if (!success) return NextResponse.json({ error: stockError }, { status: 500 });
 
   return NextResponse.json({ order_id: order.id, daily_number: order.daily_number }, { status: 201 });

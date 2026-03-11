@@ -16,8 +16,7 @@ import { PaymentModal } from "@/features/pos/components/PaymentModal";
 import { ConfirmSaleModal } from "@/features/pos/components/ConfirmSaleModal";
 import { TicketModal } from "@/features/pos/components/TicketModal";
 import { PosService } from "@/features/pos/services/pos.service";
-import type { Product } from "@/features/pos/types/pos.types";
-import type { TicketData } from "@/features/pos/types/pos.types";
+import type { Product, TicketData, OrderType } from "@/features/pos/types/pos.types";
 
 export default function PosPage() {
   const { identity, handleLogout } = usePosIdentity();
@@ -36,8 +35,8 @@ export default function PosPage() {
 
   if (!identity) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-gray-500">Cargando...</div>
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5" }}>
+        <div style={{ color: "#9ca3af" }}>Cargando...</div>
       </div>
     );
   }
@@ -56,8 +55,9 @@ export default function PosPage() {
     setVariantModal(null);
   };
 
-  const handlePaymentSelect = (method: "efectivo" | "qr" | null) => {
+  const handlePaymentConfirm = (orderType: OrderType, method: "efectivo" | "qr" | null) => {
     setPaymentMethod(method);
+    cart.setOrderType(orderType);
     setPaymentModal(false);
     setConfirmModal(true);
   };
@@ -67,9 +67,13 @@ export default function PosPage() {
       message.error("Tu usuario no tiene sucursal asignada. Contactá al administrador.");
       return;
     }
+    if (!cart.orderType) {
+      message.error("Seleccioná el tipo de pedido antes de confirmar.");
+      return;
+    }
     setConfirmLoading(true);
     const token = await PosService.getToken();
-    const result = await PosService.confirmSale(identity.branch_id, cart.discountedCart, cart.total, paymentMethod, token);
+    const result = await PosService.confirmSale(identity.branch_id, cart.discountedCart, cart.total, paymentMethod, cart.orderType, token);
     setConfirmLoading(false);
 
     if (result.ok) {
@@ -77,7 +81,7 @@ export default function PosPage() {
       cart.suppressNextClear();
       setConfirmModal(false);
       setPaymentMethod(null);
-      setTicket({ orderId: result.order_id!, dailyNumber: result.daily_number!, items: cart.discountedCart, total: cart.total, paymentMethod });
+      setTicket({ orderId: result.order_id!, dailyNumber: result.daily_number!, items: cart.discountedCart, total: cart.total, paymentMethod, orderType: cart.orderType });
       cart.clearCart();
       if (identity.branch_id) fetchDayOrders(identity.branch_id);
     } else {
@@ -86,7 +90,7 @@ export default function PosPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#f5f5f5", overflow: "hidden" }}>
       <PosHeader
         identity={identity}
         showOrders={showOrders}
@@ -103,7 +107,7 @@ export default function PosPage() {
         />
       )}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         <ProductCatalog
           products={products}
           loading={loading}
@@ -134,7 +138,7 @@ export default function PosPage() {
       <PaymentModal
         open={paymentModal}
         onClose={() => { setPaymentModal(false); setPaymentMethod(null); }}
-        onSelect={handlePaymentSelect}
+        onConfirm={handlePaymentConfirm}
       />
       <ConfirmSaleModal
         open={confirmModal}
@@ -142,6 +146,7 @@ export default function PosPage() {
         total={cart.total}
         totalDiscount={cart.totalDiscount}
         paymentMethod={paymentMethod}
+        orderType={cart.orderType}
         loading={confirmLoading}
         onConfirm={handleConfirmSale}
         onCancel={() => { setConfirmModal(false); setPaymentMethod(null); }}

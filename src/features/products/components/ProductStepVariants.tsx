@@ -2,14 +2,14 @@
 
 import { Button, Card, Select, InputNumber, Row, Col, Typography } from "antd";
 import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
-import { VARIANT_OPTIONS } from "../constants/product.constants";
-import type { Branch, Variant } from "../types/product.types";
+import type { Branch, Variant, VariantTypeOption } from "../types/product.types";
 
 const { Text } = Typography;
 
 interface Props {
   variants: Variant[];
   branches: Branch[];
+  variantTypeOptions: VariantTypeOption[];
   selectedBranchId: string;
   onUpdateVariant: (index: number, field: keyof Variant, value: unknown) => void;
   onUpdateBranchPrice: (variantIndex: number, branchId: string, price: number) => void;
@@ -20,11 +20,19 @@ interface Props {
 }
 
 export function ProductStepVariants({
-  variants, branches, selectedBranchId,
+  variants, branches, variantTypeOptions, selectedBranchId,
   onUpdateVariant, onUpdateBranchPrice,
   onAddVariant, onRemoveVariant,
   onPrev, onNext,
 }: Props) {
+  if (variantTypeOptions.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No hay tipos de variante configurados. Creá uno primero en <strong>Tipos de variante</strong>.
+      </div>
+    );
+  }
+
   return (
     <div>
       {selectedBranchId && (
@@ -40,11 +48,11 @@ export function ProductStepVariants({
           title={
             <Select
               value={variant.name}
-              options={VARIANT_OPTIONS.filter(
+              options={variantTypeOptions.filter(
                 (o) => o.value === variant.name || !variants.some((v, i) => i !== vi && v.name === o.value)
               )}
               onChange={(val) => onUpdateVariant(vi, "name", val)}
-              style={{ width: 140 }}
+              style={{ width: 160 }}
             />
           }
           extra={variants.length > 1 && (
@@ -78,7 +86,7 @@ export function ProductStepVariants({
         </Card>
       ))}
 
-      {variants.length < 3 && (
+      {variants.length < variantTypeOptions.length && (
         <Button type="dashed" block icon={<PlusOutlined />} onClick={onAddVariant} className="mb-4">
           Agregar variante
         </Button>

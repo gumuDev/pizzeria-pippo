@@ -1,7 +1,7 @@
 "use client";
 
-import { Button, Tag, Typography, Empty } from "antd";
 import { useState } from "react";
+import { Tag, Typography, Empty, Spin, Button } from "antd";
 import NextImage from "next/image";
 import type { Product } from "../types/pos.types";
 
@@ -37,27 +37,32 @@ export function ProductCatalog({ products, loading, branchId, getVariantPrice, g
     : products.filter((p) => p.category === filterCategory);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden p-4">
-      <div className="flex gap-2 mb-4">
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#f5f5f5" }}>
+      {/* Filtros */}
+      <div style={{ display: "flex", gap: 8, padding: "12px 16px", background: "#fff", borderBottom: "1px solid #f0f0f0" }}>
         {CATEGORY_OPTIONS.map((c) => (
           <Button
             key={c.value}
             type={filterCategory === c.value ? "primary" : "default"}
-            size="small"
+            size="middle"
             onClick={() => setFilterCategory(c.value)}
+            style={filterCategory === c.value ? { background: "#ea580c", borderColor: "#ea580c" } : {}}
           >
             {c.label}
           </Button>
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {/* Grid */}
+      <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
         {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <Text type="secondary">Cargando productos...</Text>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+            <Spin size="large" />
           </div>
+        ) : filteredProducts.length === 0 ? (
+          <Empty description="No hay productos en esta categoría" style={{ marginTop: 60 }} />
         ) : (
-          <div className="grid grid-cols-3 xl:grid-cols-4 gap-3">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
             {filteredProducts.map((product) => {
               const firstVariant = product.product_variants?.[0];
               const price = firstVariant ? getVariantPrice(firstVariant, branchId) : 0;
@@ -68,36 +73,55 @@ export function ProductCatalog({ products, loading, branchId, getVariantPrice, g
               return (
                 <div
                   key={product.id}
-                  className="bg-white rounded-lg shadow-sm cursor-pointer hover:shadow-md hover:border-orange-300 border-2 border-transparent transition-all overflow-hidden"
                   onClick={() => onProductClick(product)}
+                  style={{
+                    background: "#fff",
+                    borderRadius: 12,
+                    border: "1px solid #e5e7eb",
+                    cursor: "pointer",
+                    overflow: "hidden",
+                    transition: "box-shadow 0.15s, transform 0.1s",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.12)";
+                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
+                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+                  }}
                 >
-                  <div className="relative">
+                  {/* Imagen */}
+                  <div style={{ position: "relative" }}>
                     {product.image_url ? (
-                      <NextImage src={product.image_url} alt={product.name} width={300} height={112} className="w-full h-28 object-cover" />
+                      <NextImage src={product.image_url} alt={product.name} width={300} height={130} style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }} />
                     ) : (
-                      <div className="w-full h-28 bg-orange-50 flex items-center justify-center text-3xl">
+                      <div style={{ width: "100%", height: 130, background: "linear-gradient(135deg, #fff7ed, #fed7aa)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44 }}>
                         {product.category === "pizza" ? "🍕" : product.category === "bebida" ? "🥤" : "🍽️"}
                       </div>
                     )}
+                    <div style={{ position: "absolute", top: 8, left: 8 }}>
+                      <Tag color={CATEGORY_COLORS[product.category]} style={{ margin: 0, fontSize: 11 }}>{product.category}</Tag>
+                    </div>
                     {promoLabel && (
-                      <div className="absolute top-1 right-1">
-                        <Tag color="red" className="!m-0 text-xs font-bold">{promoLabel}</Tag>
+                      <div style={{ position: "absolute", top: 8, right: 8 }}>
+                        <Tag color="volcano" style={{ margin: 0, fontSize: 11, fontWeight: 700 }}>{promoLabel}</Tag>
                       </div>
                     )}
-                    <div className="absolute top-1 left-1">
-                      <Tag color={CATEGORY_COLORS[product.category]} className="!m-0 text-xs">
-                        {product.category}
-                      </Tag>
-                    </div>
                   </div>
-                  <div className="p-2">
-                    <Text strong className="text-sm block leading-tight">{product.name}</Text>
-                    <div className="flex justify-between items-center mt-1">
-                      <Text className="text-orange-600 font-bold">
+
+                  {/* Info */}
+                  <div style={{ padding: "10px 12px" }}>
+                    <Text strong style={{ fontSize: 13, display: "block", lineHeight: "1.3", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {product.name}
+                    </Text>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+                      <Text style={{ color: "#ea580c", fontWeight: 700, fontSize: 14 }}>
                         {hasMultipleVariants ? `Desde Bs ${price}` : `Bs ${price}`}
                       </Text>
                       {hasMultipleVariants && (
-                        <Text type="secondary" className="text-xs">varios tamaños</Text>
+                        <Text type="secondary" style={{ fontSize: 11 }}>varios</Text>
                       )}
                     </div>
                   </div>
@@ -105,9 +129,6 @@ export function ProductCatalog({ products, loading, branchId, getVariantPrice, g
               );
             })}
           </div>
-        )}
-        {!loading && filteredProducts.length === 0 && (
-          <Empty description="No hay productos en esta categoría" />
         )}
       </div>
     </div>

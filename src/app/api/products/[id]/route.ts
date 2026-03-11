@@ -79,10 +79,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     if (variant.recipes?.length) {
       await supabase.from("recipes").insert(
-        variant.recipes.map((r: { ingredient_id: string; quantity: number }) => ({
+        variant.recipes.map((r: { ingredient_id: string; quantity: number; apply_condition?: string }) => ({
           variant_id: variantId,
           ingredient_id: r.ingredient_id,
           quantity: r.quantity,
+          apply_condition: r.apply_condition ?? "always",
         }))
       );
     }

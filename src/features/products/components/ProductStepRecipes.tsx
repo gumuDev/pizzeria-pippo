@@ -1,8 +1,14 @@
 "use client";
 
-import { Button, Card, Select, InputNumber, Row, Col } from "antd";
-import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { Button, Card, Select, InputNumber, Row, Col, Tooltip } from "antd";
+import { PlusOutlined, MinusCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import type { Ingredient, Variant, RecipeItem } from "../types/product.types";
+
+const CONDITION_OPTIONS = [
+  { value: "always", label: "Siempre" },
+  { value: "takeaway", label: "Solo para llevar" },
+  { value: "dine_in", label: "Solo para comer aquí" },
+];
 
 interface Props {
   variants: Variant[];
@@ -27,7 +33,7 @@ export function ProductStepRecipes({
         <Card key={vi} className="mb-4" size="small" title={`Receta — ${variant.name}`}>
           {variant.recipes.map((recipe, ri) => (
             <Row key={ri} gutter={8} className="mb-2" align="middle">
-              <Col span={12}>
+              <Col span={9}>
                 <Select
                   value={recipe.ingredient_id || undefined}
                   placeholder="Insumo"
@@ -40,7 +46,7 @@ export function ProductStepRecipes({
                   }
                 />
               </Col>
-              <Col span={8}>
+              <Col span={5}>
                 <InputNumber
                   value={recipe.quantity}
                   placeholder="Cantidad"
@@ -49,7 +55,18 @@ export function ProductStepRecipes({
                   min={0}
                 />
               </Col>
-              <Col span={4}>
+              <Col span={8}>
+                <Tooltip title="Define cuándo se descuenta este insumo del inventario">
+                  <Select
+                    value={recipe.apply_condition ?? "always"}
+                    options={CONDITION_OPTIONS}
+                    onChange={(val) => onUpdateRecipeItem(vi, ri, "apply_condition", val)}
+                    style={{ width: "100%" }}
+                    suffixIcon={<InfoCircleOutlined style={{ color: "#8c8c8c" }} />}
+                  />
+                </Tooltip>
+              </Col>
+              <Col span={2}>
                 <Button type="text" danger icon={<MinusCircleOutlined />} onClick={() => onRemoveRecipeItem(vi, ri)} />
               </Col>
             </Row>

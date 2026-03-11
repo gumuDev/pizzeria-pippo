@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { todayInBolivia } from "@/lib/timezone";
-import type { Identity, Product, DayOrder } from "../types/pos.types";
+import type { Identity, Product, DayOrder, OrderType } from "../types/pos.types";
 import type { Promotion, DiscountedItem } from "@/lib/promotions";
 
 export const PosService = {
@@ -45,7 +45,7 @@ export const PosService = {
     const { data } = await supabase
       .from("orders")
       .select(`
-        id, daily_number, created_at, total, kitchen_status, payment_method,
+        id, daily_number, created_at, total, kitchen_status, payment_method, order_type,
         order_items (
           qty,
           product_variants ( name, products ( name ) )
@@ -63,6 +63,7 @@ export const PosService = {
     discountedCart: DiscountedItem[],
     total: number,
     paymentMethod: "efectivo" | "qr" | null,
+    orderType: OrderType,
     token: string
   ): Promise<{ ok: boolean; order_id?: string; daily_number?: number; error?: string }> {
     const res = await fetch("/api/orders", {
@@ -72,6 +73,7 @@ export const PosService = {
         branch_id: branchId,
         total,
         payment_method: paymentMethod,
+        order_type: orderType,
         items: discountedCart.map((i) => ({
           variant_id: i.variant_id,
           qty: i.qty_physical,

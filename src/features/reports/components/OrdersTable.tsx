@@ -49,6 +49,13 @@ export function OrdersTable({ orders, ordersTotal, ordersPage, loading, onPageCh
       },
     },
     {
+      title: "Tipo",
+      dataIndex: "order_type",
+      key: "order_type",
+      render: (t: string) =>
+        t === "takeaway" ? <Tag color="purple">🥡 Para llevar</Tag> : <Tag color="orange">🍽️ Comer aquí</Tag>,
+    },
+    {
       title: "Pago",
       dataIndex: "payment_method",
       key: "payment_method",
@@ -73,6 +80,11 @@ export function OrdersTable({ orders, ordersTotal, ordersPage, loading, onPageCh
   const sinEspecificar = orders.filter((o) => !o.payment_method).reduce((s, o) => s + Number(o.total), 0);
   const grandTotal = efectivo + qr + sinEspecificar;
 
+  const dineIn = orders.filter((o) => o.order_type !== "takeaway");
+  const takeaway = orders.filter((o) => o.order_type === "takeaway");
+  const dineInTotal = dineIn.reduce((s, o) => s + Number(o.total), 0);
+  const takeawayTotal = takeaway.reduce((s, o) => s + Number(o.total), 0);
+
   return (
     <Card size="small">
       <Table
@@ -94,24 +106,39 @@ export function OrdersTable({ orders, ordersTotal, ordersPage, loading, onPageCh
         columns={orderColumns}
       />
       {orders.length > 0 && (
-        <div className="mt-4 p-4 bg-gray-50 rounded border text-sm">
-          <Text strong className="block mb-2">Resumen por método de pago (página actual)</Text>
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between">
-              <Text strong>Total cobrado</Text>
-              <Text strong style={{ color: "#f97316" }}>Bs {grandTotal.toFixed(2)}</Text>
+        <div className="mt-4 p-4 bg-gray-50 rounded border text-sm flex gap-6">
+          <div className="flex-1">
+            <Text strong className="block mb-2">Por tipo de pedido</Text>
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between">
+                <Text strong>Total</Text>
+                <Text strong style={{ color: "#f97316" }}>Bs {grandTotal.toFixed(2)}</Text>
+              </div>
+              <div className="flex justify-between pl-4">
+                <Text type="secondary">🍽️ Comer aquí ({dineIn.length})</Text>
+                <Text>Bs {dineInTotal.toFixed(2)}</Text>
+              </div>
+              <div className="flex justify-between pl-4">
+                <Text type="secondary">🥡 Para llevar ({takeaway.length})</Text>
+                <Text>Bs {takeawayTotal.toFixed(2)}</Text>
+              </div>
             </div>
-            <div className="flex justify-between pl-4">
-              <Text type="secondary">💵 Efectivo</Text>
-              <Text>Bs {efectivo.toFixed(2)}</Text>
-            </div>
-            <div className="flex justify-between pl-4">
-              <Text type="secondary">📱 QR</Text>
-              <Text>Bs {qr.toFixed(2)}</Text>
-            </div>
-            <div className="flex justify-between pl-4">
-              <Text type="secondary">Sin especificar</Text>
-              <Text>Bs {sinEspecificar.toFixed(2)}</Text>
+          </div>
+          <div className="flex-1">
+            <Text strong className="block mb-2">Por método de pago</Text>
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between pl-4">
+                <Text type="secondary">💵 Efectivo</Text>
+                <Text>Bs {efectivo.toFixed(2)}</Text>
+              </div>
+              <div className="flex justify-between pl-4">
+                <Text type="secondary">📱 QR</Text>
+                <Text>Bs {qr.toFixed(2)}</Text>
+              </div>
+              <div className="flex justify-between pl-4">
+                <Text type="secondary">Sin especificar</Text>
+                <Text>Bs {sinEspecificar.toFixed(2)}</Text>
+              </div>
             </div>
           </div>
         </div>

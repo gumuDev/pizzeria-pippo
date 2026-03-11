@@ -7,6 +7,8 @@ import {
 } from "@/lib/promotions";
 import type { Product } from "../types/pos.types";
 
+type OrderType = "dine_in" | "takeaway";
+
 export function usePosCart(
   promotions: Promotion[],
   branchId: string | undefined,
@@ -14,6 +16,7 @@ export function usePosCart(
 ) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [discountedCart, setDiscountedCart] = useState<DiscountedItem[]>([]);
+  const [orderType, setOrderType] = useState<OrderType | null>(null);
   const suppressClearRef = useRef(false);
 
   useEffect(() => {
@@ -26,8 +29,8 @@ export function usePosCart(
     const active = getActivePromotions(promotions, branchId ?? "");
     const result = applyPromotions(cart, active);
     setDiscountedCart(result);
-    broadcast("CART_UPDATE", { items: result, total: getCartTotal(result) });
-  }, [cart, promotions, branchId, broadcast]);
+    broadcast("CART_UPDATE", { items: result, total: getCartTotal(result), orderType });
+  }, [cart, promotions, branchId, broadcast, orderType]);
 
   const addToCart = (product: Product, variant: Product["product_variants"][0], price: number) => {
     setCart((prev) => {
@@ -56,6 +59,7 @@ export function usePosCart(
 
   const clearCart = () => {
     setCart([]);
+    setOrderType(null);
     broadcast("CART_CLEAR");
   };
 
@@ -66,6 +70,7 @@ export function usePosCart(
 
   return {
     cart, discountedCart, total, totalDiscount,
+    orderType, setOrderType,
     addToCart, updateQty, removeFromCart, clearCart, suppressNextClear,
   };
 }

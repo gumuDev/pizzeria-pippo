@@ -2,10 +2,16 @@
 
 export function DisplayThankYou() {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center animate-pulse">
-      <div className="text-8xl mb-6">🙌</div>
-      <h1 className="text-6xl font-bold text-orange-400 mb-4">¡Gracias!</h1>
-      <p className="text-2xl text-gray-300">Tu pedido está siendo preparado</p>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ fontSize: 96, marginBottom: 24, animation: "pulse 2s ease-in-out infinite" }}>🙌</div>
+      <h1 style={{ fontSize: 72, fontWeight: 800, color: "#fb923c", margin: "0 0 16px" }}>¡Gracias!</h1>
+      <p style={{ fontSize: 26, color: "#d1d5db", margin: 0 }}>Tu pedido está siendo preparado</p>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.08); }
+        }
+      `}</style>
     </div>
   );
 }

@@ -23,21 +23,26 @@ interface Props {
 export function DisplayMenu({ products, menuPage }: Props) {
   const categories = Array.from(new Set(products.map((p) => p.category)));
   const visibleProducts = products.slice(menuPage * 6, menuPage * 6 + 6);
+  const totalPages = Math.ceil(products.length / 6);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden p-6">
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", padding: "20px 24px" }}>
+
       {/* Category tabs */}
-      <div className="flex gap-4 mb-6">
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexShrink: 0 }}>
         {categories.map((cat) => (
-          <div key={cat} className="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-full">
+          <div
+            key={cat}
+            style={{ display: "flex", alignItems: "center", gap: 8, background: "#1f2937", padding: "8px 18px", borderRadius: 999, fontSize: 15, fontWeight: 500 }}
+          >
             <span>{CATEGORY_EMOJI[cat] ?? "🍽️"}</span>
-            <span className="text-sm font-medium">{CATEGORY_LABEL[cat] ?? cat}</span>
+            <span>{CATEGORY_LABEL[cat] ?? cat}</span>
           </div>
         ))}
       </div>
 
-      {/* Product grid — 6 per page */}
-      <div className="flex-1 grid grid-cols-3 gap-4 overflow-hidden">
+      {/* Product grid — 3 columns, 2 rows = 6 per page */}
+      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, overflow: "hidden" }}>
         {visibleProducts.map((product) => {
           const minPrice = product.product_variants?.length
             ? Math.min(...product.product_variants.map((v) => v.base_price))
@@ -47,36 +52,36 @@ export function DisplayMenu({ products, menuPage }: Props) {
           return (
             <div
               key={product.id}
-              className="bg-gray-800 rounded-2xl overflow-hidden flex flex-col transition-all duration-500"
+              style={{ background: "#1f2937", borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column" }}
             >
               {product.image_url ? (
                 <NextImage
                   src={product.image_url}
                   alt={product.name}
                   width={400}
-                  height={144}
-                  className="w-full h-36 object-cover"
+                  height={160}
+                  style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
                 />
               ) : (
-                <div className="w-full h-36 bg-gray-700 flex items-center justify-center text-5xl">
+                <div style={{ width: "100%", height: 160, background: "#374151", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56 }}>
                   {CATEGORY_EMOJI[product.category] ?? "🍽️"}
                 </div>
               )}
-              <div className="p-4 flex-1 flex flex-col justify-between">
+              <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <div>
-                  <h3 className="font-bold text-lg leading-tight">{product.name}</h3>
+                  <h3 style={{ fontWeight: 700, fontSize: 18, lineHeight: 1.3, margin: 0 }}>{product.name}</h3>
                   {product.description && (
-                    <p className="text-gray-400 text-sm mt-1 line-clamp-2">
+                    <p style={{ color: "#9ca3af", fontSize: 13, marginTop: 4, marginBottom: 0, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                       {product.description}
                     </p>
                   )}
                 </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-orange-400 font-bold text-lg">
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ color: "#fb923c", fontWeight: 700, fontSize: 20 }}>
                     {hasVariants ? `Desde Bs ${minPrice}` : `Bs ${minPrice}`}
                   </span>
                   {hasVariants && (
-                    <span className="text-xs text-gray-500">varios tamaños</span>
+                    <span style={{ fontSize: 12, color: "#6b7280" }}>varios tamaños</span>
                   )}
                 </div>
               </div>
@@ -86,14 +91,18 @@ export function DisplayMenu({ products, menuPage }: Props) {
       </div>
 
       {/* Page indicator dots */}
-      {products.length > 6 && (
-        <div className="flex justify-center gap-2 mt-4">
-          {Array.from({ length: Math.ceil(products.length / 6) }).map((_, i) => (
+      {totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16, flexShrink: 0 }}>
+          {Array.from({ length: totalPages }).map((_, i) => (
             <div
               key={i}
-              className={`w-2 h-2 rounded-full transition-all ${
-                i === menuPage ? "bg-orange-400 w-6" : "bg-gray-600"
-              }`}
+              style={{
+                height: 8,
+                width: i === menuPage ? 24 : 8,
+                borderRadius: 999,
+                background: i === menuPage ? "#fb923c" : "#374151",
+                transition: "all 0.3s",
+              }}
             />
           ))}
         </div>

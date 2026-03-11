@@ -7,12 +7,13 @@ import { DisplayCart } from "@/features/display/components/DisplayCart";
 import { DisplayThankYou } from "@/features/display/components/DisplayThankYou";
 
 export default function DisplayPage() {
-  const { mode, cartItems, cartTotal, products, menuPage } = useDisplay();
+  const { mode, cartItems, cartTotal, orderType, products, menuPage } = useDisplay();
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-gray-950 text-white flex flex-col">
-      <div className="flex items-center justify-between px-8 py-4 bg-orange-600">
-        <div className="flex items-center gap-3">
+    <div style={{ height: "100vh", width: "100vw", overflow: "hidden", background: "#030712", color: "#fff", display: "flex", flexDirection: "column" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 32px", background: "#ea580c", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Image
             src="/pippo.jpg"
             alt="Pippo Pizza"
@@ -20,16 +21,22 @@ export default function DisplayPage() {
             height={44}
             style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
           />
-          <span className="text-2xl font-bold tracking-wide">Pizzería Pippo</span>
+          <span style={{ fontSize: 26, fontWeight: 800, letterSpacing: "0.02em" }}>Pizzería Pippo</span>
         </div>
-        <span className="text-orange-200 text-sm">
-          {mode === "order" ? "Tu pedido" : mode === "thanks" ? "" : "Nuestro menú"}
+        <span style={{ color: "#fed7aa", fontSize: 16 }}>
+          {mode === "order"
+            ? orderType === "takeaway" ? "🥡 Pedido para llevar" : "🍽️ Pedido para comer aquí"
+            : mode === "thanks" ? ""
+            : "Nuestro menú"}
         </span>
       </div>
 
-      {mode === "thanks" && <DisplayThankYou />}
-      {mode === "order" && <DisplayCart cartItems={cartItems} cartTotal={cartTotal} />}
-      {mode === "menu" && <DisplayMenu products={products} menuPage={menuPage} />}
+      {/* Content */}
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        {mode === "thanks" && <DisplayThankYou />}
+        {mode === "order" && <DisplayCart cartItems={cartItems} cartTotal={cartTotal} />}
+        {mode === "menu" && <DisplayMenu products={products} menuPage={menuPage} />}
+      </div>
     </div>
   );
 }

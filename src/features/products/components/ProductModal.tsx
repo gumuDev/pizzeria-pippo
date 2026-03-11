@@ -67,6 +67,7 @@ export function ProductModal({ open, editing, branches, ingredients, onClose, on
         <ProductStepVariants
           variants={form.variants}
           branches={branches}
+          variantTypeOptions={form.variantTypeOptions}
           selectedBranchId={form.selectedBranchId}
           onUpdateVariant={form.updateVariant}
           onUpdateBranchPrice={form.updateBranchPrice}

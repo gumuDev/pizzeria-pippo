@@ -28,8 +28,4 @@ export const CATEGORY_EMOJI: Record<string, string> = {
   otro: "🍽️",
 };
 
-export const VARIANT_OPTIONS = [
-  { value: "Personal", label: "Personal" },
-  { value: "Mediana", label: "Mediana" },
-  { value: "Familiar", label: "Familiar" },
-];
+// Variant options are now loaded dynamically from variant_types table in the DB

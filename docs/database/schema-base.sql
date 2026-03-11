@@ -37,10 +37,20 @@ CREATE TABLE public.products (
   CONSTRAINT products_pkey PRIMARY KEY (id)
 );
 
+CREATE TABLE public.variant_types (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  sort_order integer NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  CONSTRAINT variant_types_pkey PRIMARY KEY (id),
+  CONSTRAINT variant_types_name_unique UNIQUE (name)
+);
+
 CREATE TABLE public.product_variants (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   product_id uuid NOT NULL,
-  name text NOT NULL CHECK (name = ANY (ARRAY['Personal'::text, 'Mediana'::text, 'Familiar'::text])),
+  name text NOT NULL,
   base_price numeric NOT NULL CHECK (base_price >= 0::numeric),
   created_at timestamp with time zone DEFAULT now(),
   is_active boolean DEFAULT true,
@@ -85,6 +95,7 @@ CREATE TABLE public.recipes (
   variant_id uuid NOT NULL,
   ingredient_id uuid NOT NULL,
   quantity numeric NOT NULL CHECK (quantity > 0::numeric),
+  apply_condition text NOT NULL DEFAULT 'always' CHECK (apply_condition = ANY (ARRAY['always'::text, 'takeaway'::text, 'dine_in'::text])),
   CONSTRAINT recipes_pkey PRIMARY KEY (id),
   CONSTRAINT recipes_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.product_variants(id),
   CONSTRAINT recipes_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id)
@@ -146,6 +157,7 @@ CREATE TABLE public.orders (
   kitchen_status character varying DEFAULT 'pending'::character varying,
   daily_number integer NOT NULL DEFAULT 0,
   payment_method text CHECK (payment_method = ANY (ARRAY['efectivo'::text, 'qr'::text])),
+  order_type text NOT NULL DEFAULT 'dine_in' CHECK (order_type = ANY (ARRAY['dine_in'::text, 'takeaway'::text])),
   CONSTRAINT orders_pkey PRIMARY KEY (id),
   CONSTRAINT orders_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
   CONSTRAINT orders_cashier_id_fkey FOREIGN KEY (cashier_id) REFERENCES auth.users(id)

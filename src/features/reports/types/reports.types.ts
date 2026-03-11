@@ -1,7 +1,15 @@
 import type { Dayjs } from "dayjs";
 
 export interface Branch { id: string; name: string; }
-export interface SalesSummary { total: number; count: number; avg: number; }
+export interface SalesSummary {
+  total: number;
+  count: number;
+  avg: number;
+  by_order_type: {
+    dine_in: { total: number; count: number };
+    takeaway: { total: number; count: number };
+  };
+}
 export interface TopProduct {
   variant_id: string;
   product_name: string;
@@ -42,6 +50,7 @@ export interface Order {
   branch_id: string;
   cashier_name: string;
   payment_method: "efectivo" | "qr" | null;
+  order_type: "dine_in" | "takeaway";
   branches: { name: string } | null;
   order_items: OrderItem[];
 }

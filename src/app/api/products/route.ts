@@ -72,10 +72,11 @@ export async function POST(request: NextRequest) {
     if (variant.recipes?.length) {
       const { error: recipeError } = await supabase
         .from("recipes")
-        .insert(variant.recipes.map((r: { ingredient_id: string; quantity: number }) => ({
+        .insert(variant.recipes.map((r: { ingredient_id: string; quantity: number; apply_condition?: string }) => ({
           variant_id: createdVariant.id,
           ingredient_id: r.ingredient_id,
           quantity: r.quantity,
+          apply_condition: r.apply_condition ?? "always",
         })));
       if (recipeError) return NextResponse.json({ error: recipeError.message }, { status: 500 });
     }

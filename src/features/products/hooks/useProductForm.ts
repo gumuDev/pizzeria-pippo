@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Form, notification } from "antd";
 import { supabase } from "@/lib/supabase";
 import { ProductsService } from "../services/products.service";
-import type { Product, Variant, Step1Data, RecipeItem } from "../types/product.types";
-import { VARIANT_OPTIONS } from "../constants/product.constants";
+import type { Product, Variant, Step1Data, RecipeItem, VariantTypeOption } from "../types/product.types";
 
 export function useProductForm(onSuccess: () => void) {
   const [currentStep, setCurrentStep] = useState(0);
@@ -14,9 +13,8 @@ export function useProductForm(onSuccess: () => void) {
   const [imageUrl, setImageUrl] = useState<string>("");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("");
   const [step1Data, setStep1Data] = useState<Step1Data>({ name: "", category: "", description: "", branch_id: "" });
-  const [variants, setVariants] = useState<Variant[]>([
-    { name: "Personal", base_price: 0, branch_prices: [], recipes: [] },
-  ]);
+  const [variantTypeOptions, setVariantTypeOptions] = useState<VariantTypeOption[]>([]);
+  const [variants, setVariants] = useState<Variant[]>([]);
   const [formStep1] = Form.useForm();
 
   const getToken = async () => {
@@ -24,13 +22,38 @@ export function useProductForm(onSuccess: () => void) {
     return data.session?.access_token ?? "";
   };
 
+  // Load variant types from DB on mount
+  useEffect(() => {
+    const loadVariantTypes = async () => {
+      const token = await getToken();
+      const res = await fetch("/api/variant-types", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const options = data.map((vt: { name: string }) => ({ value: vt.name, label: vt.name }));
+        setVariantTypeOptions(options);
+        // Initialize with first available type if no variants loaded yet
+        setVariants((prev) => prev.length > 0 ? prev : options.length > 0
+          ? [{ name: options[0].value, base_price: 0, branch_prices: [], recipes: [] }]
+          : []
+        );
+      }
+    };
+    loadVariantTypes();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const resetForm = () => {
     setCurrentStep(0);
     setImageUrl("");
     setSelectedBranchId("");
     setStep1Data({ name: "", category: "", description: "", branch_id: "" });
     formStep1.resetFields();
-    setVariants([{ name: "Personal", base_price: 0, branch_prices: [], recipes: [] }]);
+    setVariants(variantTypeOptions.length > 0
+      ? [{ name: variantTypeOptions[0].value, base_price: 0, branch_prices: [], recipes: [] }]
+      : []
+    );
   };
 
   const loadForEdit = async (record: Product) => {
@@ -95,7 +118,7 @@ export function useProductForm(onSuccess: () => void) {
 
   const addVariant = () => {
     const used = variants.map((v) => v.name);
-    const next = VARIANT_OPTIONS.find((o) => !used.includes(o.value));
+    const next = variantTypeOptions.find((o) => !used.includes(o.value));
     if (next) {
       setVariants((prev) => [...prev, { name: next.value, base_price: 0, branch_prices: [], recipes: [] }]);
     }
@@ -115,7 +138,7 @@ export function useProductForm(onSuccess: () => void) {
   const addRecipeItem = (variantIndex: number) => {
     updateVariant(variantIndex, "recipes", [
       ...variants[variantIndex].recipes,
-      { ingredient_id: "", quantity: 0 },
+      { ingredient_id: "", quantity: 0, apply_condition: "always" as const },
     ]);
   };
 
@@ -135,7 +158,7 @@ export function useProductForm(onSuccess: () => void) {
     uploading, saving,
     imageUrl, selectedBranchId, setSelectedBranchId,
     step1Data, setStep1Data,
-    variants,
+    variants, variantTypeOptions,
     formStep1,
     resetForm, loadForEdit,
     handleImageUpload, handleSave,

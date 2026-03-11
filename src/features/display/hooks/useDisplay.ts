@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import type { DisplayMode, DisplayCartItem, DisplayProduct } from "../types/display.types";
+import type { DisplayMode, DisplayCartItem, DisplayProduct, OrderType } from "../types/display.types";
 
 export function useDisplay() {
   const [mode, setMode] = useState<DisplayMode>("menu");
   const [cartItems, setCartItems] = useState<DisplayCartItem[]>([]);
   const [cartTotal, setCartTotal] = useState(0);
+  const [orderType, setOrderType] = useState<OrderType | null>(null);
   const [products, setProducts] = useState<DisplayProduct[]>([]);
   const [menuPage, setMenuPage] = useState(0);
   const thanksTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,15 +45,18 @@ export function useDisplay() {
       if (type === "CART_UPDATE") {
         setCartItems(payload.items ?? []);
         setCartTotal(payload.total ?? 0);
+        setOrderType(payload.orderType ?? null);
         setMode("order");
       } else if (type === "CART_CLEAR") {
         setCartItems([]);
         setCartTotal(0);
+        setOrderType(null);
         setMode("menu");
         setMenuPage(0);
       } else if (type === "ORDER_COMPLETE") {
         setCartItems([]);
         setCartTotal(0);
+        setOrderType(null);
         setMode("thanks");
         if (thanksTimerRef.current) clearTimeout(thanksTimerRef.current);
         thanksTimerRef.current = setTimeout(() => {
@@ -68,5 +72,5 @@ export function useDisplay() {
     };
   }, []);
 
-  return { mode, cartItems, cartTotal, products, menuPage };
+  return { mode, cartItems, cartTotal, orderType, products, menuPage };
 }

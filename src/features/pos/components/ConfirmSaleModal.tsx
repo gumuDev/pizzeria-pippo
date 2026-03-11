@@ -5,18 +5,21 @@ import type { DiscountedItem } from "@/lib/promotions";
 
 const { Text } = Typography;
 
+type OrderType = "dine_in" | "takeaway";
+
 interface Props {
   open: boolean;
   discountedCart: DiscountedItem[];
   total: number;
   totalDiscount: number;
   paymentMethod: "efectivo" | "qr" | null;
+  orderType: OrderType | null;
   loading: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, paymentMethod, loading, onConfirm, onCancel }: Props) {
+export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, paymentMethod, orderType, loading, onConfirm, onCancel }: Props) {
   return (
     <Modal
       title="Confirmar venta"
@@ -48,6 +51,10 @@ export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, p
         <div className="flex justify-between mb-2">
           <Text strong className="text-lg">Total a cobrar</Text>
           <Text strong className="text-xl text-orange-600">Bs {total.toFixed(2)}</Text>
+        </div>
+        <div className="flex justify-between text-gray-500 text-sm">
+          <Text type="secondary">Tipo de pedido</Text>
+          <Text>{orderType === "takeaway" ? "🥡 Para llevar" : "🍽️ Comer aquí"}</Text>
         </div>
         {paymentMethod && (
           <div className="flex justify-between text-gray-500 text-sm">

@@ -81,8 +81,9 @@ export const ProductsService = {
     const variantsWithBranch = variants.map((v) => {
       if (!selectedBranchId) return v;
       const alreadyHas = v.branch_prices.some((bp) => bp.branch_id === selectedBranchId);
-      if (alreadyHas) return v;
-      return { ...v, branch_prices: [...v.branch_prices, { branch_id: selectedBranchId, price: v.base_price }] };
+      const withBranch = alreadyHas ? v : { ...v, branch_prices: [...v.branch_prices, { branch_id: selectedBranchId, price: v.base_price }] };
+      // Filter out incomplete recipe rows before sending to API
+      return { ...withBranch, recipes: withBranch.recipes.filter((r) => r.ingredient_id && r.quantity > 0) };
     });
     return {
       name: step1Data.name,

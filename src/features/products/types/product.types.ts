@@ -9,9 +9,17 @@ export interface Branch {
   name: string;
 }
 
+export type ApplyCondition = "always" | "takeaway" | "dine_in";
+
+export interface VariantTypeOption {
+  value: string;
+  label: string;
+}
+
 export interface RecipeItem {
   ingredient_id: string;
   quantity: number;
+  apply_condition: ApplyCondition;
 }
 
 export interface BranchPrice {

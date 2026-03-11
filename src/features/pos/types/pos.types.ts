@@ -23,6 +23,8 @@ export interface Identity {
   branch_id: string;
 }
 
+export type OrderType = "dine_in" | "takeaway";
+
 export interface DayOrder {
   id: string;
   daily_number: number;
@@ -30,6 +32,7 @@ export interface DayOrder {
   total: number;
   kitchen_status: string;
   payment_method: "efectivo" | "qr" | null;
+  order_type: OrderType;
   order_items: {
     qty: number;
     product_variants: { name: string; products: { name: string } | null } | null;
@@ -42,4 +45,5 @@ export interface TicketData {
   items: DiscountedItem[];
   total: number;
   paymentMethod: "efectivo" | "qr" | null;
+  orderType: OrderType;
 }

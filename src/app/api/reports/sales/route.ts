@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("orders")
-    .select("id, total, created_at, branch_id");
+    .select("id, total, created_at, branch_id, order_type");
 
   if (branchId) query = query.eq("branch_id", branchId);
   if (from) query = query.gte("created_at", dateRangeFrom(from));
@@ -31,5 +31,22 @@ export async function GET(request: NextRequest) {
   const count = orders?.length ?? 0;
   const avg = count > 0 ? total / count : 0;
 
-  return NextResponse.json({ total, count, avg });
+  const dineIn = orders?.filter((o) => o.order_type === "dine_in") ?? [];
+  const takeaway = orders?.filter((o) => o.order_type === "takeaway") ?? [];
+
+  return NextResponse.json({
+    total,
+    count,
+    avg,
+    by_order_type: {
+      dine_in: {
+        total: dineIn.reduce((sum, o) => sum + Number(o.total), 0),
+        count: dineIn.length,
+      },
+      takeaway: {
+        total: takeaway.reduce((sum, o) => sum + Number(o.total), 0),
+        count: takeaway.length,
+      },
+    },
+  });
 }

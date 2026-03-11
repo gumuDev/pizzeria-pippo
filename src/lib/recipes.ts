@@ -1,7 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 
+type OrderType = "dine_in" | "takeaway";
+
 /**
  * Deducts ingredients from branch_stock based on the recipes of each order item.
+ * Only deducts ingredients whose apply_condition matches the order type:
+ *   - 'always'   → always deducted
+ *   - 'takeaway' → only when orderType = 'takeaway'
+ *   - 'dine_in'  → only when orderType = 'dine_in'
  * Records a stock_movement of type 'venta' for each deduction.
  * Called server-side after an order is confirmed.
  */
@@ -9,7 +15,8 @@ export async function deductStock(
   orderId: string,
   branchId: string,
   token: string,
-  userId: string | null = null
+  userId: string | null = null,
+  orderType: OrderType = "dine_in"
 ): Promise<{ success: boolean; error?: string }> {
   // Use service role to bypass RLS for stock updates — deduction is always server-side after auth check
   const supabase = createClient(
@@ -22,18 +29,21 @@ export async function deductStock(
   // qty          = units charged (may be less when BUY_X_GET_Y promo applies)
   const { data: orderItems, error: orderError } = await supabase
     .from("order_items")
-    .select("qty, qty_physical, variant_id, product_variants(recipes(ingredient_id, quantity))")
+    .select("qty, qty_physical, variant_id, product_variants(recipes(ingredient_id, quantity, apply_condition))")
     .eq("order_id", orderId);
 
   if (orderError) return { success: false, error: orderError.message };
   if (!orderItems?.length) return { success: true };
 
   // 2. Aggregate total deduction per ingredient using qty_physical
+  // Only include ingredients whose apply_condition matches the order type
   const deductions: Record<string, number> = {};
   for (const item of orderItems) {
-    const recipes = (item.product_variants as unknown as { recipes: { ingredient_id: string; quantity: number }[] })?.recipes ?? [];
+    const recipes = (item.product_variants as unknown as { recipes: { ingredient_id: string; quantity: number; apply_condition: string }[] })?.recipes ?? [];
     const physicalQty = (item as { qty_physical?: number }).qty_physical ?? item.qty;
     for (const recipe of recipes) {
+      const condition = recipe.apply_condition ?? "always";
+      if (condition !== "always" && condition !== orderType) continue;
       deductions[recipe.ingredient_id] = (deductions[recipe.ingredient_id] ?? 0) + recipe.quantity * physicalQty;
     }
   }

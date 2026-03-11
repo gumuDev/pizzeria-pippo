@@ -2,6 +2,8 @@ import type { DiscountedItem } from "@/lib/promotions";
 
 export type DisplayMode = "menu" | "order" | "thanks";
 
+export type OrderType = "dine_in" | "takeaway";
+
 export type DisplayCartItem = DiscountedItem;
 
 export interface DisplayProduct {
