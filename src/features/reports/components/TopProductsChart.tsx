@@ -48,7 +48,7 @@ export function TopProductsChart({ topProducts }: Props) {
           </PieChart>
         </ResponsiveContainer>
       ) : (
-        <div className="flex items-center justify-center h-48 text-gray-400">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 192, color: "#9ca3af" }}>
           Sin datos
         </div>
       )}

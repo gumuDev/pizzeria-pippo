@@ -2,6 +2,7 @@
 
 import { Table, Tag, Space, Typography, Tooltip } from "antd";
 import { WarningOutlined } from "@ant-design/icons";
+import { useIsMobile } from "@/lib/useIsMobile";
 import type { StockRow } from "../types/stock.types";
 
 const { Text } = Typography;
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export function StockCurrentTable({ stock, loading, onEditMinQty }: Props) {
+  const isMobile = useIsMobile();
+
   const columns = [
     {
       title: "Insumo",
@@ -20,7 +23,7 @@ export function StockCurrentTable({ stock, loading, onEditMinQty }: Props) {
       render: (_: unknown, r: StockRow) => (
         <Space>
           {r.quantity < r.min_quantity && (
-            <Tooltip title="Stock bajo el mínimo"><WarningOutlined className="text-red-500" /></Tooltip>
+            <Tooltip title="Stock bajo el mínimo"><WarningOutlined style={{ color: "#ef4444" }} /></Tooltip>
           )}
           <Text>{r.ingredients?.name}</Text>
         </Space>
@@ -36,7 +39,7 @@ export function StockCurrentTable({ stock, loading, onEditMinQty }: Props) {
       dataIndex: "quantity",
       key: "quantity",
       render: (qty: number, r: StockRow) => (
-        <Text strong className={qty < r.min_quantity ? "text-red-500" : "text-green-600"}>{qty}</Text>
+        <Text strong style={{ color: qty < r.min_quantity ? "#ef4444" : "#16a34a" }}>{qty}</Text>
       ),
     },
     {
@@ -44,7 +47,11 @@ export function StockCurrentTable({ stock, loading, onEditMinQty }: Props) {
       dataIndex: "min_quantity",
       key: "min_quantity",
       render: (min: number, r: StockRow) => (
-        <button type="button" className="text-blue-500 hover:underline text-sm" onClick={() => onEditMinQty(r)}>
+        <button
+          type="button"
+          style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: 0 }}
+          onClick={() => onEditMinQty(r)}
+        >
           {min}
         </button>
       ),
@@ -58,6 +65,54 @@ export function StockCurrentTable({ stock, loading, onEditMinQty }: Props) {
           : <Tag color="green">OK</Tag>,
     },
   ];
+
+  if (isMobile) {
+    if (loading) return <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>Cargando...</div>;
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {stock.map((r) => {
+          const isLow = r.quantity < r.min_quantity;
+          return (
+            <div
+              key={r.id}
+              style={{
+                background: isLow ? "#fef2f2" : "#fff",
+                border: `1px solid ${isLow ? "#fca5a5" : "#e5e7eb"}`,
+                borderRadius: 10,
+                padding: "12px 14px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {isLow && <WarningOutlined style={{ color: "#ef4444" }} />}
+                  <Text strong style={{ fontSize: 15 }}>{r.ingredients?.name}</Text>
+                </div>
+                {isLow ? <Tag color="red" style={{ margin: 0 }}>Stock bajo</Tag> : <Tag color="green" style={{ margin: 0 }}>OK</Tag>}
+              </div>
+              <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                <Tag style={{ margin: 0 }}>{r.ingredients?.unit}</Tag>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>Actual: </Text>
+                  <Text strong style={{ color: isLow ? "#ef4444" : "#16a34a" }}>{r.quantity}</Text>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>Mínimo: </Text>
+                  <button
+                    type="button"
+                    style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: 0, fontWeight: 600 }}
+                    onClick={() => onEditMinQty(r)}
+                  >
+                    {r.min_quantity}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <Table

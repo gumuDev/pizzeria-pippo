@@ -2,9 +2,14 @@
 
 import { Row, Col, Card, Statistic, Space, Typography, Avatar, Collapse, Table, Tag } from "antd";
 import { UserOutlined } from "@ant-design/icons";
+import { useIsMobile } from "@/lib/useIsMobile";
 import type { CashierReport, TopProduct } from "../types/reports.types";
 
 const { Text } = Typography;
+
+const CATEGORY_COLOR: Record<string, string> = {
+  pizza: "red", bebida: "blue", otro: "green",
+};
 
 const cashierItemColumns = [
   {
@@ -21,9 +26,7 @@ const cashierItemColumns = [
     title: "Categoría",
     dataIndex: "category",
     key: "category",
-    render: (cat: string) => (
-      <Tag color={cat === "pizza" ? "red" : cat === "bebida" ? "blue" : "green"}>{cat}</Tag>
-    ),
+    render: (cat: string) => <Tag color={CATEGORY_COLOR[cat] ?? "default"}>{cat}</Tag>,
   },
   {
     title: "Unidades",
@@ -47,10 +50,12 @@ interface Props {
 }
 
 export function CashierReportTable({ cashierReports, loading }: Props) {
+  const isMobile = useIsMobile();
+
   if (cashierReports.length === 0 && !loading) {
     return (
       <Card>
-        <div className="flex items-center justify-center h-40 text-gray-400">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 160, color: "#9ca3af" }}>
           Sin ventas para el período seleccionado
         </div>
       </Card>
@@ -59,7 +64,7 @@ export function CashierReportTable({ cashierReports, loading }: Props) {
 
   return (
     <>
-      <Row gutter={[16, 16]} className="mb-6">
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         {cashierReports.map((c) => (
           <Col xs={24} sm={12} lg={8} key={c.cashier_id}>
             <Card loading={loading}>
@@ -70,13 +75,7 @@ export function CashierReportTable({ cashierReports, loading }: Props) {
                 </Space>
                 <Row gutter={8}>
                   <Col span={12}>
-                    <Statistic
-                      title="Ventas"
-                      value={c.total}
-                      suffix="Bs"
-                      precision={2}
-                      valueStyle={{ color: "#f97316", fontSize: 18 }}
-                    />
+                    <Statistic title="Ventas" value={c.total} suffix="Bs" precision={2} valueStyle={{ color: "#f97316", fontSize: 18 }} />
                   </Col>
                   <Col span={12}>
                     <Statistic title="Órdenes" value={c.orders} valueStyle={{ fontSize: 18 }} />
@@ -93,14 +92,32 @@ export function CashierReportTable({ cashierReports, loading }: Props) {
         items={cashierReports.map((c) => ({
           key: c.cashier_id,
           label: (
-            <Space>
+            <Space wrap>
               <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: "#f97316" }} />
               <Text strong>{c.cashier_name}</Text>
               <Text type="secondary">— {c.orders} órdenes</Text>
               <Text style={{ color: "#f97316", fontWeight: 600 }}>Bs {c.total.toFixed(2)}</Text>
             </Space>
           ),
-          children: (
+          children: isMobile ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {c.items.sort((a, b) => b.qty - a.qty).map((r) => (
+                <div key={r.variant_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "#f9fafb", borderRadius: 8 }}>
+                  <div>
+                    <Text strong style={{ fontSize: 13, display: "block" }}>{r.product_name}</Text>
+                    <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
+                      <Text type="secondary" style={{ fontSize: 11 }}>{r.variant_name}</Text>
+                      <Tag color={CATEGORY_COLOR[r.category] ?? "default"} style={{ margin: 0, fontSize: 10, lineHeight: "16px" }}>{r.category}</Tag>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <Text strong style={{ color: "#f97316", display: "block" }}>Bs {r.revenue.toFixed(2)}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>{r.qty} uds.</Text>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
             <Table
               dataSource={c.items.sort((a, b) => b.qty - a.qty)}
               columns={cashierItemColumns}

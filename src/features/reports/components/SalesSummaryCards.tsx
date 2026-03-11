@@ -16,7 +16,7 @@ export function SalesSummaryCards({ summary, loading }: Props) {
   const takeaway = summary?.by_order_type?.takeaway;
 
   return (
-    <Row gutter={16} className="mb-6">
+    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
       <Col xs={24} sm={8}>
         <Card>
           <Statistic
@@ -29,14 +29,14 @@ export function SalesSummaryCards({ summary, loading }: Props) {
             valueStyle={{ color: "#f97316" }}
           />
           {!loading && summary && (
-            <div className="mt-2 flex flex-col gap-0.5 text-xs text-gray-500">
-              <div className="flex justify-between">
-                <Text type="secondary">🍽️ Comer aquí ({dineIn?.count ?? 0})</Text>
-                <Text type="secondary">Bs {(dineIn?.total ?? 0).toFixed(2)}</Text>
+            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>🍽️ Comer aquí ({dineIn?.count ?? 0})</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>Bs {(dineIn?.total ?? 0).toFixed(2)}</Text>
               </div>
-              <div className="flex justify-between">
-                <Text type="secondary">🥡 Para llevar ({takeaway?.count ?? 0})</Text>
-                <Text type="secondary">Bs {(takeaway?.total ?? 0).toFixed(2)}</Text>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>🥡 Para llevar ({takeaway?.count ?? 0})</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>Bs {(takeaway?.total ?? 0).toFixed(2)}</Text>
               </div>
             </div>
           )}

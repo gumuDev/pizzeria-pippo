@@ -58,7 +58,6 @@ export default function WarehouseTransferPage() {
         }
       }
     };
-
     load();
   }, [getToken, preselectedIngredient, form]);
 
@@ -103,20 +102,20 @@ export default function WarehouseTransferPage() {
   };
 
   return (
-    <div className="p-6 max-w-lg">
-      <Space className="mb-6">
+    <div style={{ padding: 24, maxWidth: 520 }}>
+      <Space style={{ marginBottom: 20 }}>
         <Button icon={<ArrowLeftOutlined />} type="text" onClick={() => router.push("/warehouse")}>
           Volver
         </Button>
       </Space>
 
-      <Title level={4} className="!mb-6">Transferir a sucursal</Title>
+      <Title level={4} style={{ marginBottom: 20 }}>Transferir a sucursal</Title>
 
       {success && (
-        <Alert type="success" message="Transferencia realizada correctamente" className="mb-4" showIcon />
+        <Alert type="success" message="Transferencia realizada correctamente" style={{ marginBottom: 16 }} showIcon />
       )}
       {error && (
-        <Alert type="error" message={error} className="mb-4" showIcon closable onClose={() => setError(null)} />
+        <Alert type="error" message={error} style={{ marginBottom: 16 }} showIcon closable onClose={() => setError(null)} />
       )}
 
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
@@ -137,9 +136,9 @@ export default function WarehouseTransferPage() {
         </Form.Item>
 
         {available !== null && (
-          <div className="mb-4 px-3 py-2 bg-gray-50 rounded border text-sm">
+          <div style={{ marginBottom: 16, padding: "8px 12px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14 }}>
             Disponible en bodega:{" "}
-            <Text strong className={available === 0 ? "text-red-500" : "text-green-600"}>
+            <Text strong style={{ color: available === 0 ? "#ef4444" : "#16a34a" }}>
               {available} {selectedUnit}
             </Text>
           </div>
@@ -174,14 +173,9 @@ export default function WarehouseTransferPage() {
           <Input.TextArea rows={2} placeholder="Opcional" />
         </Form.Item>
 
-        <div className="flex gap-2">
+        <div style={{ display: "flex", gap: 8 }}>
           <Button onClick={() => router.push("/warehouse")}>Cancelar</Button>
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={loading}
-            icon={<SwapOutlined />}
-          >
+          <Button type="primary" htmlType="submit" loading={loading} icon={<SwapOutlined />}>
             Confirmar transferencia
           </Button>
         </div>

@@ -1,8 +1,11 @@
 "use client";
 
-import { Table, Button, Tag, Space } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { Table, Button, Tag, Space, Typography } from "antd";
+import { PlusOutlined, EditOutlined, StopOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { useIsMobile } from "@/lib/useIsMobile";
 import type { VariantType } from "../types/variant-type.types";
+
+const { Title, Text } = Typography;
 
 interface Props {
   variantTypes: VariantType[];
@@ -13,18 +16,11 @@ interface Props {
 }
 
 export function VariantTypesTable({ variantTypes, loading, onCreate, onEdit, onToggle }: Props) {
+  const isMobile = useIsMobile();
+
   const columns = [
-    {
-      title: "Nombre",
-      dataIndex: "name",
-      key: "name",
-    },
-    {
-      title: "Orden",
-      dataIndex: "sort_order",
-      key: "sort_order",
-      width: 80,
-    },
+    { title: "Nombre", dataIndex: "name", key: "name" },
+    { title: "Orden", dataIndex: "sort_order", key: "sort_order", width: 80 },
     {
       title: "Estado",
       dataIndex: "is_active",
@@ -40,11 +36,7 @@ export function VariantTypesTable({ variantTypes, loading, onCreate, onEdit, onT
       render: (_: unknown, record: VariantType) => (
         <Space>
           <Button size="small" onClick={() => onEdit(record)}>Editar</Button>
-          <Button
-            size="small"
-            danger={record.is_active}
-            onClick={() => onToggle(record)}
-          >
+          <Button size="small" danger={record.is_active} onClick={() => onToggle(record)}>
             {record.is_active ? "Desactivar" : "Activar"}
           </Button>
         </Space>
@@ -52,14 +44,66 @@ export function VariantTypesTable({ variantTypes, loading, onCreate, onEdit, onT
     },
   ];
 
+  const header = (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+      <Title level={4} style={{ margin: 0 }}>Tipos de Variante</Title>
+      <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>
+        Nuevo tipo
+      </Button>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        {header}
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>Cargando...</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {variantTypes.map((vt) => (
+              <div
+                key={vt.id}
+                style={{
+                  background: "#fff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <Text strong style={{ fontSize: 15 }}>{vt.name}</Text>
+                  <div style={{ marginTop: 4, display: "flex", gap: 4 }}>
+                    <Tag style={{ margin: 0 }}>Orden: {vt.sort_order}</Tag>
+                    {vt.is_active
+                      ? <Tag color="green" style={{ margin: 0 }}>Activo</Tag>
+                      : <Tag color="default" style={{ margin: 0 }}>Inactivo</Tag>}
+                  </div>
+                </div>
+                <Space size={6}>
+                  <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(vt)} />
+                  <Button
+                    icon={vt.is_active ? <StopOutlined /> : <CheckCircleOutlined />}
+                    size="small"
+                    danger={vt.is_active}
+                    onClick={() => onToggle(vt)}
+                  />
+                </Space>
+              </div>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold m-0">Tipos de Variante</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>
-          Nuevo tipo
-        </Button>
-      </div>
+      {header}
       <Table
         dataSource={variantTypes}
         columns={columns}

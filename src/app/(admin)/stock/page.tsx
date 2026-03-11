@@ -1,8 +1,9 @@
 "use client";
 
 import { Select, Tag, Typography, Tabs, Space, Badge } from "antd";
-import { WarningOutlined, ShoppingCartOutlined, ToolOutlined, HistoryOutlined } from "@ant-design/icons";
+import { WarningOutlined, ShoppingCartOutlined, ToolOutlined, HistoryOutlined, DatabaseOutlined } from "@ant-design/icons";
 import { useStock } from "@/features/stock/hooks/useStock";
+import { useIsMobile } from "@/lib/useIsMobile";
 import { StockCurrentTable } from "@/features/stock/components/StockCurrentTable";
 import { StockPurchaseForm } from "@/features/stock/components/StockPurchaseForm";
 import { StockAdjustForm } from "@/features/stock/components/StockAdjustForm";
@@ -12,6 +13,7 @@ import { StockMinQtyModal } from "@/features/stock/components/StockMinQtyModal";
 const { Title } = Typography;
 
 export default function StockPage() {
+  const isMobile = useIsMobile();
   const {
     branches, ingredients, stock, movements, alerts,
     selectedBranch, setSelectedBranch, loading,
@@ -26,12 +28,14 @@ export default function StockPage() {
   const tabItems = [
     {
       key: "stock",
-      label: <Space>Stock actual{alerts.length > 0 && <Badge count={alerts.length} />}</Space>,
+      label: isMobile
+        ? <Badge count={alerts.length} size="small"><DatabaseOutlined /></Badge>
+        : <Space>Stock actual{alerts.length > 0 && <Badge count={alerts.length} />}</Space>,
       children: <StockCurrentTable stock={stock} loading={loading} onEditMinQty={openMinQty} />,
     },
     {
       key: "purchase",
-      label: <Space><ShoppingCartOutlined />Registrar compra</Space>,
+      label: isMobile ? <ShoppingCartOutlined /> : <Space><ShoppingCartOutlined />Registrar compra</Space>,
       children: (
         <StockPurchaseForm
           form={purchaseForm}
@@ -44,21 +48,21 @@ export default function StockPage() {
     },
     {
       key: "adjust",
-      label: <Space><ToolOutlined />Ajuste manual</Space>,
+      label: isMobile ? <ToolOutlined /> : <Space><ToolOutlined />Ajuste manual</Space>,
       children: <StockAdjustForm form={adjustForm} ingredients={ingredients} onSubmit={handleAdjust} />,
     },
     {
       key: "history",
-      label: <Space><HistoryOutlined />Historial</Space>,
+      label: isMobile ? <HistoryOutlined /> : <Space><HistoryOutlined />Historial</Space>,
       children: <StockMovementsTable movements={movements} loading={loading} />,
     },
   ];
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-4">
-          <Title level={4} className="!mb-0">Stock</Title>
+    <div style={{ padding: isMobile ? 16 : 24 }}>
+      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", gap: 12, marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Title level={4} style={{ margin: 0 }}>Stock</Title>
           {alerts.length > 0 && (
             <Tag color="red" icon={<WarningOutlined />}>
               {alerts.length} insumo{alerts.length > 1 ? "s" : ""} bajo mínimo
@@ -69,7 +73,7 @@ export default function StockPage() {
           value={selectedBranch}
           onChange={setSelectedBranch}
           options={branches.map((b) => ({ value: b.id, label: b.name }))}
-          style={{ width: 200 }}
+          style={{ width: isMobile ? "100%" : 200 }}
           placeholder="Seleccionar sucursal"
         />
       </div>

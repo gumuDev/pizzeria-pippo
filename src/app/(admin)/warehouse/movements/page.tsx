@@ -7,6 +7,7 @@ import {
 } from "antd";
 import { ArrowLeftOutlined, HistoryOutlined } from "@ant-design/icons";
 import { supabase } from "@/lib/supabase";
+import { useIsMobile } from "@/lib/useIsMobile";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
@@ -27,19 +28,15 @@ interface Movement {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  compra: "green",
-  transferencia: "blue",
-  ajuste: "orange",
+  compra: "green", transferencia: "blue", ajuste: "orange",
 };
-
 const TYPE_LABELS: Record<string, string> = {
-  compra: "Compra",
-  transferencia: "Transferencia",
-  ajuste: "Ajuste",
+  compra: "Compra", transferencia: "Transferencia", ajuste: "Ajuste",
 };
 
 export default function WarehouseMovementsPage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [movements, setMovements] = useState<Movement[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -112,8 +109,7 @@ export default function WarehouseMovementsPage() {
       key: "quantity",
       render: (q: number, r: Movement) => {
         const display = r.type === "compra" ? `+${q}` : q >= 0 ? `+${q}` : `${q}`;
-        const color = q >= 0 ? "text-green-600" : "text-red-500";
-        return <Text className={color}>{display} {r.ingredients?.unit}</Text>;
+        return <Text style={{ color: q >= 0 ? "#16a34a" : "#ef4444" }}>{display} {r.ingredients?.unit}</Text>;
       },
     },
     {
@@ -131,20 +127,20 @@ export default function WarehouseMovementsPage() {
   ];
 
   return (
-    <div className="p-6">
-      <Space className="mb-4">
+    <div style={{ padding: isMobile ? 16 : 24 }}>
+      <Space style={{ marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} type="text" onClick={() => router.push("/warehouse")}>
           Volver
         </Button>
       </Space>
 
-      <div className="flex items-center gap-3 mb-6">
-        <HistoryOutlined className="text-lg" />
-        <Title level={4} className="!mb-0">Historial de movimientos — Bodega</Title>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+        <HistoryOutlined style={{ fontSize: 18 }} />
+        <Title level={4} style={{ margin: 0 }}>Historial de movimientos — Bodega</Title>
       </div>
 
       {/* Filters */}
-      <Row gutter={[12, 12]} className="mb-4">
+      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} md={6}>
           <Select
             allowClear
@@ -193,13 +189,49 @@ export default function WarehouseMovementsPage() {
         </Col>
       </Row>
 
-      <Table
-        dataSource={movements}
-        columns={columns}
-        rowKey="id"
-        loading={loading}
-        pagination={{ pageSize: 30 }}
-      />
+      {isMobile ? (
+        loading ? (
+          <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>Cargando...</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {movements.map((r) => {
+              const qty = r.quantity;
+              const display = r.type === "compra" ? `+${qty}` : qty >= 0 ? `+${qty}` : `${qty}`;
+              return (
+                <div key={r.id} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "12px 14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <Tag color={TYPE_COLORS[r.type]} style={{ margin: 0 }}>{TYPE_LABELS[r.type] ?? r.type}</Tag>
+                    <Text type="secondary" style={{ fontSize: 12 }}>{new Date(r.created_at).toLocaleString("es-BO")}</Text>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <Text strong>{r.ingredients?.name}</Text>
+                      <Tag style={{ margin: "0 0 0 6px" }}>{r.ingredients?.unit}</Tag>
+                    </div>
+                    <Text strong style={{ color: qty >= 0 ? "#16a34a" : "#ef4444", fontSize: 15 }}>
+                      {display} {r.ingredients?.unit}
+                    </Text>
+                  </div>
+                  {(r.branches || r.notes) && (
+                    <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {r.branches && <Tag style={{ margin: 0 }}>→ {r.branches.name}</Tag>}
+                      {r.notes && <Text type="secondary" style={{ fontSize: 12 }}>{r.notes}</Text>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : (
+        <Table
+          dataSource={movements}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 30 }}
+        />
+      )}
     </div>
   );
 }

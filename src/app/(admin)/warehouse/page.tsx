@@ -7,6 +7,7 @@ import {
 } from "antd";
 import { WarningOutlined, SwapOutlined, ShoppingCartOutlined, HistoryOutlined } from "@ant-design/icons";
 import { supabase } from "@/lib/supabase";
+import { useIsMobile } from "@/lib/useIsMobile";
 
 const { Title, Text } = Typography;
 
@@ -23,6 +24,7 @@ interface WarehouseRow {
 
 export default function WarehousePage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [rows, setRows] = useState<WarehouseRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingRow, setEditingRow] = useState<WarehouseRow | null>(null);
@@ -80,7 +82,7 @@ export default function WarehousePage() {
         <Space>
           {row.quantity < row.min_quantity && (
             <Tooltip title="Stock bajo el mínimo">
-              <WarningOutlined className="text-red-500" />
+              <WarningOutlined style={{ color: "#ef4444" }} />
             </Tooltip>
           )}
           <Text strong>{row.ingredient_name}</Text>
@@ -94,7 +96,7 @@ export default function WarehousePage() {
       render: (_: unknown, row: WarehouseRow) => {
         const isLow = row.quantity < row.min_quantity;
         return (
-          <Text strong className={isLow ? "text-red-500" : "text-green-600"}>
+          <Text strong style={{ color: isLow ? "#ef4444" : "#16a34a" }}>
             {row.quantity} {row.unit}
           </Text>
         );
@@ -104,7 +106,7 @@ export default function WarehousePage() {
       title: "Mínimo",
       key: "min_quantity",
       render: (_: unknown, row: WarehouseRow) => (
-        <Button type="link" size="small" className="!p-0" onClick={() => openMinQty(row)}>
+        <Button type="link" size="small" style={{ padding: 0 }} onClick={() => openMinQty(row)}>
           {row.min_quantity} {row.unit}
         </Button>
       ),
@@ -135,41 +137,81 @@ export default function WarehousePage() {
   const alertCount = rows.filter((r) => r.quantity < r.min_quantity).length;
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div style={{ padding: isMobile ? 16 : 24 }}>
+      {/* Header */}
+      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", gap: 12, marginBottom: 20 }}>
         <Space>
-          <Title level={4} className="!mb-0">Bodega Central</Title>
+          <Title level={4} style={{ margin: 0 }}>Bodega Central</Title>
           {alertCount > 0 && (
             <Tag color="red" icon={<WarningOutlined />}>
               {alertCount} insumo{alertCount > 1 ? "s" : ""} bajo mínimo
             </Tag>
           )}
         </Space>
-        <Space>
-          <Button
-            icon={<HistoryOutlined />}
-            onClick={() => router.push("/warehouse/movements")}
-          >
+        <Space wrap>
+          <Button icon={<HistoryOutlined />} onClick={() => router.push("/warehouse/movements")} block={isMobile}>
             Historial
           </Button>
-          <Button
-            icon={<ShoppingCartOutlined />}
-            onClick={() => router.push("/warehouse/purchase")}
-          >
-            Nueva compra
+          <Button icon={<ShoppingCartOutlined />} onClick={() => router.push("/warehouse/purchase")} block={isMobile}>
+            {isMobile ? "Compra" : "Nueva compra"}
           </Button>
-          <Button
-            type="primary"
-            icon={<SwapOutlined />}
-            onClick={() => router.push("/warehouse/transfer")}
-          >
+          <Button type="primary" icon={<SwapOutlined />} onClick={() => router.push("/warehouse/transfer")} block={isMobile}>
             Transferir
           </Button>
         </Space>
       </div>
 
+      {/* Content */}
       {loading ? (
-        <div className="flex justify-center py-12"><Spin size="large" /></div>
+        <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
+          <Spin size="large" />
+        </div>
+      ) : isMobile ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {rows.map((row) => {
+            const isLow = row.quantity < row.min_quantity;
+            return (
+              <div
+                key={row.ingredient_id}
+                style={{
+                  background: isLow ? "#fef2f2" : "#fff",
+                  border: `1px solid ${isLow ? "#fca5a5" : "#e5e7eb"}`,
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {isLow && <WarningOutlined style={{ color: "#ef4444" }} />}
+                    <Text strong style={{ fontSize: 15 }}>{row.ingredient_name}</Text>
+                    <Tag style={{ margin: 0 }}>{row.unit}</Tag>
+                  </div>
+                  {isLow ? <Tag color="red" style={{ margin: 0 }}>Stock bajo</Tag> : <Tag color="green" style={{ margin: 0 }}>OK</Tag>}
+                </div>
+                <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 10 }}>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>Stock: </Text>
+                    <Text strong style={{ color: isLow ? "#ef4444" : "#16a34a" }}>{row.quantity}</Text>
+                  </div>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>Mínimo: </Text>
+                    <Button type="link" size="small" style={{ padding: 0, fontWeight: 600 }} onClick={() => openMinQty(row)}>
+                      {row.min_quantity}
+                    </Button>
+                  </div>
+                </div>
+                <Button
+                  size="small"
+                  icon={<SwapOutlined />}
+                  block
+                  onClick={() => router.push(`/warehouse/transfer?ingredientId=${row.ingredient_id}`)}
+                >
+                  Transferir a sucursal
+                </Button>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <Table
           dataSource={rows}
@@ -188,7 +230,7 @@ export default function WarehousePage() {
         footer={null}
         destroyOnHidden
       >
-        <Form form={minQtyForm} layout="vertical" onFinish={handleMinQty} className="mt-4">
+        <Form form={minQtyForm} layout="vertical" onFinish={handleMinQty} style={{ marginTop: 16 }}>
           <Form.Item
             label={`Cantidad mínima (${editingRow?.unit})`}
             name="min_quantity"
@@ -196,7 +238,7 @@ export default function WarehousePage() {
           >
             <InputNumber min={0} style={{ width: "100%" }} />
           </Form.Item>
-          <div className="flex justify-end gap-2">
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <Button onClick={() => setEditingRow(null)}>Cancelar</Button>
             <Button type="primary" htmlType="submit">Guardar</Button>
           </div>

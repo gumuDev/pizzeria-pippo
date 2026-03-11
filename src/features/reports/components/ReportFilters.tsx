@@ -18,8 +18,8 @@ interface Props {
 
 export function ReportFilters({ branches, selectedBranch, dateRange, onBranchChange, onDateRangeChange }: Props) {
   return (
-    <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-      <Title level={4} className="!mb-0">Reportes</Title>
+    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", marginBottom: 24, gap: 12 }}>
+      <Title level={4} style={{ margin: 0 }}>Reportes</Title>
       <Space wrap>
         {PRESET_RANGES.map((p) => (
           <Button key={p.label} size="small" onClick={() => onDateRangeChange(p.range)}>

@@ -6,6 +6,7 @@ import {
   CheckCircleOutlined, EyeOutlined,
 } from "@ant-design/icons";
 import { UNIT_OPTIONS, UNIT_COLORS } from "../constants/ingredient.constants";
+import { useIsMobile } from "@/lib/useIsMobile";
 import type { Ingredient } from "../types/ingredient.types";
 
 const { Title, Text } = Typography;
@@ -21,6 +22,8 @@ interface Props {
 }
 
 export function IngredientsTable({ ingredients, loading, showInactive, onToggleInactive, onCreate, onEdit, onToggleActive }: Props) {
+  const isMobile = useIsMobile();
+
   const columns = [
     {
       title: "Nombre",
@@ -67,21 +70,87 @@ export function IngredientsTable({ ingredients, loading, showInactive, onToggleI
     },
   ];
 
+  const header = (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 8 }}>
+      <Title level={4} style={{ margin: 0 }}>Insumos</Title>
+      <Space wrap>
+        <Space size={4}>
+          <EyeOutlined style={{ color: "#6b7280" }} />
+          {!isMobile && <Text type="secondary">Ver inactivos</Text>}
+          <Switch size="small" checked={showInactive} onChange={onToggleInactive} />
+        </Space>
+        <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>
+          {isMobile ? "Nuevo" : "Nuevo insumo"}
+        </Button>
+      </Space>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        {header}
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>Cargando...</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {ingredients.map((ingredient) => (
+              <div
+                key={ingredient.id}
+                style={{
+                  background: "#fff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  opacity: ingredient.is_active ? 1 : 0.6,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    strong
+                    style={{
+                      fontSize: 15,
+                      display: "block",
+                      textDecoration: ingredient.is_active ? "none" : "line-through",
+                      color: ingredient.is_active ? undefined : "#9ca3af",
+                    }}
+                  >
+                    {ingredient.name}
+                  </Text>
+                  <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    <Tag
+                      color={ingredient.is_active ? (UNIT_COLORS[ingredient.unit] ?? "default") : "default"}
+                      style={{ margin: 0 }}
+                    >
+                      {UNIT_OPTIONS.find((u) => u.value === ingredient.unit)?.label ?? ingredient.unit}
+                    </Tag>
+                    {!ingredient.is_active && <Tag color="default" style={{ margin: 0 }}>Inactivo</Tag>}
+                  </div>
+                </div>
+                <Space size={6}>
+                  <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(ingredient)} />
+                  <Button
+                    icon={ingredient.is_active ? <StopOutlined /> : <CheckCircleOutlined />}
+                    size="small"
+                    danger={ingredient.is_active}
+                    onClick={() => onToggleActive(ingredient)}
+                  />
+                </Space>
+              </div>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
-        <Title level={4} className="!mb-0">Insumos</Title>
-        <Space>
-          <Space>
-            <EyeOutlined style={{ color: "#6b7280" }} />
-            <Text type="secondary">Ver inactivos</Text>
-            <Switch size="small" checked={showInactive} onChange={onToggleInactive} />
-          </Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>
-            Nuevo insumo
-          </Button>
-        </Space>
-      </div>
+      {header}
       <Table
         dataSource={ingredients}
         columns={columns}

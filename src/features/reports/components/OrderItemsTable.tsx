@@ -1,9 +1,12 @@
 "use client";
 
 import { Table, Tag, Typography, Space } from "antd";
+import { useIsMobile } from "@/lib/useIsMobile";
 import type { OrderItem } from "../types/reports.types";
 
 const { Text } = Typography;
+
+const CATEGORY_COLOR: Record<string, string> = { pizza: "red", bebida: "blue", otro: "green" };
 
 export const orderItemColumns = [
   {
@@ -21,39 +24,24 @@ export const orderItemColumns = [
     key: "category",
     render: (_: unknown, item: OrderItem) => {
       const cat = item.product_variants?.products?.category ?? "";
-      return <Tag color={cat === "pizza" ? "red" : cat === "bebida" ? "blue" : "green"}>{cat}</Tag>;
+      return <Tag color={CATEGORY_COLOR[cat] ?? "default"}>{cat}</Tag>;
     },
   },
-  {
-    title: "Cant.",
-    dataIndex: "qty",
-    key: "qty",
-    width: 60,
-    render: (qty: number) => <Text strong>{qty}</Text>,
-  },
-  {
-    title: "Precio unit.",
-    dataIndex: "unit_price",
-    key: "unit_price",
-    render: (p: number) => `Bs ${Number(p).toFixed(2)}`,
-  },
+  { title: "Cant.", dataIndex: "qty", key: "qty", width: 60, render: (qty: number) => <Text strong>{qty}</Text> },
+  { title: "Precio unit.", dataIndex: "unit_price", key: "unit_price", render: (p: number) => `Bs ${Number(p).toFixed(2)}` },
   {
     title: "Descuento",
     dataIndex: "discount_applied",
     key: "discount_applied",
     render: (d: number) =>
-      Number(d) > 0
-        ? <Text style={{ color: "#ef4444" }}>-Bs {Number(d).toFixed(2)}</Text>
-        : <Text type="secondary">—</Text>,
+      Number(d) > 0 ? <Text style={{ color: "#ef4444" }}>-Bs {Number(d).toFixed(2)}</Text> : <Text type="secondary">—</Text>,
   },
   {
     title: "Promoción",
     dataIndex: "promo_label",
     key: "promo_label",
     render: (label: string | null, item: OrderItem) =>
-      label && Number(item.discount_applied) > 0
-        ? <Tag color="orange">{label}</Tag>
-        : <Text type="secondary">—</Text>,
+      label && Number(item.discount_applied) > 0 ? <Tag color="orange">{label}</Tag> : <Text type="secondary">—</Text>,
   },
   {
     title: "Subtotal",
@@ -70,6 +58,40 @@ interface Props {
 }
 
 export function OrderItemsTable({ items }: Props) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "4px 0" }}>
+        {items.map((item, i) => {
+          const cat = item.product_variants?.products?.category ?? "";
+          const sub = (Number(item.unit_price) * item.qty) - Number(item.discount_applied);
+          return (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+              <div>
+                <Text strong style={{ fontSize: 13 }}>{item.product_variants?.products?.name}</Text>
+                <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
+                  <Text type="secondary" style={{ fontSize: 11 }}>{item.product_variants?.name}</Text>
+                  <Tag color={CATEGORY_COLOR[cat] ?? "default"} style={{ margin: 0, fontSize: 10, lineHeight: "16px" }}>{cat}</Tag>
+                  {item.promo_label && Number(item.discount_applied) > 0 && (
+                    <Tag color="orange" style={{ margin: 0, fontSize: 10, lineHeight: "16px" }}>{item.promo_label}</Tag>
+                  )}
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <Text strong style={{ color: "#f97316", display: "block" }}>Bs {sub.toFixed(2)}</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{item.qty}x · Bs {Number(item.unit_price).toFixed(2)}</Text>
+                {Number(item.discount_applied) > 0 && (
+                  <Text style={{ color: "#16a34a", fontSize: 11, display: "block" }}>-Bs {Number(item.discount_applied).toFixed(2)}</Text>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <Table
       dataSource={items}

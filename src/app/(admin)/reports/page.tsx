@@ -34,7 +34,7 @@ export default function ReportsPage() {
   }, [activeTab, selectedBranch, filters.dateRange]);
 
   return (
-    <div className="p-6">
+    <div style={{ padding: 24 }}>
       <ReportFilters
         branches={filters.branches}
         selectedBranch={filters.selectedBranch}
@@ -53,7 +53,7 @@ export default function ReportsPage() {
             children: (
               <>
                 <SalesSummaryCards summary={sales.summary} loading={sales.loading} />
-                <Row gutter={16} className="mb-6">
+                <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                   <Col xs={24} lg={16}><DailySalesChart dailyData={sales.dailyData} /></Col>
                   <Col xs={24} lg={8}><TopProductsChart topProducts={sales.topProducts} /></Col>
                 </Row>
