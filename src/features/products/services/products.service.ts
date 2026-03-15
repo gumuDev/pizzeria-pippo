@@ -3,10 +3,17 @@ import type { Product, Ingredient, Branch, Variant } from "../types/product.type
 
 export const ProductsService = {
   async getProducts(showInactive: boolean): Promise<Product[]> {
-    let query = supabase.from("products").select("*, product_variants(id, name, base_price)").order("name");
+    let query = supabase
+      .from("products")
+      .select("*, product_variants(id, name, base_price, is_active)")
+      .order("name");
     if (!showInactive) query = query.eq("is_active", true);
     const { data } = await query;
-    return data ?? [];
+    const result = (data ?? []).map((p) => ({
+      ...p,
+      product_variants: (p.product_variants ?? []).filter((v: { is_active: boolean }) => v.is_active),
+    }));
+    return result;
   },
 
   async getIngredients(): Promise<Ingredient[]> {
@@ -23,7 +30,8 @@ export const ProductsService = {
     const { data } = await supabase
       .from("product_variants")
       .select("*, branch_prices(*), recipes(*)")
-      .eq("product_id", productId);
+      .eq("product_id", productId)
+      .eq("is_active", true);
     return data ?? [];
   },
 

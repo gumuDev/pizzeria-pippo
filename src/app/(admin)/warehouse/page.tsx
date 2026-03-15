@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import {
   Table, Typography, Tag, Space, Button, Tooltip, Spin, Modal, Form, InputNumber,
-  Select, Input,
+  Select, Input, message,
 } from "antd";
-import { WarningOutlined, SwapOutlined, ShoppingCartOutlined, HistoryOutlined, SearchOutlined } from "@ant-design/icons";
+import { WarningOutlined, SwapOutlined, ShoppingCartOutlined, HistoryOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { supabase } from "@/lib/supabase";
 import { useIsMobile } from "@/lib/useIsMobile";
 
@@ -24,6 +24,7 @@ interface WarehouseRow {
   unit: string;
   quantity: number;
   min_quantity: number;
+  has_movements: boolean;
 }
 
 async function fetcher(url: string) {
@@ -40,6 +41,7 @@ async function fetcher(url: string) {
       unit: (w.ingredients as Ingredient).unit,
       quantity: w.quantity,
       min_quantity: w.min_quantity,
+      has_movements: w.has_movements ?? false,
     })),
     total: json.total ?? 0,
   };
@@ -49,6 +51,8 @@ export default function WarehousePage() {
   const router = useRouter();
   const isMobile = useIsMobile();
   const [editingRow, setEditingRow] = useState<WarehouseRow | null>(null);
+  const [adjustingRow, setAdjustingRow] = useState<WarehouseRow | null>(null);
+  const [adjustLoading, setAdjustLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState<"low" | "ok" | undefined>();
   const [search, setSearch] = useState("");
@@ -56,6 +60,7 @@ export default function WarehousePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [minQtyForm] = Form.useForm();
+  const [adjustForm] = Form.useForm();
 
   const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (filterStatus) params.set("status", filterStatus);
@@ -120,6 +125,49 @@ export default function WarehousePage() {
   const openMinQty = (row: WarehouseRow) => {
     setEditingRow(row);
     minQtyForm.setFieldsValue({ min_quantity: row.min_quantity });
+  };
+
+  const openAdjust = (row: WarehouseRow) => {
+    setAdjustingRow(row);
+    adjustForm.setFieldsValue({ real_quantity: row.quantity, notes: "" });
+  };
+
+  const handleDelete = async (row: WarehouseRow) => {
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token ?? "";
+    const res = await fetch(`/api/warehouse/stock/${row.id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      message.error(json.error ?? "Error al eliminar");
+      return;
+    }
+    message.success("Insumo eliminado de bodega");
+    mutate();
+  };
+
+  const handleAdjust = async (values: { real_quantity: number; notes: string }) => {
+    if (!adjustingRow) return;
+    setAdjustLoading(true);
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token ?? "";
+    const res = await fetch("/api/warehouse/adjust", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ingredient_id: adjustingRow.ingredient_id, real_quantity: values.real_quantity, notes: values.notes }),
+    });
+    setAdjustLoading(false);
+    const json = await res.json();
+    if (!res.ok) {
+      message.error(json.error ?? "Error al ajustar");
+      return;
+    }
+    message.success("Stock ajustado correctamente");
+    setAdjustingRow(null);
+    adjustForm.resetFields();
+    mutate();
   };
 
   const handleMinQty = async (values: { min_quantity: number }) => {
@@ -192,16 +240,30 @@ export default function WarehousePage() {
           : <Tag color="green">OK</Tag>,
     },
     {
-      title: "Acción",
+      title: "Acciones",
       key: "action",
       render: (_: unknown, row: WarehouseRow) => (
-        <Button
-          size="small"
-          icon={<SwapOutlined />}
-          onClick={() => router.push(`/warehouse/transfer?ingredientId=${row.ingredient_id}`)}
-        >
-          Transferir
-        </Button>
+        <Space>
+          <Button size="small" icon={<EditOutlined />} onClick={() => openAdjust(row)}>
+            Ajustar
+          </Button>
+          <Button
+            size="small"
+            icon={<SwapOutlined />}
+            onClick={() => router.push(`/warehouse/transfer?ingredientId=${row.ingredient_id}`)}
+          >
+            Transferir
+          </Button>
+          <Tooltip title={row.has_movements ? "Tiene movimientos registrados" : "Eliminar"}>
+            <Button
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              disabled={row.has_movements}
+              onClick={() => handleDelete(row)}
+            />
+          </Tooltip>
+        </Space>
       ),
     },
   ];
@@ -293,14 +355,27 @@ export default function WarehousePage() {
                     </Button>
                   </div>
                 </div>
-                <Button
-                  size="small"
-                  icon={<SwapOutlined />}
-                  block
-                  onClick={() => router.push(`/warehouse/transfer?ingredientId=${row.ingredient_id}`)}
-                >
-                  Transferir a sucursal
-                </Button>
+                <Space style={{ width: "100%" }}>
+                  <Button size="small" icon={<EditOutlined />} onClick={() => openAdjust(row)}>
+                    Ajustar
+                  </Button>
+                  <Button
+                    size="small"
+                    icon={<SwapOutlined />}
+                    onClick={() => router.push(`/warehouse/transfer?ingredientId=${row.ingredient_id}`)}
+                  >
+                    Transferir
+                  </Button>
+                  <Tooltip title={row.has_movements ? "Tiene movimientos registrados" : "Eliminar"}>
+                    <Button
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      disabled={row.has_movements}
+                      onClick={() => handleDelete(row)}
+                    />
+                  </Tooltip>
+                </Space>
               </div>
             );
           })}
@@ -338,6 +413,35 @@ export default function WarehousePage() {
           size="middle"
         />
       )}
+
+      <Modal
+        title={`Ajustar stock — ${adjustingRow?.ingredient_name}`}
+        open={!!adjustingRow}
+        onCancel={() => { setAdjustingRow(null); adjustForm.resetFields(); }}
+        footer={null}
+        destroyOnHidden
+      >
+        <Form form={adjustForm} layout="vertical" onFinish={handleAdjust} style={{ marginTop: 16 }}>
+          <Form.Item
+            label={`Cantidad real (${adjustingRow?.unit})`}
+            name="real_quantity"
+            rules={[{ required: true, message: "Requerido" }]}
+          >
+            <InputNumber min={0} style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item
+            label="Motivo del ajuste"
+            name="notes"
+            rules={[{ required: true, message: "El motivo es requerido" }]}
+          >
+            <Input placeholder="Ej: Conteo físico, merma, error de carga..." />
+          </Form.Item>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <Button onClick={() => { setAdjustingRow(null); adjustForm.resetFields(); }}>Cancelar</Button>
+            <Button type="primary" htmlType="submit" loading={adjustLoading}>Guardar</Button>
+          </div>
+        </Form>
+      </Modal>
 
       <Modal
         title={`Stock mínimo — ${editingRow?.ingredient_name}`}

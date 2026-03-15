@@ -71,7 +71,9 @@ export default function ReportsPage() {
                 ordersTotal={ordersReport.ordersTotal}
                 ordersPage={ordersReport.ordersPage}
                 loading={ordersReport.loading}
+                exporting={ordersReport.exporting}
                 onPageChange={(p) => { ordersReport.setOrdersPage(p); ordersReport.fetch(buildParams(), p); }}
+                onExport={() => ordersReport.exportToExcel(buildParams())}
               />
             ),
           },

@@ -64,4 +64,13 @@ export const ReportsService = {
     if (data && !data.error) return { data: data.data ?? [], total: data.total ?? 0 };
     return { data: [], total: 0 };
   },
+
+  async fetchAllOrdersForExport(params: string, token: string): Promise<Order[]> {
+    const res = await fetch(`/api/reports/orders?${params}&page=1&pageSize=9999`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (data && !data.error) return data.data ?? [];
+    return [];
+  },
 };

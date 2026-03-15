@@ -1,6 +1,7 @@
 "use client";
 
-import { Card, Table, Tag, Typography, Collapse } from "antd";
+import { Card, Table, Tag, Typography, Collapse, Button } from "antd";
+import { FileExcelOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { UTC_OFFSET_HOURS } from "@/lib/timezone";
 import { OrderItemsTable } from "./OrderItemsTable";
@@ -14,10 +15,12 @@ interface Props {
   ordersTotal: number;
   ordersPage: number;
   loading: boolean;
+  exporting: boolean;
   onPageChange: (page: number) => void;
+  onExport: () => void;
 }
 
-export function OrdersTable({ orders, ordersTotal, ordersPage, loading, onPageChange }: Props) {
+export function OrdersTable({ orders, ordersTotal, ordersPage, loading, exporting, onPageChange, onExport }: Props) {
   const isMobile = useIsMobile();
 
   const orderColumns = [
@@ -118,7 +121,14 @@ export function OrdersTable({ orders, ordersTotal, ordersPage, loading, onPageCh
 
   if (isMobile) {
     return (
-      <Card size="small">
+      <Card
+        size="small"
+        extra={
+          <Button size="small" icon={<FileExcelOutlined />} loading={exporting} disabled={orders.length === 0} onClick={onExport}>
+            Exportar
+          </Button>
+        }
+      >
         {loading ? (
           <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>Cargando...</div>
         ) : orders.length === 0 ? (
@@ -188,7 +198,19 @@ export function OrdersTable({ orders, ordersTotal, ordersPage, loading, onPageCh
   }
 
   return (
-    <Card size="small">
+    <Card
+      size="small"
+      extra={
+        <Button
+          icon={<FileExcelOutlined />}
+          loading={exporting}
+          disabled={orders.length === 0}
+          onClick={onExport}
+        >
+          Exportar Excel
+        </Button>
+      }
+    >
       <Table
         dataSource={orders}
         rowKey="id"

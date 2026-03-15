@@ -18,5 +18,16 @@ export async function GET(request: NextRequest) {
   const { data, total, error } = await getWarehouseStock(supabase, page, pageSize, { ingredientId, status });
   if (error) return NextResponse.json({ error }, { status: 500 });
 
-  return NextResponse.json({ data, total, page, pageSize });
+  // Check which ingredients have warehouse movements
+  const ingredientIds = (data ?? []).map((r) => r.ingredient_id);
+  const { data: movements } = await supabase
+    .from("warehouse_movements")
+    .select("ingredient_id")
+    .in("ingredient_id", ingredientIds.length ? ingredientIds : ["none"]);
+
+  const withMovements = new Set((movements ?? []).map((m: { ingredient_id: string }) => m.ingredient_id));
+
+  const enriched = (data ?? []).map((r) => ({ ...r, has_movements: withMovements.has(r.ingredient_id) }));
+
+  return NextResponse.json({ data: enriched, total, page, pageSize });
 }
