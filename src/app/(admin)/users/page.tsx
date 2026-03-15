@@ -9,7 +9,7 @@ export default function UsersPage() {
     users, branches, loading, saving,
     modalOpen, editing, selectedRole, form,
     openCreate, openEdit, closeModal,
-    handleRoleChange, handleSubmit, handleDelete,
+    handleRoleChange, handleSubmit, handleToggleBan, handleDelete,
   } = useUsers();
 
   return (
@@ -20,6 +20,7 @@ export default function UsersPage() {
         loading={loading}
         onCreate={openCreate}
         onEdit={openEdit}
+        onToggleBan={handleToggleBan}
         onDelete={handleDelete}
       />
       <UserModal

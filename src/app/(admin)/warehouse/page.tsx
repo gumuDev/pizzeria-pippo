@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import useSWR from "swr";
 import {
   Table, Typography, Tag, Space, Button, Tooltip, Spin, Modal, Form, InputNumber,
+  Select, Input,
 } from "antd";
-import { WarningOutlined, SwapOutlined, ShoppingCartOutlined, HistoryOutlined } from "@ant-design/icons";
+import { WarningOutlined, SwapOutlined, ShoppingCartOutlined, HistoryOutlined, SearchOutlined } from "@ant-design/icons";
 import { supabase } from "@/lib/supabase";
 import { useIsMobile } from "@/lib/useIsMobile";
 
 const { Title, Text } = Typography;
+const PAGE_SIZE = 10;
+const REVALIDATE_INTERVAL = 60;
 
 interface Ingredient { id: string; name: string; unit: string; }
 
@@ -22,42 +26,96 @@ interface WarehouseRow {
   min_quantity: number;
 }
 
+async function fetcher(url: string) {
+  const { data: session } = await supabase.auth.getSession();
+  const token = session.session?.access_token ?? "";
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const json = await res.json();
+  if (!json.data) return { rows: [], total: 0 };
+  return {
+    rows: json.data.map((w: WarehouseRow & { ingredients: Ingredient }) => ({
+      id: w.id,
+      ingredient_id: w.ingredient_id,
+      ingredient_name: (w.ingredients as Ingredient).name,
+      unit: (w.ingredients as Ingredient).unit,
+      quantity: w.quantity,
+      min_quantity: w.min_quantity,
+    })),
+    total: json.total ?? 0,
+  };
+}
+
 export default function WarehousePage() {
   const router = useRouter();
   const isMobile = useIsMobile();
-  const [rows, setRows] = useState<WarehouseRow[]>([]);
-  const [loading, setLoading] = useState(false);
   const [editingRow, setEditingRow] = useState<WarehouseRow | null>(null);
+  const [page, setPage] = useState(1);
+  const [filterStatus, setFilterStatus] = useState<"low" | "ok" | undefined>();
+  const [search, setSearch] = useState("");
+  const [mobileRows, setMobileRows] = useState<WarehouseRow[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [minQtyForm] = Form.useForm();
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const { data: session } = await supabase.auth.getSession();
-    const token = session.session?.access_token ?? "";
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (filterStatus) params.set("status", filterStatus);
+  const swrKey = `/api/warehouse/stock?${params.toString()}`;
 
-    const res = await fetch("/api/warehouse/stock", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
+  const { data, isLoading, mutate } = useSWR(swrKey, fetcher, {
+    revalidateOnFocus: true,
+    dedupingInterval: REVALIDATE_INTERVAL * 1000,
+    keepPreviousData: true,
+  });
 
-    if (Array.isArray(data)) {
-      setRows(
-        data
-          .map((w) => ({
-            id: w.id,
-            ingredient_id: w.ingredient_id,
-            ingredient_name: (w.ingredients as Ingredient).name,
-            unit: (w.ingredients as Ingredient).unit,
-            quantity: w.quantity,
-            min_quantity: w.min_quantity,
-          }))
-          .sort((a, b) => a.ingredient_name.localeCompare(b.ingredient_name))
-      );
+  const rows = data?.rows ?? [];
+  const total = data?.total ?? 0;
+  const hasMore = mobileRows.length < total;
+
+  // Acumula rows en móvil al cargar nuevas páginas
+  useEffect(() => {
+    if (!isMobile || !data?.rows) return;
+    if (page === 1) {
+      setMobileRows(data.rows);
+    } else {
+      setMobileRows((prev) => {
+        const existingIds = new Set(prev.map((r) => r.ingredient_id));
+        const newRows = data.rows.filter((r: WarehouseRow) => !existingIds.has(r.ingredient_id));
+        return [...prev, ...newRows];
+      });
     }
-    setLoading(false);
+    setLoadingMore(false);
+  }, [data, page, isMobile]);
+
+  // Resetea al cambiar filtros
+  const handleStatusFilter = (val: "low" | "ok" | undefined) => {
+    setFilterStatus(val);
+    setPage(1);
+    setMobileRows([]);
+  };
+
+  const handleSearch = (val: string) => {
+    setSearch(val);
+  };
+
+  // IntersectionObserver para infinite scroll
+  const handleSentinel = useCallback((node: HTMLDivElement | null) => {
+    sentinelRef.current = node;
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    if (!isMobile || !sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading && !loadingMore) {
+          setLoadingMore(true);
+          setPage((p) => p + 1);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [isMobile, hasMore, isLoading, loadingMore]);
 
   const openMinQty = (row: WarehouseRow) => {
     setEditingRow(row);
@@ -71,8 +129,22 @@ export default function WarehousePage() {
       .update({ min_quantity: values.min_quantity })
       .eq("id", editingRow.id);
     setEditingRow(null);
-    fetchData();
+    setPage(1);
+    setMobileRows([]);
+    mutate();
   };
+
+  const filteredRows = search
+    ? rows.filter((r: WarehouseRow) => r.ingredient_name.toLowerCase().includes(search.toLowerCase()))
+    : rows;
+
+  const displayMobileRows = search
+    ? mobileRows.filter((r: WarehouseRow) => r.ingredient_name.toLowerCase().includes(search.toLowerCase()))
+    : mobileRows;
+
+  const alertCount = isMobile
+    ? mobileRows.filter((r: WarehouseRow) => r.quantity < r.min_quantity).length
+    : rows.filter((r: WarehouseRow) => r.quantity < r.min_quantity).length;
 
   const columns = [
     {
@@ -134,12 +206,10 @@ export default function WarehousePage() {
     },
   ];
 
-  const alertCount = rows.filter((r) => r.quantity < r.min_quantity).length;
-
   return (
     <div style={{ padding: isMobile ? 16 : 24 }}>
       {/* Header */}
-      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", gap: 12, marginBottom: 20 }}>
+      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", gap: 12, marginBottom: 16 }}>
         <Space>
           <Title level={4} style={{ margin: 0 }}>Bodega Central</Title>
           {alertCount > 0 && (
@@ -161,14 +231,37 @@ export default function WarehousePage() {
         </Space>
       </div>
 
+      {/* Filters */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+        <Input
+          placeholder="Buscar insumo..."
+          prefix={<SearchOutlined />}
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
+          allowClear
+          style={{ width: isMobile ? "100%" : 220 }}
+        />
+        <Select
+          placeholder="Estado"
+          allowClear
+          value={filterStatus}
+          onChange={handleStatusFilter}
+          style={{ width: isMobile ? "100%" : 140 }}
+          options={[
+            { value: "low", label: "Stock bajo" },
+            { value: "ok", label: "OK" },
+          ]}
+        />
+      </div>
+
       {/* Content */}
-      {loading ? (
+      {isLoading && !data ? (
         <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
           <Spin size="large" />
         </div>
       ) : isMobile ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {rows.map((row) => {
+          {displayMobileRows.map((row) => {
             const isLow = row.quantity < row.min_quantity;
             return (
               <div
@@ -211,13 +304,36 @@ export default function WarehousePage() {
               </div>
             );
           })}
+
+          {/* Sentinel para infinite scroll */}
+          <div ref={handleSentinel} style={{ height: 1 }} />
+
+          {loadingMore && (
+            <div style={{ display: "flex", justifyContent: "center", padding: "16px 0" }}>
+              <Spin size="small" />
+            </div>
+          )}
+
+          {!hasMore && mobileRows.length > 0 && (
+            <Text type="secondary" style={{ textAlign: "center", display: "block", padding: "8px 0", fontSize: 12 }}>
+              {mobileRows.length} insumos en total
+            </Text>
+          )}
         </div>
       ) : (
         <Table
-          dataSource={rows}
+          dataSource={filteredRows}
           columns={columns}
           rowKey="ingredient_id"
-          pagination={false}
+          loading={isLoading}
+          pagination={{
+            current: page,
+            pageSize: PAGE_SIZE,
+            total,
+            showTotal: (t) => `${t} insumos`,
+            onChange: (p) => setPage(p),
+            showSizeChanger: false,
+          }}
           rowClassName={(row) => row.quantity < row.min_quantity ? "bg-red-50" : ""}
           size="middle"
         />

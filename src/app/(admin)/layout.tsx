@@ -27,6 +27,16 @@ import {
   TagsOutlined,
 } from "@ant-design/icons";
 
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "1.0.0";
+
+function AppFooter() {
+  return (
+    <div style={{ textAlign: "center", padding: "8px 16px", color: "#9ca3af", fontSize: 12, borderTop: "1px solid #f0f0f0" }}>
+      Pippo Pizza — v{APP_VERSION}
+    </div>
+  );
+}
+
 function SiderTitle({ collapsed }: { collapsed: boolean }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -128,7 +138,7 @@ export default function AdminLayout({
           }}
         >
           <Authenticated key="admin-auth" redirectOnFail="/login">
-            <ThemedLayout Sider={() => <ThemedSider fixed Title={SiderTitle} />}>
+            <ThemedLayout Sider={() => <ThemedSider fixed Title={SiderTitle} />} Footer={AppFooter}>
               {children}
             </ThemedLayout>
           </Authenticated>

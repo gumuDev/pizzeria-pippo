@@ -6,7 +6,9 @@ import { useIngredients } from "@/features/ingredients/hooks/useIngredients";
 
 export default function IngredientsPage() {
   const {
-    ingredients, loading, saving, showInactive, setShowInactive,
+    ingredients, total, loading, saving, showInactive, setShowInactive,
+    search, setSearch,
+    page, setPage, PAGE_SIZE,
     modalOpen, editing, form,
     openCreate, openEdit, closeModal,
     handleSubmit, handleToggleActive,
@@ -19,9 +21,15 @@ export default function IngredientsPage() {
         loading={loading}
         showInactive={showInactive}
         onToggleInactive={setShowInactive}
+        search={search}
+        onSearch={setSearch}
         onCreate={openCreate}
         onEdit={openEdit}
         onToggleActive={handleToggleActive}
+        page={page}
+        total={total}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
       />
       <IngredientModal
         open={modalOpen}

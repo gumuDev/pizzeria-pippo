@@ -216,15 +216,30 @@ export async function adjustWarehouseStock(
 // ── Read helpers ──────────────────────────────────────────────────────────────
 
 export async function getWarehouseStock(
-  supabase: SupabaseClient
-): Promise<{ data: WarehouseStockRow[] | null; error: string | null }> {
-  const { data, error } = await supabase
-    .from("warehouse_stock")
-    .select("*, ingredients(name, unit)")
-    .order("ingredients(name)");
+  supabase: SupabaseClient,
+  page = 1,
+  pageSize = 10,
+  filters: { ingredientId?: string; status?: "low" | "ok" } = {}
+): Promise<{ data: WarehouseStockRow[] | null; total: number; error: string | null }> {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
-  if (error) return { data: null, error: error.message };
-  return { data: data as WarehouseStockRow[], error: null };
+  let query = supabase
+    .from("warehouse_stock")
+    .select("*, ingredients(name, unit)", { count: "exact" })
+    .order("ingredients(name)")
+    .range(from, to);
+
+  if (filters.ingredientId) query = query.eq("ingredient_id", filters.ingredientId);
+
+  const { data, error, count } = await query;
+  if (error) return { data: null, total: 0, error: error.message };
+
+  let result = data as WarehouseStockRow[];
+  if (filters.status === "low") result = result.filter((r) => r.quantity < r.min_quantity);
+  if (filters.status === "ok") result = result.filter((r) => r.quantity >= r.min_quantity);
+
+  return { data: result, total: count ?? 0, error: null };
 }
 
 export async function getWarehouseMovements(

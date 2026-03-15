@@ -15,8 +15,9 @@ const { Title } = Typography;
 export default function StockPage() {
   const isMobile = useIsMobile();
   const {
-    branches, ingredients, stock, movements, alerts,
+    branches, ingredients, stock, totalStock, movements, totalMovements, alerts,
     selectedBranch, setSelectedBranch, loading,
+    pageStock, setPageStock, pageMovements, setPageMovements, PAGE_SIZE,
     minQtyOpen, setMinQtyOpen, editingStock,
     purchaseIngredientIsNew,
     purchaseForm, adjustForm, minQtyForm,
@@ -31,7 +32,7 @@ export default function StockPage() {
       label: isMobile
         ? <Badge count={alerts.length} size="small"><DatabaseOutlined /></Badge>
         : <Space>Stock actual{alerts.length > 0 && <Badge count={alerts.length} />}</Space>,
-      children: <StockCurrentTable stock={stock} loading={loading} onEditMinQty={openMinQty} />,
+      children: <StockCurrentTable stock={stock} loading={loading} onEditMinQty={openMinQty} page={pageStock} total={totalStock} pageSize={PAGE_SIZE} onPageChange={setPageStock} />,
     },
     {
       key: "purchase",
@@ -54,7 +55,7 @@ export default function StockPage() {
     {
       key: "history",
       label: isMobile ? <HistoryOutlined /> : <Space><HistoryOutlined />Historial</Space>,
-      children: <StockMovementsTable movements={movements} loading={loading} />,
+      children: <StockMovementsTable movements={movements} loading={loading} page={pageMovements} total={totalMovements} pageSize={PAGE_SIZE} onPageChange={setPageMovements} />,
     },
   ];
 

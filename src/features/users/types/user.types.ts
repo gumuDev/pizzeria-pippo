@@ -7,6 +7,8 @@ export interface User {
   role: UserRole;
   branch_id: string | null;
   created_at: string;
+  is_banned: boolean;
+  has_orders: boolean;
 }
 
 export interface Branch {

@@ -1,6 +1,7 @@
 "use client";
 
-import { Table, Tag, Space, Typography, Tooltip } from "antd";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Table, Tag, Space, Typography, Tooltip, Spin } from "antd";
 import { WarningOutlined } from "@ant-design/icons";
 import { useIsMobile } from "@/lib/useIsMobile";
 import type { StockRow } from "../types/stock.types";
@@ -11,10 +12,58 @@ interface Props {
   stock: StockRow[];
   loading: boolean;
   onEditMinQty: (record: StockRow) => void;
+  page: number;
+  total: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 }
 
-export function StockCurrentTable({ stock, loading, onEditMinQty }: Props) {
+export function StockCurrentTable({ stock, loading, onEditMinQty, page, total, pageSize, onPageChange }: Props) {
   const isMobile = useIsMobile();
+  const [mobileRows, setMobileRows] = useState<StockRow[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const hasMore = mobileRows.length < total;
+
+  // Acumula rows en móvil
+  useEffect(() => {
+    if (!isMobile) return;
+    if (page === 1) {
+      setMobileRows(stock);
+    } else {
+      setMobileRows((prev) => {
+        const existingIds = new Set(prev.map((r) => r.id));
+        return [...prev, ...stock.filter((r) => !existingIds.has(r.id))];
+      });
+    }
+    setLoadingMore(false);
+  }, [stock, page, isMobile]);
+
+  // Resetea cards al cambiar sucursal (page vuelve a 1 desde el hook)
+  useEffect(() => {
+    if (isMobile && page === 1) setMobileRows(stock);
+  }, [page, isMobile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // IntersectionObserver para infinite scroll
+  const handleSentinel = useCallback((node: HTMLDivElement | null) => {
+    sentinelRef.current = node;
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile || !sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          setLoadingMore(true);
+          onPageChange(page + 1);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [isMobile, hasMore, loading, loadingMore, onPageChange, page]);
 
   const columns = [
     {
@@ -67,11 +116,11 @@ export function StockCurrentTable({ stock, loading, onEditMinQty }: Props) {
   ];
 
   if (isMobile) {
-    if (loading) return <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>Cargando...</div>;
+    if (loading && page === 1) return <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>Cargando...</div>;
 
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {stock.map((r) => {
+        {mobileRows.map((r) => {
           const isLow = r.quantity < r.min_quantity;
           return (
             <div
@@ -110,6 +159,20 @@ export function StockCurrentTable({ stock, loading, onEditMinQty }: Props) {
             </div>
           );
         })}
+
+        <div ref={handleSentinel} style={{ height: 1 }} />
+
+        {loadingMore && (
+          <div style={{ display: "flex", justifyContent: "center", padding: "16px 0" }}>
+            <Spin size="small" />
+          </div>
+        )}
+
+        {!hasMore && mobileRows.length > 0 && (
+          <Text type="secondary" style={{ textAlign: "center", display: "block", padding: "8px 0", fontSize: 12 }}>
+            {mobileRows.length} insumos en total
+          </Text>
+        )}
       </div>
     );
   }
@@ -120,7 +183,14 @@ export function StockCurrentTable({ stock, loading, onEditMinQty }: Props) {
       columns={columns}
       rowKey="id"
       loading={loading}
-      pagination={{ pageSize: 20 }}
+      pagination={{
+        current: page,
+        pageSize,
+        total,
+        showTotal: (t) => `${t} insumos`,
+        onChange: onPageChange,
+        showSizeChanger: false,
+      }}
       rowClassName={(r: StockRow) => r.quantity < r.min_quantity ? "bg-red-50" : ""}
     />
   );

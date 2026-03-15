@@ -8,8 +8,15 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { data, error } = await getWarehouseStock(supabase);
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const pageSize = Math.max(1, parseInt(searchParams.get("pageSize") ?? "10", 10));
+  const ingredientId = searchParams.get("ingredientId") ?? undefined;
+  const rawStatus = searchParams.get("status");
+  const status = rawStatus === "low" || rawStatus === "ok" ? rawStatus : undefined;
+
+  const { data, total, error } = await getWarehouseStock(supabase, page, pageSize, { ingredientId, status });
   if (error) return NextResponse.json({ error }, { status: 500 });
 
-  return NextResponse.json(data);
+  return NextResponse.json({ data, total, page, pageSize });
 }

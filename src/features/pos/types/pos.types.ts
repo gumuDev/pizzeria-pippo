@@ -20,7 +20,12 @@ export interface Identity {
   id: string;
   name: string;
   role: string;
-  branch_id: string;
+  branch_id: string | null;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
 }
 
 export type OrderType = "dine_in" | "takeaway";

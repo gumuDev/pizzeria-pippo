@@ -1,9 +1,9 @@
 "use client";
 
-import { Table, Button, Space, Tag, Typography, Tooltip, Switch } from "antd";
+import { Table, Button, Space, Tag, Typography, Tooltip, Switch, Pagination, Input } from "antd";
 import {
   PlusOutlined, EditOutlined, StopOutlined,
-  CheckCircleOutlined, EyeOutlined,
+  CheckCircleOutlined, EyeOutlined, SearchOutlined,
 } from "@ant-design/icons";
 import { UNIT_OPTIONS, UNIT_COLORS } from "../constants/ingredient.constants";
 import { useIsMobile } from "@/lib/useIsMobile";
@@ -16,12 +16,18 @@ interface Props {
   loading: boolean;
   showInactive: boolean;
   onToggleInactive: (val: boolean) => void;
+  search: string;
+  onSearch: (val: string) => void;
   onCreate: () => void;
   onEdit: (ingredient: Ingredient) => void;
   onToggleActive: (ingredient: Ingredient) => void;
+  page: number;
+  total: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 }
 
-export function IngredientsTable({ ingredients, loading, showInactive, onToggleInactive, onCreate, onEdit, onToggleActive }: Props) {
+export function IngredientsTable({ ingredients, loading, showInactive, onToggleInactive, search, onSearch, onCreate, onEdit, onToggleActive, page, total, pageSize, onPageChange }: Props) {
   const isMobile = useIsMobile();
 
   const columns = [
@@ -71,18 +77,28 @@ export function IngredientsTable({ ingredients, loading, showInactive, onToggleI
   ];
 
   const header = (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 8 }}>
-      <Title level={4} style={{ margin: 0 }}>Insumos</Title>
-      <Space wrap>
-        <Space size={4}>
-          <EyeOutlined style={{ color: "#6b7280" }} />
-          {!isMobile && <Text type="secondary">Ver inactivos</Text>}
-          <Switch size="small" checked={showInactive} onChange={onToggleInactive} />
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+        <Title level={4} style={{ margin: 0 }}>Insumos</Title>
+        <Space wrap>
+          <Space size={4}>
+            <EyeOutlined style={{ color: "#6b7280" }} />
+            {!isMobile && <Text type="secondary">Ver inactivos</Text>}
+            <Switch size="small" checked={showInactive} onChange={onToggleInactive} />
+          </Space>
+          <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>
+            {isMobile ? "Nuevo" : "Nuevo insumo"}
+          </Button>
         </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>
-          {isMobile ? "Nuevo" : "Nuevo insumo"}
-        </Button>
-      </Space>
+      </div>
+      <Input
+        placeholder="Buscar por nombre..."
+        prefix={<SearchOutlined />}
+        value={search}
+        onChange={(e) => onSearch(e.target.value)}
+        allowClear
+        style={{ width: isMobile ? "100%" : 260 }}
+      />
     </div>
   );
 
@@ -142,6 +158,19 @@ export function IngredientsTable({ ingredients, loading, showInactive, onToggleI
                 </Space>
               </div>
             ))}
+            {total > pageSize && (
+              <div style={{ display: "flex", justifyContent: "center", paddingTop: 8 }}>
+                <Pagination
+                  current={page}
+                  pageSize={pageSize}
+                  total={total}
+                  showTotal={(t) => `${t} insumos`}
+                  onChange={onPageChange}
+                  showSizeChanger={false}
+                  size="small"
+                />
+              </div>
+            )}
           </div>
         )}
       </>
@@ -156,7 +185,14 @@ export function IngredientsTable({ ingredients, loading, showInactive, onToggleI
         columns={columns}
         rowKey="id"
         loading={loading}
-        pagination={{ pageSize: 20 }}
+        pagination={{
+          current: page,
+          pageSize,
+          total,
+          showTotal: (t) => `${t} insumos`,
+          onChange: onPageChange,
+          showSizeChanger: false,
+        }}
         rowClassName={(r) => (!r.is_active ? "opacity-60" : "")}
       />
     </>

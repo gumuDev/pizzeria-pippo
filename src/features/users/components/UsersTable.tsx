@@ -1,7 +1,7 @@
 "use client";
 
-import { Table, Button, Space, Tag, Typography, Popconfirm } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Table, Button, Space, Tag, Typography, Popconfirm, Tooltip } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, StopOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { ROLE_COLORS, ROLE_LABELS } from "../constants/user.constants";
 import { useIsMobile } from "@/lib/useIsMobile";
 import type { User, Branch } from "../types/user.types";
@@ -14,13 +14,60 @@ interface Props {
   loading: boolean;
   onCreate: () => void;
   onEdit: (user: User) => void;
+  onToggleBan: (user: User) => void;
   onDelete: (id: string) => void;
 }
 
-export function UsersTable({ users, branches, loading, onCreate, onEdit, onDelete }: Props) {
+export function UsersTable({ users, branches, loading, onCreate, onEdit, onToggleBan, onDelete }: Props) {
   const isMobile = useIsMobile();
   const branchName = (id: string | null) =>
     id ? (branches.find((b) => b.id === id)?.name ?? "—") : "—";
+
+  const renderActions = (record: User) => (
+    <Space size={4}>
+      <Tooltip title="Editar">
+        <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} />
+      </Tooltip>
+
+      <Tooltip title={record.is_banned ? "Reactivar cuenta" : "Desactivar cuenta"}>
+        <Popconfirm
+          title={record.is_banned ? "¿Reactivar cuenta?" : "¿Desactivar cuenta?"}
+          description={record.is_banned
+            ? "El usuario podrá volver a iniciar sesión."
+            : "El usuario no podrá iniciar sesión hasta que se reactive."}
+          onConfirm={() => onToggleBan(record)}
+          okText={record.is_banned ? "Reactivar" : "Desactivar"}
+          cancelText="Cancelar"
+          okButtonProps={{ danger: !record.is_banned }}
+        >
+          <Button
+            icon={record.is_banned ? <CheckCircleOutlined /> : <StopOutlined />}
+            size="small"
+            danger={!record.is_banned}
+          />
+        </Popconfirm>
+      </Tooltip>
+
+      <Tooltip title={record.has_orders ? "No se puede eliminar: tiene ventas registradas" : "Eliminar usuario"}>
+        <Popconfirm
+          title="¿Eliminar usuario?"
+          description="Esta acción no se puede deshacer."
+          onConfirm={() => onDelete(record.id)}
+          okText="Eliminar"
+          cancelText="Cancelar"
+          okButtonProps={{ danger: true }}
+          disabled={record.has_orders}
+        >
+          <Button
+            icon={<DeleteOutlined />}
+            size="small"
+            danger
+            disabled={record.has_orders}
+          />
+        </Popconfirm>
+      </Tooltip>
+    </Space>
+  );
 
   const columns = [
     {
@@ -28,7 +75,14 @@ export function UsersTable({ users, branches, loading, onCreate, onEdit, onDelet
       dataIndex: "full_name",
       key: "full_name",
       sorter: (a: User, b: User) => a.full_name.localeCompare(b.full_name),
-      render: (name: string) => name || "—",
+      render: (name: string, record: User) => (
+        <Space>
+          <Text delete={record.is_banned} style={record.is_banned ? { color: "#9ca3af" } : {}}>
+            {name || "—"}
+          </Text>
+          {record.is_banned && <Tag color="default">Inactivo</Tag>}
+        </Space>
+      ),
     },
     { title: "Email", dataIndex: "email", key: "email" },
     {
@@ -55,22 +109,8 @@ export function UsersTable({ users, branches, loading, onCreate, onEdit, onDelet
     {
       title: "Acciones",
       key: "actions",
-      width: 120,
-      render: (_: unknown, record: User) => (
-        <Space>
-          <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} />
-          <Popconfirm
-            title="¿Eliminar usuario?"
-            description="Esta acción no se puede deshacer."
-            onConfirm={() => onDelete(record.id)}
-            okText="Eliminar"
-            cancelText="Cancelar"
-            okButtonProps={{ danger: true }}
-          >
-            <Button icon={<DeleteOutlined />} size="small" danger />
-          </Popconfirm>
-        </Space>
-      ),
+      width: 130,
+      render: (_: unknown, record: User) => renderActions(record),
     },
   ];
 
@@ -94,11 +134,22 @@ export function UsersTable({ users, branches, loading, onCreate, onEdit, onDelet
             {users.map((user) => (
               <div
                 key={user.id}
-                style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 14 }}
+                style={{
+                  background: user.is_banned ? "#f9fafb" : "#fff",
+                  border: `1px solid ${user.is_banned ? "#d1d5db" : "#e5e7eb"}`,
+                  borderRadius: 10,
+                  padding: 14,
+                  opacity: user.is_banned ? 0.75 : 1,
+                }}
               >
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <Text strong style={{ fontSize: 15, display: "block" }}>{user.full_name || "—"}</Text>
+                    <Space>
+                      <Text strong style={{ fontSize: 15, textDecoration: user.is_banned ? "line-through" : "none", color: user.is_banned ? "#9ca3af" : undefined }}>
+                        {user.full_name || "—"}
+                      </Text>
+                      {user.is_banned && <Tag color="default" style={{ margin: 0 }}>Inactivo</Tag>}
+                    </Space>
                     <Text type="secondary" style={{ fontSize: 13, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {user.email}
                     </Text>
@@ -111,19 +162,7 @@ export function UsersTable({ users, branches, loading, onCreate, onEdit, onDelet
                       )}
                     </div>
                   </div>
-                  <Space size={6}>
-                    <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(user)} />
-                    <Popconfirm
-                      title="¿Eliminar usuario?"
-                      description="Esta acción no se puede deshacer."
-                      onConfirm={() => onDelete(user.id)}
-                      okText="Eliminar"
-                      cancelText="Cancelar"
-                      okButtonProps={{ danger: true }}
-                    >
-                      <Button icon={<DeleteOutlined />} size="small" danger />
-                    </Popconfirm>
-                  </Space>
+                  {renderActions(user)}
                 </div>
               </div>
             ))}

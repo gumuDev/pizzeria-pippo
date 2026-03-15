@@ -15,16 +15,17 @@ import { VariantSelectorModal } from "@/features/pos/components/VariantSelectorM
 import { PaymentModal } from "@/features/pos/components/PaymentModal";
 import { ConfirmSaleModal } from "@/features/pos/components/ConfirmSaleModal";
 import { TicketModal } from "@/features/pos/components/TicketModal";
+import { BranchSelector } from "@/features/pos/components/BranchSelector";
 import { PosService } from "@/features/pos/services/pos.service";
 import type { Product, TicketData, OrderType } from "@/features/pos/types/pos.types";
 
 export default function PosPage() {
-  const { identity, handleLogout } = usePosIdentity();
+  const { identity, branches, effectiveBranchId, isAdminChoosingBranch, selectBranch, handleLogout } = usePosIdentity();
   const { broadcast } = usePosBroadcast();
-  const { products, promotions, loading, getVariantPrice, getPromoLabel } = usePosProducts(identity?.branch_id);
-  const cart = usePosCart(promotions, identity?.branch_id, broadcast);
+  const { products, promotions, loading, getVariantPrice, getPromoLabel } = usePosProducts(effectiveBranchId ?? undefined);
+  const cart = usePosCart(promotions, effectiveBranchId ?? undefined, broadcast);
   const [showOrders, setShowOrders] = useState(false);
-  const { dayOrders, markingReady, fetchDayOrders, handleMarkReady } = useDayOrders(identity?.branch_id, showOrders);
+  const { dayOrders, markingReady, fetchDayOrders, handleMarkReady } = useDayOrders(effectiveBranchId ?? undefined, showOrders);
 
   const [variantModal, setVariantModal] = useState<Product | null>(null);
   const [paymentModal, setPaymentModal] = useState(false);
@@ -41,17 +42,31 @@ export default function PosPage() {
     );
   }
 
+  if (isAdminChoosingBranch) {
+    return (
+      <BranchSelector
+        branches={branches}
+        userName={identity.name}
+        onSelect={selectBranch}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  // En este punto effectiveBranchId siempre es string (cajero tiene branch_id, admin ya eligió)
+  const branchId = effectiveBranchId!;
+
   const handleProductClick = (product: Product) => {
     const variants = product.product_variants ?? [];
     if (variants.length === 1) {
-      cart.addToCart(product, variants[0], getVariantPrice(variants[0], identity.branch_id));
+      cart.addToCart(product, variants[0], getVariantPrice(variants[0], branchId));
     } else {
       setVariantModal(product);
     }
   };
 
   const handleVariantSelect = (product: Product, variant: Product["product_variants"][0]) => {
-    cart.addToCart(product, variant, getVariantPrice(variant, identity.branch_id));
+    cart.addToCart(product, variant, getVariantPrice(variant, branchId));
     setVariantModal(null);
   };
 
@@ -63,8 +78,8 @@ export default function PosPage() {
   };
 
   const handleConfirmSale = async () => {
-    if (!identity.branch_id) {
-      message.error("Tu usuario no tiene sucursal asignada. Contactá al administrador.");
+    if (!effectiveBranchId) {
+      message.error("No hay sucursal seleccionada.");
       return;
     }
     if (!cart.orderType) {
@@ -73,7 +88,7 @@ export default function PosPage() {
     }
     setConfirmLoading(true);
     const token = await PosService.getToken();
-    const result = await PosService.confirmSale(identity.branch_id, cart.discountedCart, cart.total, paymentMethod, cart.orderType, token);
+    const result = await PosService.confirmSale(branchId, cart.discountedCart, cart.total, paymentMethod, cart.orderType, token);
     setConfirmLoading(false);
 
     if (result.ok) {
@@ -83,7 +98,7 @@ export default function PosPage() {
       setPaymentMethod(null);
       setTicket({ orderId: result.order_id!, dailyNumber: result.daily_number!, items: cart.discountedCart, total: cart.total, paymentMethod, orderType: cart.orderType });
       cart.clearCart();
-      if (identity.branch_id) fetchDayOrders(identity.branch_id);
+      fetchDayOrders(branchId);
     } else {
       message.error(`Error al confirmar venta: ${result.error}`);
     }
@@ -111,7 +126,7 @@ export default function PosPage() {
         <ProductCatalog
           products={products}
           loading={loading}
-          branchId={identity.branch_id}
+          branchId={branchId}
           getVariantPrice={getVariantPrice}
           getPromoLabel={getPromoLabel}
           onProductClick={handleProductClick}
@@ -129,7 +144,7 @@ export default function PosPage() {
 
       <VariantSelectorModal
         product={variantModal}
-        branchId={identity.branch_id}
+        branchId={branchId}
         getVariantPrice={getVariantPrice}
         getPromoLabel={getPromoLabel}
         onSelect={handleVariantSelect}

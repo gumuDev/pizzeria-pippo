@@ -90,6 +90,16 @@ export function useUsers() {
     setSaving(false);
   };
 
+  const handleToggleBan = async (user: { id: string; is_banned: boolean; full_name: string }) => {
+    const result = await UsersService.toggleBan(user.id, !user.is_banned);
+    if (result.ok) {
+      fetchUsers();
+      notification.success({ message: user.is_banned ? `Cuenta de ${user.full_name} reactivada` : `Cuenta de ${user.full_name} desactivada` });
+    } else {
+      notification.error({ message: result.error ?? "Error al actualizar" });
+    }
+  };
+
   const handleDelete = async (id: string) => {
     const result = await UsersService.deleteUser(id);
     if (result.ok) {
@@ -114,6 +124,7 @@ export function useUsers() {
     closeModal,
     handleRoleChange,
     handleSubmit,
+    handleToggleBan,
     handleDelete,
   };
 }

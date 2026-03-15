@@ -10,6 +10,10 @@ function getServiceClient() {
 }
 
 export async function GET(request: NextRequest) {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error("[reports/sales] SUPABASE_SERVICE_ROLE_KEY is not set");
+    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+  }
   const supabase = getServiceClient();
   const { searchParams } = new URL(request.url);
   const branchId = searchParams.get("branchId");
@@ -25,7 +29,10 @@ export async function GET(request: NextRequest) {
   if (to) query = query.lte("created_at", dateRangeTo(to));
 
   const { data: orders, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[reports/sales] Supabase error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   const total = orders?.reduce((sum, o) => sum + Number(o.total), 0) ?? 0;
   const count = orders?.length ?? 0;

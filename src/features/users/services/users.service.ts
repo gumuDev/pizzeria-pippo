@@ -49,6 +49,20 @@ export const UsersService = {
     return { ok: true };
   },
 
+  async toggleBan(id: string, ban: boolean): Promise<{ ok: boolean; error?: string }> {
+    const token = await getToken();
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ban }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      return { ok: false, error: data.error };
+    }
+    return { ok: true };
+  },
+
   async deleteUser(id: string): Promise<{ ok: boolean; error?: string }> {
     const token = await getToken();
     const res = await fetch(`/api/users/${id}`, {

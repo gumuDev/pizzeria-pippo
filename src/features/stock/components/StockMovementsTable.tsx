@@ -9,9 +9,13 @@ const { Text } = Typography;
 interface Props {
   movements: Movement[];
   loading: boolean;
+  page: number;
+  total: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 }
 
-export function StockMovementsTable({ movements, loading }: Props) {
+export function StockMovementsTable({ movements, loading, page, total, pageSize, onPageChange }: Props) {
   const columns = [
     {
       title: "Fecha",
@@ -54,7 +58,14 @@ export function StockMovementsTable({ movements, loading }: Props) {
       columns={columns}
       rowKey="id"
       loading={loading}
-      pagination={{ pageSize: 20 }}
+      pagination={{
+        current: page,
+        pageSize,
+        total,
+        showTotal: (t) => `${t} movimientos`,
+        onChange: onPageChange,
+        showSizeChanger: false,
+      }}
     />
   );
 }
