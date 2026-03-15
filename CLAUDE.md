@@ -363,3 +363,17 @@ Los módulos actuales aún no siguen esta arquitectura. El plan de refactor est�
 
 - El usuario ejecuta manualmente `npm run dev` y `npm run build` — Claude nunca ejecuta estos dos comandos
 - Claude **puede ejecutar** cualquier otro comando: `npm install`, `mkdir`, mover archivos, etc.
+
+## Development Approach
+- NEVER rush ahead with multiple features at once. Implement ONE feature at a time.
+- After implementing a feature, ask the user to validate before proceeding.
+- When building UI components, show the user what you plan to build BEFORE writing code.
+
+## Debugging Rules
+- Identify the ACTUAL root cause before attempting fixes.
+- Limit yourself to 3 attempts on a single bug before asking for more context.
+- If first fix doesn't work, step back and re-read error/logs before trying another.
+
+## Code Changes
+- After refactors touching multiple files, run `tsc --noEmit` BEFORE presenting work as complete.
+- Do not add columns, fields, or summary stats that weren't explicitly requested.
