@@ -1,21 +1,43 @@
 "use client";
 
 import { useEffect } from "react";
-import { Tabs, Space } from "antd";
+import dynamic from "next/dynamic";
+import { Tabs, Space, Row, Col } from "antd";
 import { UnorderedListOutlined, UserOutlined } from "@ant-design/icons";
-import { Row, Col } from "antd";
+
 import { ReportFilters } from "@/features/reports/components/ReportFilters";
 import { SalesSummaryCards } from "@/features/reports/components/SalesSummaryCards";
-import { DailySalesChart } from "@/features/reports/components/DailySalesChart";
-import { TopProductsChart } from "@/features/reports/components/TopProductsChart";
-import { TopProductsTable } from "@/features/reports/components/TopProductsTable";
-import { StockAlerts } from "@/features/reports/components/StockAlerts";
-import { OrdersTable } from "@/features/reports/components/OrdersTable";
-import { CashierReportTable } from "@/features/reports/components/CashierReportTable";
+
 import { useReportFilters } from "@/features/reports/hooks/useReportFilters";
 import { useSalesReport } from "@/features/reports/hooks/useSalesReport";
 import { useCashierReport } from "@/features/reports/hooks/useCashierReport";
 import { useOrdersReport } from "@/features/reports/hooks/useOrdersReport";
+
+const DailySalesChart = dynamic(() =>
+  import("@/features/reports/components/DailySalesChart").then(m => m.DailySalesChart),
+  { ssr: false }
+);
+
+const TopProductsChart = dynamic(() =>
+  import("@/features/reports/components/TopProductsChart").then(m => m.TopProductsChart),
+  { ssr: false }
+);
+
+const TopProductsTable = dynamic(() =>
+  import("@/features/reports/components/TopProductsTable").then(m => m.TopProductsTable)
+);
+
+const StockAlerts = dynamic(() =>
+  import("@/features/reports/components/StockAlerts").then(m => m.StockAlerts)
+);
+
+const OrdersTable = dynamic(() =>
+  import("@/features/reports/components/OrdersTable").then(m => m.OrdersTable)
+);
+
+const CashierReportTable = dynamic(() =>
+  import("@/features/reports/components/CashierReportTable").then(m => m.CashierReportTable)
+);
 
 export default function ReportsPage() {
   const filters = useReportFilters();

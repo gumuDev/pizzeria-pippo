@@ -1,8 +1,13 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { PromotionsTable } from "@/features/promotions/components/PromotionsTable";
-import { PromotionModal } from "@/features/promotions/components/PromotionModal";
 import { usePromotions } from "@/features/promotions/hooks/usePromotions";
+
+const PromotionModal = dynamic(
+  () => import("@/features/promotions/components/PromotionModal").then((m) => m.PromotionModal),
+  { ssr: false }
+);
 
 export default function PromotionsPage() {
   const {

@@ -1,7 +1,12 @@
 "use client";
 
 import { Form, Select, InputNumber, Button } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+
+const IconPlus = () => (
+  <svg className="inline w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+);
 import type { FormInstance } from "antd";
 import type { Ingredient } from "../types/stock.types";
 
@@ -39,7 +44,7 @@ export function StockPurchaseForm({ form, ingredients, isNewIngredient, onIngred
             <InputNumber min={0} style={{ width: "100%" }} placeholder="Ej: 500" />
           </Form.Item>
         )}
-        <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
+        <Button type="primary" htmlType="submit" icon={<IconPlus />}>
           Registrar entrada
         </Button>
       </Form>

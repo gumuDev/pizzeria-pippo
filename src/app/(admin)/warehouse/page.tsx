@@ -1,305 +1,76 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import useSWR from "swr";
-import {
-  Table, Typography, Tag, Space, Button, Tooltip, Spin, Modal, Form, InputNumber,
-  Select, Input, message,
-} from "antd";
-import { WarningOutlined, SwapOutlined, ShoppingCartOutlined, HistoryOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { supabase } from "@/lib/supabase";
-import { useIsMobile } from "@/lib/useIsMobile";
+import { Tag, Space, Button, Input, Select } from "antd";
+import { useWarehouse } from "@/features/warehouse/hooks/useWarehouse";
+import { WarehouseTable } from "@/features/warehouse/components/WarehouseTable";
+import { WarehouseAdjustModal, WarehouseMinQtyModal } from "@/features/warehouse/components/WarehouseModals";
 
-const { Title, Text } = Typography;
-const PAGE_SIZE = 10;
-const REVALIDATE_INTERVAL = 60;
-
-interface Ingredient { id: string; name: string; unit: string; }
-
-interface WarehouseRow {
-  id: string;
-  ingredient_id: string;
-  ingredient_name: string;
-  unit: string;
-  quantity: number;
-  min_quantity: number;
-  has_movements: boolean;
-}
-
-async function fetcher(url: string) {
-  const { data: session } = await supabase.auth.getSession();
-  const token = session.session?.access_token ?? "";
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  const json = await res.json();
-  if (!json.data) return { rows: [], total: 0 };
-  return {
-    rows: json.data.map((w: WarehouseRow & { ingredients: Ingredient }) => ({
-      id: w.id,
-      ingredient_id: w.ingredient_id,
-      ingredient_name: (w.ingredients as Ingredient).name,
-      unit: (w.ingredients as Ingredient).unit,
-      quantity: w.quantity,
-      min_quantity: w.min_quantity,
-      has_movements: w.has_movements ?? false,
-    })),
-    total: json.total ?? 0,
-  };
-}
+const IconWarning = () => (
+  <svg className="inline w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
+const IconHistory = () => (
+  <svg className="inline w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+  </svg>
+);
+const IconCart = () => (
+  <svg className="inline w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+  </svg>
+);
+const IconSwap = () => (
+  <svg className="inline w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+  </svg>
+);
+const IconSearch = () => (
+  <svg className="inline w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  </svg>
+);
 
 export default function WarehousePage() {
   const router = useRouter();
-  const isMobile = useIsMobile();
-  const [editingRow, setEditingRow] = useState<WarehouseRow | null>(null);
-  const [adjustingRow, setAdjustingRow] = useState<WarehouseRow | null>(null);
-  const [adjustLoading, setAdjustLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [filterStatus, setFilterStatus] = useState<"low" | "ok" | undefined>();
-  const [search, setSearch] = useState("");
-  const [mobileRows, setMobileRows] = useState<WarehouseRow[]>([]);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const [minQtyForm] = Form.useForm();
-  const [adjustForm] = Form.useForm();
-
-  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-  if (filterStatus) params.set("status", filterStatus);
-  const swrKey = `/api/warehouse/stock?${params.toString()}`;
-
-  const { data, isLoading, mutate } = useSWR(swrKey, fetcher, {
-    revalidateOnFocus: true,
-    dedupingInterval: REVALIDATE_INTERVAL * 1000,
-    keepPreviousData: true,
-  });
-
-  const rows = data?.rows ?? [];
-  const total = data?.total ?? 0;
-  const hasMore = mobileRows.length < total;
-
-  // Acumula rows en móvil al cargar nuevas páginas
-  useEffect(() => {
-    if (!isMobile || !data?.rows) return;
-    if (page === 1) {
-      setMobileRows(data.rows);
-    } else {
-      setMobileRows((prev) => {
-        const existingIds = new Set(prev.map((r) => r.ingredient_id));
-        const newRows = data.rows.filter((r: WarehouseRow) => !existingIds.has(r.ingredient_id));
-        return [...prev, ...newRows];
-      });
-    }
-    setLoadingMore(false);
-  }, [data, page, isMobile]);
-
-  // Resetea al cambiar filtros
-  const handleStatusFilter = (val: "low" | "ok" | undefined) => {
-    setFilterStatus(val);
-    setPage(1);
-    setMobileRows([]);
-  };
-
-  const handleSearch = (val: string) => {
-    setSearch(val);
-  };
-
-  // IntersectionObserver para infinite scroll
-  const handleSentinel = useCallback((node: HTMLDivElement | null) => {
-    sentinelRef.current = node;
-  }, []);
-
-  useEffect(() => {
-    if (!isMobile || !sentinelRef.current) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoading && !loadingMore) {
-          setLoadingMore(true);
-          setPage((p) => p + 1);
-        }
-      },
-      { threshold: 0.1 }
-    );
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [isMobile, hasMore, isLoading, loadingMore]);
-
-  const openMinQty = (row: WarehouseRow) => {
-    setEditingRow(row);
-    minQtyForm.setFieldsValue({ min_quantity: row.min_quantity });
-  };
-
-  const openAdjust = (row: WarehouseRow) => {
-    setAdjustingRow(row);
-    adjustForm.setFieldsValue({ real_quantity: row.quantity, notes: "" });
-  };
-
-  const handleDelete = async (row: WarehouseRow) => {
-    const { data: session } = await supabase.auth.getSession();
-    const token = session.session?.access_token ?? "";
-    const res = await fetch(`/api/warehouse/stock/${row.id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      message.error(json.error ?? "Error al eliminar");
-      return;
-    }
-    message.success("Insumo eliminado de bodega");
-    mutate();
-  };
-
-  const handleAdjust = async (values: { real_quantity: number; notes: string }) => {
-    if (!adjustingRow) return;
-    setAdjustLoading(true);
-    const { data: session } = await supabase.auth.getSession();
-    const token = session.session?.access_token ?? "";
-    const res = await fetch("/api/warehouse/adjust", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ ingredient_id: adjustingRow.ingredient_id, real_quantity: values.real_quantity, notes: values.notes }),
-    });
-    setAdjustLoading(false);
-    const json = await res.json();
-    if (!res.ok) {
-      message.error(json.error ?? "Error al ajustar");
-      return;
-    }
-    message.success("Stock ajustado correctamente");
-    setAdjustingRow(null);
-    adjustForm.resetFields();
-    mutate();
-  };
-
-  const handleMinQty = async (values: { min_quantity: number }) => {
-    if (!editingRow) return;
-    await supabase
-      .from("warehouse_stock")
-      .update({ min_quantity: values.min_quantity })
-      .eq("id", editingRow.id);
-    setEditingRow(null);
-    setPage(1);
-    setMobileRows([]);
-    mutate();
-  };
-
-  const filteredRows = search
-    ? rows.filter((r: WarehouseRow) => r.ingredient_name.toLowerCase().includes(search.toLowerCase()))
-    : rows;
-
-  const displayMobileRows = search
-    ? mobileRows.filter((r: WarehouseRow) => r.ingredient_name.toLowerCase().includes(search.toLowerCase()))
-    : mobileRows;
-
-  const alertCount = isMobile
-    ? mobileRows.filter((r: WarehouseRow) => r.quantity < r.min_quantity).length
-    : rows.filter((r: WarehouseRow) => r.quantity < r.min_quantity).length;
-
-  const columns = [
-    {
-      title: "Insumo",
-      key: "ingredient",
-      render: (_: unknown, row: WarehouseRow) => (
-        <Space>
-          {row.quantity < row.min_quantity && (
-            <Tooltip title="Stock bajo el mínimo">
-              <WarningOutlined style={{ color: "#ef4444" }} />
-            </Tooltip>
-          )}
-          <Text strong>{row.ingredient_name}</Text>
-          <Tag>{row.unit}</Tag>
-        </Space>
-      ),
-    },
-    {
-      title: "Stock bodega",
-      key: "quantity",
-      render: (_: unknown, row: WarehouseRow) => {
-        const isLow = row.quantity < row.min_quantity;
-        return (
-          <Text strong style={{ color: isLow ? "#ef4444" : "#16a34a" }}>
-            {row.quantity} {row.unit}
-          </Text>
-        );
-      },
-    },
-    {
-      title: "Mínimo",
-      key: "min_quantity",
-      render: (_: unknown, row: WarehouseRow) => (
-        <Button type="link" size="small" style={{ padding: 0 }} onClick={() => openMinQty(row)}>
-          {row.min_quantity} {row.unit}
-        </Button>
-      ),
-    },
-    {
-      title: "Estado",
-      key: "status",
-      render: (_: unknown, row: WarehouseRow) =>
-        row.quantity < row.min_quantity
-          ? <Tag color="red">Stock bajo</Tag>
-          : <Tag color="green">OK</Tag>,
-    },
-    {
-      title: "Acciones",
-      key: "action",
-      render: (_: unknown, row: WarehouseRow) => (
-        <Space>
-          <Button size="small" icon={<EditOutlined />} onClick={() => openAdjust(row)}>
-            Ajustar
-          </Button>
-          <Button
-            size="small"
-            icon={<SwapOutlined />}
-            onClick={() => router.push(`/warehouse/transfer?ingredientId=${row.ingredient_id}`)}
-          >
-            Transferir
-          </Button>
-          <Tooltip title={row.has_movements ? "Tiene movimientos registrados" : "Eliminar"}>
-            <Button
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              disabled={row.has_movements}
-              onClick={() => handleDelete(row)}
-            />
-          </Tooltip>
-        </Space>
-      ),
-    },
-  ];
+  const {
+    filteredRows, displayMobileRows, total, isLoading,
+    isMobile, mobileRows, loadingMore, hasMore,
+    alertCount, search, filterStatus, page, PAGE_SIZE,
+    editingRow, adjustingRow, adjustLoading,
+    minQtyForm, adjustForm,
+    setSearch, setPage,
+    handleStatusFilter, handleSentinel,
+    openMinQty, openAdjust,
+    handleDelete, handleAdjust, handleMinQty,
+    closeAdjust, closeMinQty,
+  } = useWarehouse();
 
   return (
     <div style={{ padding: isMobile ? 16 : 24 }}>
-      {/* Header */}
       <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", gap: 12, marginBottom: 16 }}>
         <Space>
-          <Title level={4} style={{ margin: 0 }}>Bodega Central</Title>
+          <h2 className="text-lg font-semibold m-0">Bodega Central</h2>
           {alertCount > 0 && (
-            <Tag color="red" icon={<WarningOutlined />}>
+            <Tag color="red" icon={<IconWarning />}>
               {alertCount} insumo{alertCount > 1 ? "s" : ""} bajo mínimo
             </Tag>
           )}
         </Space>
         <Space wrap>
-          <Button icon={<HistoryOutlined />} onClick={() => router.push("/warehouse/movements")} block={isMobile}>
-            Historial
-          </Button>
-          <Button icon={<ShoppingCartOutlined />} onClick={() => router.push("/warehouse/purchase")} block={isMobile}>
-            {isMobile ? "Compra" : "Nueva compra"}
-          </Button>
-          <Button type="primary" icon={<SwapOutlined />} onClick={() => router.push("/warehouse/transfer")} block={isMobile}>
-            Transferir
-          </Button>
+          <Button icon={<IconHistory />} onClick={() => router.push("/warehouse/movements")} block={isMobile}>Historial</Button>
+          <Button icon={<IconCart />} onClick={() => router.push("/warehouse/purchase")} block={isMobile}>{isMobile ? "Compra" : "Nueva compra"}</Button>
+          <Button type="primary" icon={<IconSwap />} onClick={() => router.push("/warehouse/transfer")} block={isMobile}>Transferir</Button>
         </Space>
       </div>
 
-      {/* Filters */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
         <Input
           placeholder="Buscar insumo..."
-          prefix={<SearchOutlined />}
+          prefix={<IconSearch />}
           value={search}
-          onChange={(e) => handleSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           allowClear
           style={{ width: isMobile ? "100%" : 220 }}
         />
@@ -309,161 +80,42 @@ export default function WarehousePage() {
           value={filterStatus}
           onChange={handleStatusFilter}
           style={{ width: isMobile ? "100%" : 140 }}
-          options={[
-            { value: "low", label: "Stock bajo" },
-            { value: "ok", label: "OK" },
-          ]}
+          options={[{ value: "low", label: "Stock bajo" }, { value: "ok", label: "OK" }]}
         />
       </div>
 
-      {/* Content */}
-      {isLoading && !data ? (
-        <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
-          <Spin size="large" />
-        </div>
-      ) : isMobile ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {displayMobileRows.map((row) => {
-            const isLow = row.quantity < row.min_quantity;
-            return (
-              <div
-                key={row.ingredient_id}
-                style={{
-                  background: isLow ? "#fef2f2" : "#fff",
-                  border: `1px solid ${isLow ? "#fca5a5" : "#e5e7eb"}`,
-                  borderRadius: 10,
-                  padding: "12px 14px",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {isLow && <WarningOutlined style={{ color: "#ef4444" }} />}
-                    <Text strong style={{ fontSize: 15 }}>{row.ingredient_name}</Text>
-                    <Tag style={{ margin: 0 }}>{row.unit}</Tag>
-                  </div>
-                  {isLow ? <Tag color="red" style={{ margin: 0 }}>Stock bajo</Tag> : <Tag color="green" style={{ margin: 0 }}>OK</Tag>}
-                </div>
-                <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 10 }}>
-                  <div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>Stock: </Text>
-                    <Text strong style={{ color: isLow ? "#ef4444" : "#16a34a" }}>{row.quantity}</Text>
-                  </div>
-                  <div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>Mínimo: </Text>
-                    <Button type="link" size="small" style={{ padding: 0, fontWeight: 600 }} onClick={() => openMinQty(row)}>
-                      {row.min_quantity}
-                    </Button>
-                  </div>
-                </div>
-                <Space style={{ width: "100%" }}>
-                  <Button size="small" icon={<EditOutlined />} onClick={() => openAdjust(row)}>
-                    Ajustar
-                  </Button>
-                  <Button
-                    size="small"
-                    icon={<SwapOutlined />}
-                    onClick={() => router.push(`/warehouse/transfer?ingredientId=${row.ingredient_id}`)}
-                  >
-                    Transferir
-                  </Button>
-                  <Tooltip title={row.has_movements ? "Tiene movimientos registrados" : "Eliminar"}>
-                    <Button
-                      size="small"
-                      danger
-                      icon={<DeleteOutlined />}
-                      disabled={row.has_movements}
-                      onClick={() => handleDelete(row)}
-                    />
-                  </Tooltip>
-                </Space>
-              </div>
-            );
-          })}
+      <WarehouseTable
+        rows={filteredRows}
+        filteredRows={filteredRows}
+        displayMobileRows={displayMobileRows}
+        total={total}
+        isLoading={isLoading}
+        isMobile={isMobile}
+        loadingMore={loadingMore}
+        hasMore={hasMore}
+        page={page}
+        PAGE_SIZE={PAGE_SIZE}
+        mobileRows={mobileRows}
+        sentinelRef={handleSentinel}
+        onPageChange={setPage}
+        onAdjust={openAdjust}
+        onEditMinQty={openMinQty}
+        onDelete={handleDelete}
+      />
 
-          {/* Sentinel para infinite scroll */}
-          <div ref={handleSentinel} style={{ height: 1 }} />
-
-          {loadingMore && (
-            <div style={{ display: "flex", justifyContent: "center", padding: "16px 0" }}>
-              <Spin size="small" />
-            </div>
-          )}
-
-          {!hasMore && mobileRows.length > 0 && (
-            <Text type="secondary" style={{ textAlign: "center", display: "block", padding: "8px 0", fontSize: 12 }}>
-              {mobileRows.length} insumos en total
-            </Text>
-          )}
-        </div>
-      ) : (
-        <Table
-          dataSource={filteredRows}
-          columns={columns}
-          rowKey="ingredient_id"
-          loading={isLoading}
-          pagination={{
-            current: page,
-            pageSize: PAGE_SIZE,
-            total,
-            showTotal: (t) => `${t} insumos`,
-            onChange: (p) => setPage(p),
-            showSizeChanger: false,
-          }}
-          rowClassName={(row) => row.quantity < row.min_quantity ? "bg-red-50" : ""}
-          size="middle"
-        />
-      )}
-
-      <Modal
-        title={`Ajustar stock — ${adjustingRow?.ingredient_name}`}
-        open={!!adjustingRow}
-        onCancel={() => { setAdjustingRow(null); adjustForm.resetFields(); }}
-        footer={null}
-        destroyOnHidden
-      >
-        <Form form={adjustForm} layout="vertical" onFinish={handleAdjust} style={{ marginTop: 16 }}>
-          <Form.Item
-            label={`Cantidad real (${adjustingRow?.unit})`}
-            name="real_quantity"
-            rules={[{ required: true, message: "Requerido" }]}
-          >
-            <InputNumber min={0} style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item
-            label="Motivo del ajuste"
-            name="notes"
-            rules={[{ required: true, message: "El motivo es requerido" }]}
-          >
-            <Input placeholder="Ej: Conteo físico, merma, error de carga..." />
-          </Form.Item>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <Button onClick={() => { setAdjustingRow(null); adjustForm.resetFields(); }}>Cancelar</Button>
-            <Button type="primary" htmlType="submit" loading={adjustLoading}>Guardar</Button>
-          </div>
-        </Form>
-      </Modal>
-
-      <Modal
-        title={`Stock mínimo — ${editingRow?.ingredient_name}`}
-        open={!!editingRow}
-        onCancel={() => setEditingRow(null)}
-        footer={null}
-        destroyOnHidden
-      >
-        <Form form={minQtyForm} layout="vertical" onFinish={handleMinQty} style={{ marginTop: 16 }}>
-          <Form.Item
-            label={`Cantidad mínima (${editingRow?.unit})`}
-            name="min_quantity"
-            rules={[{ required: true, message: "Requerido" }]}
-          >
-            <InputNumber min={0} style={{ width: "100%" }} />
-          </Form.Item>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <Button onClick={() => setEditingRow(null)}>Cancelar</Button>
-            <Button type="primary" htmlType="submit">Guardar</Button>
-          </div>
-        </Form>
-      </Modal>
+      <WarehouseAdjustModal
+        adjustingRow={adjustingRow}
+        form={adjustForm}
+        loading={adjustLoading}
+        onSubmit={handleAdjust}
+        onClose={closeAdjust}
+      />
+      <WarehouseMinQtyModal
+        editingRow={editingRow}
+        form={minQtyForm}
+        onSubmit={handleMinQty}
+        onClose={closeMinQty}
+      />
     </div>
   );
 }

@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Row, Col, Card, Space, Table, Typography, Tag, Button } from "antd";
-import { FireOutlined, ArrowRightOutlined } from "@ant-design/icons";
+import { Row, Col, Card, Space, Table, Typography, Tag } from "antd";
 import dayjs from "dayjs";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -11,6 +10,18 @@ import {
 import type { TopProduct, DailyData } from "../services/dashboard.service";
 
 const { Text } = Typography;
+
+const IconFire = () => (
+  <svg className="inline w-4 h-4" style={{ color: "#f97316" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+  </svg>
+);
+
+const IconArrow = () => (
+  <svg className="inline w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+  </svg>
+);
 
 const topColumns = [
   {
@@ -61,8 +72,8 @@ export function DashboardCharts({ dailyData, topProducts, loading }: Props) {
           title="Ventas últimos 7 días"
           size="small"
           extra={
-            <Link href="/reports">
-              <Button size="small" icon={<ArrowRightOutlined />}>Ver reportes</Button>
+            <Link href="/reports" className="flex items-center gap-1 text-sm text-gray-600 hover:text-blue-600">
+              Ver reportes <IconArrow />
             </Link>
           }
         >
@@ -102,7 +113,7 @@ export function DashboardCharts({ dailyData, topProducts, loading }: Props) {
         <Card
           title={
             <Space>
-              <FireOutlined style={{ color: "#f97316" }} />
+              <IconFire />
               Top 5 hoy
             </Space>
           }

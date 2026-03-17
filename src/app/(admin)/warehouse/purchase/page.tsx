@@ -5,7 +5,16 @@ import { useRouter } from "next/navigation";
 import {
   Form, Select, InputNumber, Input, Button, Typography, Space, Alert,
 } from "antd";
-import { ShoppingCartOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+const IconCart = () => (
+  <svg className="inline w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+  </svg>
+);
+const IconArrowLeft = () => (
+  <svg className="inline w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+  </svg>
+);
 import { supabase } from "@/lib/supabase";
 
 const { Title, Text } = Typography;
@@ -31,12 +40,12 @@ export default function WarehousePurchasePage() {
 
       const [ingRes, stockRes] = await Promise.all([
         supabase.from("ingredients").select("id, name, unit").eq("is_active", true).order("name"),
-        fetch("/api/warehouse/stock", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/warehouse/stock?pageSize=500", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       if (ingRes.data) setIngredients(ingRes.data);
       const stockData = await stockRes.json();
-      if (Array.isArray(stockData)) setWarehouseStock(stockData);
+      setWarehouseStock(stockData.data ?? []);
     };
     load();
   }, []);
@@ -85,7 +94,7 @@ export default function WarehousePurchasePage() {
   return (
     <div style={{ padding: 24, maxWidth: 520 }}>
       <Space style={{ marginBottom: 20 }}>
-        <Button icon={<ArrowLeftOutlined />} type="text" onClick={() => router.push("/warehouse")}>
+        <Button icon={<IconArrowLeft />} type="text" onClick={() => router.push("/warehouse")}>
           Volver
         </Button>
       </Space>
@@ -156,7 +165,7 @@ export default function WarehousePurchasePage() {
 
         <div style={{ display: "flex", gap: 8 }}>
           <Button onClick={() => router.push("/warehouse")}>Cancelar</Button>
-          <Button type="primary" htmlType="submit" loading={loading} icon={<ShoppingCartOutlined />}>
+          <Button type="primary" htmlType="submit" loading={loading} icon={<IconCart />}>
             Registrar entrada
           </Button>
         </div>

@@ -1,11 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { Row, Col, Card, Space, Typography, Tag, Button, Badge } from "antd";
-import { WarningOutlined, ArrowRightOutlined } from "@ant-design/icons";
+import { Row, Col, Card, Space, Typography, Tag, Badge } from "antd";
 import type { StockAlert, WarehouseAlert } from "../services/dashboard.service";
 
 const { Text } = Typography;
+
+const IconWarning = ({ color }: { color: string }) => (
+  <svg className="inline w-4 h-4" style={{ color }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
+
+const IconArrow = () => (
+  <svg className="inline w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+  </svg>
+);
 
 interface Props {
   stockAlerts: StockAlert[];
@@ -19,7 +30,7 @@ export function DashboardStockAlerts({ stockAlerts, warehouseAlerts }: Props) {
         <Card
           title={
             <Space>
-              <WarningOutlined style={{ color: "#ef4444" }} />
+              <IconWarning color="#ef4444" />
               <Text>Insumos bajo mínimo en sucursales</Text>
               <Badge count={stockAlerts.length} color="#ef4444" />
             </Space>
@@ -27,8 +38,8 @@ export function DashboardStockAlerts({ stockAlerts, warehouseAlerts }: Props) {
           size="small"
           style={{ marginBottom: 16 }}
           extra={
-            <Link href="/stock">
-              <Button size="small" icon={<ArrowRightOutlined />}>Ir a stock</Button>
+            <Link href="/stock" className="flex items-center gap-1 text-sm text-gray-600 hover:text-blue-600">
+              Ir a stock <IconArrow />
             </Link>
           }
         >
@@ -38,7 +49,7 @@ export function DashboardStockAlerts({ stockAlerts, warehouseAlerts }: Props) {
                 <Card size="small" style={{ borderColor: "#fca5a5", background: "#fff5f5" }}>
                   <Space direction="vertical" size={2} style={{ width: "100%" }}>
                     <Space>
-                      <WarningOutlined style={{ color: "#ef4444" }} />
+                      <IconWarning color="#ef4444" />
                       <Text strong style={{ fontSize: 13 }}>{alert.ingredients?.name}</Text>
                       <Tag>{alert.ingredients?.unit}</Tag>
                     </Space>
@@ -59,15 +70,15 @@ export function DashboardStockAlerts({ stockAlerts, warehouseAlerts }: Props) {
         <Card
           title={
             <Space>
-              <WarningOutlined style={{ color: "#f97316" }} />
+              <IconWarning color="#f97316" />
               <Text>Insumos bajo mínimo en bodega</Text>
               <Badge count={warehouseAlerts.length} color="#f97316" />
             </Space>
           }
           size="small"
           extra={
-            <Link href="/warehouse">
-              <Button size="small" icon={<ArrowRightOutlined />}>Ir a bodega</Button>
+            <Link href="/warehouse" className="flex items-center gap-1 text-sm text-gray-600 hover:text-blue-600">
+              Ir a bodega <IconArrow />
             </Link>
           }
         >
@@ -77,7 +88,7 @@ export function DashboardStockAlerts({ stockAlerts, warehouseAlerts }: Props) {
                 <Card size="small" style={{ borderColor: "#fed7aa", background: "#fff7ed" }}>
                   <Space direction="vertical" size={2} style={{ width: "100%" }}>
                     <Space>
-                      <WarningOutlined style={{ color: "#f97316" }} />
+                      <IconWarning color="#f97316" />
                       <Text strong style={{ fontSize: 13 }}>{alert.ingredients?.name}</Text>
                       <Tag>{alert.ingredients?.unit}</Tag>
                     </Space>

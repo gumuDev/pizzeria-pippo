@@ -1,7 +1,9 @@
 "use client";
 
+import { memo, useMemo, useCallback } from "react";
 import { Select, DatePicker, Button, Space, Typography } from "antd";
 import type { Dayjs } from "dayjs";
+
 import { PRESET_RANGES } from "../hooks/useReportFilters";
 import type { Branch } from "../types/reports.types";
 
@@ -16,33 +18,78 @@ interface Props {
   onDateRangeChange: (range: [Dayjs, Dayjs]) => void;
 }
 
-export function ReportFilters({ branches, selectedBranch, dateRange, onBranchChange, onDateRangeChange }: Props) {
+function ReportFiltersComponent({
+  branches,
+  selectedBranch,
+  dateRange,
+  onBranchChange,
+  onDateRangeChange,
+}: Props) {
+
+  const branchOptions = useMemo(() => {
+    return [
+      { value: "all", label: "Todas las sucursales" },
+      ...branches.map((b) => ({
+        value: b.id,
+        label: b.name,
+      })),
+    ];
+  }, [branches]);
+
+  const handleRangeChange = useCallback(
+    (dates: null | (Dayjs | null)[]) => {
+      if (dates?.[0] && dates?.[1]) {
+        onDateRangeChange([dates[0], dates[1]]);
+      }
+    },
+    [onDateRangeChange]
+  );
+
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", marginBottom: 24, gap: 12 }}>
-      <Title level={4} style={{ margin: 0 }}>Reportes</Title>
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 24,
+        gap: 12,
+      }}
+    >
+      <Title level={4} style={{ margin: 0 }}>
+        Reportes
+      </Title>
+
       <Space wrap>
+
         {PRESET_RANGES.map((p) => (
-          <Button key={p.label} size="small" onClick={() => onDateRangeChange(p.range)}>
+          <Button
+            key={p.label}
+            size="small"
+            onClick={() => onDateRangeChange(p.range)}
+          >
             {p.label}
           </Button>
         ))}
+
         <RangePicker
           value={dateRange}
-          onChange={(v) => { if (v?.[0] && v?.[1]) onDateRangeChange([v[0], v[1]]); }}
+          onChange={handleRangeChange}
           format="DD/MM/YYYY"
           size="small"
         />
+
         <Select
           value={selectedBranch}
           onChange={onBranchChange}
           style={{ width: 180 }}
           size="small"
-          options={[
-            { value: "all", label: "Todas las sucursales" },
-            ...branches.map((b) => ({ value: b.id, label: b.name })),
-          ]}
+          options={branchOptions}
         />
+
       </Space>
     </div>
   );
 }
+
+export const ReportFilters = memo(ReportFiltersComponent);

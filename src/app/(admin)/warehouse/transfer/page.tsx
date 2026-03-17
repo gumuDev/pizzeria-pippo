@@ -5,7 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Form, Select, InputNumber, Input, Button, Typography, Space, Alert,
 } from "antd";
-import { SwapOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+const IconSwap = () => (
+  <svg className="inline w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+  </svg>
+);
+const IconArrowLeft = () => (
+  <svg className="inline w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+  </svg>
+);
 import { supabase } from "@/lib/supabase";
 
 const { Title, Text } = Typography;
@@ -40,18 +49,19 @@ export default function WarehouseTransferPage() {
       const [ingRes, branchRes, stockRes] = await Promise.all([
         supabase.from("ingredients").select("id, name, unit").eq("is_active", true).order("name"),
         supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
-        fetch("/api/warehouse/stock", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/warehouse/stock?pageSize=500", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       if (ingRes.data) setIngredients(ingRes.data);
       if (branchRes.data) setBranches(branchRes.data);
 
       const stockData = await stockRes.json();
-      if (Array.isArray(stockData)) setWarehouseStock(stockData);
+      const stockRows: WarehouseStock[] = stockData.data ?? [];
+      setWarehouseStock(stockRows);
 
       if (preselectedIngredient) {
         form.setFieldValue("ingredient_id", preselectedIngredient);
-        const stockRow = stockData.find((s: WarehouseStock) => s.ingredient_id === preselectedIngredient);
+        const stockRow = stockRows.find((s: WarehouseStock) => s.ingredient_id === preselectedIngredient);
         if (stockRow) {
           setAvailable(stockRow.quantity);
           setSelectedUnit(stockRow.ingredients.unit);
@@ -104,7 +114,7 @@ export default function WarehouseTransferPage() {
   return (
     <div style={{ padding: 24, maxWidth: 520 }}>
       <Space style={{ marginBottom: 20 }}>
-        <Button icon={<ArrowLeftOutlined />} type="text" onClick={() => router.push("/warehouse")}>
+        <Button icon={<IconArrowLeft />} type="text" onClick={() => router.push("/warehouse")}>
           Volver
         </Button>
       </Space>
@@ -175,7 +185,7 @@ export default function WarehouseTransferPage() {
 
         <div style={{ display: "flex", gap: 8 }}>
           <Button onClick={() => router.push("/warehouse")}>Cancelar</Button>
-          <Button type="primary" htmlType="submit" loading={loading} icon={<SwapOutlined />}>
+          <Button type="primary" htmlType="submit" loading={loading} icon={<IconSwap />}>
             Confirmar transferencia
           </Button>
         </div>
