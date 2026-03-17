@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { todayInBolivia } from "@/lib/timezone";
 import type { Identity, Product, DayOrder, OrderType } from "../types/pos.types";
-import type { Promotion, DiscountedItem } from "@/lib/promotions";
+import type { Promotion, DiscountedItem, FlavorItem } from "@/lib/promotions";
 
 export const PosService = {
   async getToken(): Promise<string> {
@@ -81,6 +81,7 @@ export const PosService = {
           unit_price: i.unit_price,
           discount_applied: i.discount_applied,
           promo_label: i.promo_label ?? null,
+          flavors: (i.flavors as FlavorItem[] | undefined) ?? null,
         })),
       }),
     });

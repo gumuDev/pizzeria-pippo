@@ -21,7 +21,7 @@ export function DisplayCart({ cartItems, cartTotal }: Props) {
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {cartItems.map((item, i) => (
             <div
-              key={item.variant_id}
+              key={`${item.variant_id}-${i}`}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -40,7 +40,11 @@ export function DisplayCart({ cartItems, cartTotal }: Props) {
                 </span>
                 <div>
                   <p style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>{item.product_name}</p>
-                  <p style={{ fontSize: 14, color: "#9ca3af", margin: "2px 0 0" }}>{item.variant_name}</p>
+                  <p style={{ fontSize: 14, color: "#9ca3af", margin: "2px 0 0" }}>
+                    {item.flavors?.length
+                      ? `Mit. ${item.flavors[0].product_name} / Mit. ${item.flavors[1].product_name}`
+                      : item.variant_name}
+                  </p>
                   {item.promo_label && (
                     <span style={{ display: "inline-block", background: "#dc2626", color: "#fff", fontSize: 12, padding: "2px 10px", borderRadius: 999, marginTop: 4 }}>
                       {item.promo_label}

@@ -201,7 +201,21 @@ CREATE TABLE public.order_items (
   unit_price numeric NOT NULL CHECK (unit_price >= 0::numeric),
   discount_applied numeric NOT NULL DEFAULT 0 CHECK (discount_applied >= 0::numeric),
   qty_physical integer NOT NULL DEFAULT 1,
+  promo_label text,
   CONSTRAINT order_items_pkey PRIMARY KEY (id),
   CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
   CONSTRAINT order_items_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.product_variants(id)
+);
+
+-- Tabla satélite para pizzas mixtas (mitad/mitad).
+-- Solo existe cuando el ítem es una pizza con dos sabores.
+-- Cada pizza mixta genera dos filas con proportion = 0.50.
+CREATE TABLE public.order_item_flavors (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  order_item_id uuid NOT NULL,
+  variant_id uuid NOT NULL,
+  proportion numeric NOT NULL DEFAULT 0.50 CHECK (proportion > 0 AND proportion <= 1),
+  CONSTRAINT order_item_flavors_pkey PRIMARY KEY (id),
+  CONSTRAINT order_item_flavors_order_item_id_fkey FOREIGN KEY (order_item_id) REFERENCES public.order_items(id) ON DELETE CASCADE,
+  CONSTRAINT order_item_flavors_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.product_variants(id)
 );

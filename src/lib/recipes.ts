@@ -24,27 +24,54 @@ export async function deductStock(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // 1. Fetch order items with their variant recipes
+  // 1. Fetch order items with their variant recipes and flavor rows (for mixed pizzas)
   // qty_physical = units actually prepared (used for stock deduction)
   // qty          = units charged (may be less when BUY_X_GET_Y promo applies)
   const { data: orderItems, error: orderError } = await supabase
     .from("order_items")
-    .select("qty, qty_physical, variant_id, product_variants(recipes(ingredient_id, quantity, apply_condition))")
+    .select(`
+      qty, qty_physical, variant_id,
+      product_variants(recipes(ingredient_id, quantity, apply_condition)),
+      order_item_flavors(variant_id, proportion)
+    `)
     .eq("order_id", orderId);
 
   if (orderError) return { success: false, error: orderError.message };
   if (!orderItems?.length) return { success: true };
 
+  type Recipe = { ingredient_id: string; quantity: number; apply_condition: string };
+  type FlavorRow = { variant_id: string; proportion: number };
+
   // 2. Aggregate total deduction per ingredient using qty_physical
-  // Only include ingredients whose apply_condition matches the order type
+  // Mixed pizzas: deduct each flavor's recipe proportionally
   const deductions: Record<string, number> = {};
   for (const item of orderItems) {
-    const recipes = (item.product_variants as unknown as { recipes: { ingredient_id: string; quantity: number; apply_condition: string }[] })?.recipes ?? [];
     const physicalQty = (item as { qty_physical?: number }).qty_physical ?? item.qty;
-    for (const recipe of recipes) {
-      const condition = recipe.apply_condition ?? "always";
-      if (condition !== "always" && condition !== orderType) continue;
-      deductions[recipe.ingredient_id] = (deductions[recipe.ingredient_id] ?? 0) + recipe.quantity * physicalQty;
+    const flavors = (item as unknown as { order_item_flavors: FlavorRow[] }).order_item_flavors ?? [];
+
+    if (flavors.length > 0) {
+      // Mixed pizza: fetch each flavor's recipe and apply proportion
+      for (const flavor of flavors) {
+        const { data: flavorVariant } = await supabase
+          .from("product_variants")
+          .select("recipes(ingredient_id, quantity, apply_condition)")
+          .eq("id", flavor.variant_id)
+          .single();
+        const recipes: Recipe[] = (flavorVariant as unknown as { recipes: Recipe[] } | null)?.recipes ?? [];
+        for (const recipe of recipes) {
+          const condition = recipe.apply_condition ?? "always";
+          if (condition !== "always" && condition !== orderType) continue;
+          deductions[recipe.ingredient_id] = (deductions[recipe.ingredient_id] ?? 0) + recipe.quantity * physicalQty * flavor.proportion;
+        }
+      }
+    } else {
+      // Normal pizza: deduct 100% of the recipe
+      const recipes: Recipe[] = (item.product_variants as unknown as { recipes: Recipe[] })?.recipes ?? [];
+      for (const recipe of recipes) {
+        const condition = recipe.apply_condition ?? "always";
+        if (condition !== "always" && condition !== orderType) continue;
+        deductions[recipe.ingredient_id] = (deductions[recipe.ingredient_id] ?? 0) + recipe.quantity * physicalQty;
+      }
     }
   }
 

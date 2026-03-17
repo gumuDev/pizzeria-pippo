@@ -6,6 +6,12 @@ import { supabase } from "@/lib/supabase";
 import { getUserProfile } from "@/lib/auth";
 import { formatTimeBolivia } from "@/lib/timezone";
 
+interface FlavorRow {
+  variant_id: string;
+  proportion: number;
+  product_variants: { products: { name: string } | null } | null;
+}
+
 interface OrderItem {
   id: string;
   qty_physical: number;
@@ -17,6 +23,7 @@ interface OrderItem {
       description: string;
     } | null;
   } | null;
+  order_item_flavors: FlavorRow[];
 }
 
 interface KitchenOrder {
@@ -24,6 +31,7 @@ interface KitchenOrder {
   daily_number: number;
   created_at: string;
   kitchen_status: string;
+  order_type: "dine_in" | "takeaway";
   order_items: OrderItem[];
 }
 
@@ -60,7 +68,16 @@ function OrderCard({ order, onReady }: { order: KitchenOrder; onReady: (id: stri
     >
       {/* Header */}
       <div className="flex justify-between items-center">
-        <span className="text-2xl font-black text-white tracking-wider">{orderLabel}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-2xl font-black text-white tracking-wider">{orderLabel}</span>
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+            order.order_type === "takeaway"
+              ? "bg-blue-500 text-white"
+              : "bg-gray-600 text-gray-200"
+          }`}>
+            {order.order_type === "takeaway" ? "🥡 Llevar" : "🍽️ Aquí"}
+          </span>
+        </div>
         <div className="flex items-center gap-3">
           <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
             isLate ? "bg-red-500 text-white" : "bg-gray-600 text-gray-200"
@@ -81,19 +98,35 @@ function OrderCard({ order, onReady }: { order: KitchenOrder; onReady: (id: stri
           const productName = item.product_variants?.products?.name ?? "—";
           const variantName = item.product_variants?.name ?? "";
           const description = item.product_variants?.products?.description ?? "";
+          const flavors = item.order_item_flavors ?? [];
+          const isMixed = flavors.length >= 2;
+
+          const totalParts = flavors.reduce((sum, f) => sum + Math.round(f.proportion * 100), 0) || 100;
 
           return (
             <div key={i} className="flex flex-col gap-0.5">
               <div className="flex items-baseline gap-2">
                 <span className="text-orange-400 font-black text-xl w-8 shrink-0">{qty}x</span>
                 <span className="text-white font-semibold text-base leading-tight">
-                  {productName}
+                  {isMixed ? "Pizza mixta" : productName}
                   {variantName && (
                     <span className="text-gray-400 font-normal text-sm ml-1">— {variantName}</span>
                   )}
                 </span>
               </div>
-              {description && (
+              {isMixed && (
+                <div className="ml-10 flex flex-col gap-0.5 mt-0.5">
+                  {flavors.map((f, fi) => {
+                    const parts = Math.round(f.proportion * totalParts);
+                    return (
+                      <p key={fi} className="text-yellow-400 text-sm leading-snug font-medium m-0">
+                        {parts}/{totalParts} {f.product_variants?.products?.name}
+                      </p>
+                    );
+                  })}
+                </div>
+              )}
+              {!isMixed && description && (
                 <p className="text-gray-400 text-sm ml-10 leading-snug">{description}</p>
               )}
             </div>
@@ -149,12 +182,16 @@ export default function KitchenPage() {
     const { data } = await supabase
       .from("orders")
       .select(`
-        id, daily_number, created_at, kitchen_status,
+        id, daily_number, created_at, kitchen_status, order_type,
         order_items (
           id, qty, qty_physical,
           product_variants (
             name,
             products ( name, description )
+          ),
+          order_item_flavors (
+            variant_id, proportion,
+            product_variants ( products ( name ) )
           )
         )
       `)

@@ -56,10 +56,16 @@ function CartItemRow({ item, onUpdateQty, onRemove, showPromoTag = true }: {
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <Text strong style={{ fontSize: 13, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {item.product_name}
+          {item.flavors?.length ? "Pizza mixta" : item.product_name}
         </Text>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>{item.variant_name}</Text>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, flexWrap: "wrap" }}>
+          {item.flavors?.length ? (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {item.variant_name} — {item.flavors.map((f) => f.product_name).join(" / ")}
+            </Text>
+          ) : (
+            <Text type="secondary" style={{ fontSize: 12 }}>{item.variant_name}</Text>
+          )}
           {showPromoTag && item.promo_label && (
             <Tag color="red" style={{ margin: 0, fontSize: 11, lineHeight: "16px" }}>{item.promo_label}</Tag>
           )}

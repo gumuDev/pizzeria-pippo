@@ -8,7 +8,9 @@ import { usePosCart } from "@/features/pos/hooks/usePosCart";
 import { usePosBroadcast } from "@/features/pos/hooks/usePosBroadcast";
 import { useDayOrders } from "@/features/pos/hooks/useDayOrders";
 import { PosHeader } from "@/features/pos/components/PosHeader";
+import type { PosTab } from "@/features/pos/components/PosHeader";
 import { DayOrdersPanel } from "@/features/pos/components/DayOrdersPanel";
+import { DaySummaryPanel } from "@/features/pos/components/DaySummaryPanel";
 import { ProductCatalog } from "@/features/pos/components/ProductCatalog";
 import { PosCart } from "@/features/pos/components/PosCart";
 import { VariantSelectorModal } from "@/features/pos/components/VariantSelectorModal";
@@ -24,8 +26,8 @@ export default function PosPage() {
   const { broadcast } = usePosBroadcast();
   const { products, promotions, loading, getVariantPrice, getPromoLabel } = usePosProducts(effectiveBranchId ?? undefined);
   const cart = usePosCart(promotions, effectiveBranchId ?? undefined, broadcast);
-  const [showOrders, setShowOrders] = useState(false);
-  const { dayOrders, markingReady, fetchDayOrders, handleMarkReady } = useDayOrders(effectiveBranchId ?? undefined, showOrders);
+  const [activeTab, setActiveTab] = useState<PosTab>("sale");
+  const { dayOrders, markingReady, fetchDayOrders, handleMarkReady } = useDayOrders(effectiveBranchId ?? undefined, activeTab !== "sale");
 
   const [variantModal, setVariantModal] = useState<Product | null>(null);
   const [paymentModal, setPaymentModal] = useState(false);
@@ -65,8 +67,8 @@ export default function PosPage() {
     }
   };
 
-  const handleVariantSelect = (product: Product, variant: Product["product_variants"][0]) => {
-    cart.addToCart(product, variant, getVariantPrice(variant, branchId));
+  const handleVariantSelect = (product: Product, variant: Product["product_variants"][0], flavors?: import("@/lib/promotions").FlavorItem[]) => {
+    cart.addToCart(product, variant, getVariantPrice(variant, branchId), flavors);
     setVariantModal(null);
   };
 
@@ -96,6 +98,7 @@ export default function PosPage() {
       cart.suppressNextClear();
       setConfirmModal(false);
       setPaymentMethod(null);
+      setActiveTab("sale");
       setTicket({ orderId: result.order_id!, dailyNumber: result.daily_number!, items: cart.discountedCart, total: cart.total, paymentMethod, orderType: cart.orderType });
       cart.clearCart();
       fetchDayOrders(branchId);
@@ -108,13 +111,35 @@ export default function PosPage() {
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#f5f5f5", overflow: "hidden" }}>
       <PosHeader
         identity={identity}
-        showOrders={showOrders}
+        activeTab={activeTab}
         pendingCount={dayOrders.filter((o) => o.kitchen_status === "pending").length}
-        onToggleOrders={() => setShowOrders((v) => !v)}
+        onTabChange={setActiveTab}
         onLogout={handleLogout}
       />
 
-      {showOrders && (
+      {activeTab === "sale" && (
+        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+          <ProductCatalog
+            products={products}
+            loading={loading}
+            branchId={branchId}
+            getVariantPrice={getVariantPrice}
+            getPromoLabel={getPromoLabel}
+            onProductClick={handleProductClick}
+          />
+          <PosCart
+            discountedCart={cart.discountedCart}
+            total={cart.total}
+            totalDiscount={cart.totalDiscount}
+            onUpdateQty={cart.updateQty}
+            onRemove={cart.removeFromCart}
+            onConfirm={() => setPaymentModal(true)}
+            onClear={cart.clearCart}
+          />
+        </div>
+      )}
+
+      {activeTab === "orders" && (
         <DayOrdersPanel
           dayOrders={dayOrders}
           markingReady={markingReady}
@@ -122,29 +147,14 @@ export default function PosPage() {
         />
       )}
 
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        <ProductCatalog
-          products={products}
-          loading={loading}
-          branchId={branchId}
-          getVariantPrice={getVariantPrice}
-          getPromoLabel={getPromoLabel}
-          onProductClick={handleProductClick}
-        />
-        <PosCart
-          discountedCart={cart.discountedCart}
-          total={cart.total}
-          totalDiscount={cart.totalDiscount}
-          onUpdateQty={cart.updateQty}
-          onRemove={cart.removeFromCart}
-          onConfirm={() => setPaymentModal(true)}
-          onClear={cart.clearCart}
-        />
-      </div>
+      {activeTab === "summary" && (
+        <DaySummaryPanel dayOrders={dayOrders} />
+      )}
 
       <VariantSelectorModal
         product={variantModal}
         branchId={branchId}
+        allProducts={products}
         getVariantPrice={getVariantPrice}
         getPromoLabel={getPromoLabel}
         onSelect={handleVariantSelect}

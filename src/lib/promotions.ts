@@ -4,6 +4,12 @@
  */
 import { nowInBolivia } from "@/lib/timezone";
 
+export interface FlavorItem {
+  variant_id: string;
+  product_name: string;
+  proportion: number; // fraction of the pizza (e.g. 0.5, 0.25, 0.33...)
+}
+
 export interface CartItem {
   variant_id: string;
   qty: number;
@@ -11,6 +17,7 @@ export interface CartItem {
   product_name: string;
   variant_name: string;
   category: string;
+  flavors?: FlavorItem[]; // only present for mixed pizzas (mitad/mitad)
 }
 
 export interface PromotionRule {

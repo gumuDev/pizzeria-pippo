@@ -32,10 +32,19 @@ export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, p
       okButtonProps={{ size: "large" }}
     >
       <div className="mt-4">
-        {discountedCart.map((item) => (
-          <div key={item.variant_id} className="flex justify-between py-1 border-b last:border-0">
+        {discountedCart.map((item, idx) => (
+          <div key={`${item.variant_id}-${idx}`} className="flex justify-between py-1 border-b last:border-0">
             <div>
-              <Text>{item.qty_physical}x {item.product_name} ({item.variant_name})</Text>
+              <Text>
+                {item.qty_physical}x{" "}
+                {item.flavors?.length ? "Pizza mixta" : item.product_name}
+                {" "}({item.variant_name})
+              </Text>
+              {item.flavors?.length && (
+                <Text type="secondary" className="block text-xs ml-0">
+                  {item.flavors.map((f) => f.product_name).join(" / ")}
+                </Text>
+              )}
               {item.promo_label && <Tag color="red" className="!ml-1 !text-xs">{item.promo_label}</Tag>}
             </div>
             <Text strong>Bs {(item.unit_price * item.qty_physical - item.discount_applied).toFixed(2)}</Text>

@@ -30,10 +30,15 @@ export function TicketModal({ ticket, onClose }: Props) {
               #{String(ticket.dailyNumber).padStart(2, "0")}
             </Text>
           </div>
-          {ticket.items.map((item) => (
-            <div key={item.variant_id} className="flex justify-between py-1 border-b last:border-0">
+          {ticket.items.map((item, idx) => (
+            <div key={`${item.variant_id}-${idx}`} className="flex justify-between py-1 border-b last:border-0">
               <div>
-                <Text>{item.qty_physical}x {item.product_name} ({item.variant_name})</Text>
+                <Text>
+                  {item.qty_physical}x {item.product_name}
+                  {item.flavors?.length
+                    ? ` — Mit. ${item.flavors[0].product_name} / Mit. ${item.flavors[1].product_name}`
+                    : ` (${item.variant_name})`}
+                </Text>
                 {item.promo_label && <Tag color="red" className="!ml-1 !text-xs">{item.promo_label}</Tag>}
               </div>
               <Text>Bs {(item.unit_price * item.qty_physical - item.discount_applied).toFixed(2)}</Text>

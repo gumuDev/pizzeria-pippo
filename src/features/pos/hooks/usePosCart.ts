@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   applyPromotions, getActivePromotions, getTotalDiscount, getCartTotal,
-  type CartItem, type DiscountedItem, type Promotion,
+  type CartItem, type DiscountedItem, type Promotion, type FlavorItem,
 } from "@/lib/promotions";
 import type { Product } from "../types/pos.types";
 
@@ -32,10 +32,22 @@ export function usePosCart(
     broadcast("CART_UPDATE", { items: result, total: getCartTotal(result), orderType });
   }, [cart, promotions, branchId, broadcast, orderType]);
 
-  const addToCart = (product: Product, variant: Product["product_variants"][0], price: number) => {
+  const addToCart = (product: Product, variant: Product["product_variants"][0], price: number, flavors?: FlavorItem[]) => {
     setCart((prev) => {
-      const existing = prev.find((i) => i.variant_id === variant.id);
-      if (existing) return prev.map((i) => i.variant_id === variant.id ? { ...i, qty: i.qty + 1 } : i);
+      // Mixed pizzas are never merged with existing items — each is a separate line
+      if (flavors && flavors.length > 0) {
+        return [...prev, {
+          variant_id: variant.id,
+          qty: 1,
+          unit_price: price,
+          product_name: product.name,
+          variant_name: variant.name,
+          category: product.category,
+          flavors,
+        }];
+      }
+      const existing = prev.find((i) => i.variant_id === variant.id && !i.flavors);
+      if (existing) return prev.map((i) => i.variant_id === variant.id && !i.flavors ? { ...i, qty: i.qty + 1 } : i);
       return [...prev, {
         variant_id: variant.id,
         qty: 1,

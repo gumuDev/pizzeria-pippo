@@ -68,19 +68,48 @@ export async function POST(request: NextRequest) {
   if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 });
 
   // 3. Create order items
-  const { error: itemsError } = await supabase.from("order_items").insert(
-    items.map((i: { variant_id: string; qty: number; qty_physical: number; unit_price: number; discount_applied: number; promo_label?: string | null }) => ({
-      order_id: order.id,
-      variant_id: i.variant_id,
-      qty: i.qty,
-      qty_physical: i.qty_physical ?? i.qty,
-      unit_price: i.unit_price,
-      discount_applied: i.discount_applied,
-      promo_label: i.promo_label ?? null,
-    }))
-  );
+  type IncomingItem = {
+    variant_id: string;
+    qty: number;
+    qty_physical: number;
+    unit_price: number;
+    discount_applied: number;
+    promo_label?: string | null;
+    flavors?: { variant_id: string; product_name: string; proportion: number }[] | null;
+  };
+
+  const { data: insertedItems, error: itemsError } = await supabase
+    .from("order_items")
+    .insert(
+      items.map((i: IncomingItem) => ({
+        order_id: order.id,
+        variant_id: i.variant_id,
+        qty: i.qty,
+        qty_physical: i.qty_physical ?? i.qty,
+        unit_price: i.unit_price,
+        discount_applied: i.discount_applied,
+        promo_label: i.promo_label ?? null,
+      }))
+    )
+    .select("id, variant_id");
 
   if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 });
+
+  // 3b. Insert order_item_flavors for mixed pizzas
+  const flavorRows = (insertedItems ?? []).flatMap((dbItem: { id: string; variant_id: string }) => {
+    const source = (items as IncomingItem[]).find((i) => i.variant_id === dbItem.variant_id);
+    if (!source?.flavors?.length) return [];
+    return source.flavors.map((f) => ({
+      order_item_id: dbItem.id,
+      variant_id: f.variant_id,
+      proportion: f.proportion,
+    }));
+  });
+
+  if (flavorRows.length > 0) {
+    const { error: flavorsError } = await supabase.from("order_item_flavors").insert(flavorRows);
+    if (flavorsError) return NextResponse.json({ error: flavorsError.message }, { status: 500 });
+  }
 
   // 4. Deduct stock based on recipes
   const { success, error: stockError } = await deductStock(order.id, branch_id, token, cashier_id, order_type);
