@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     .select("*, promotion_rules(*)")
     .order("name");
 
-  if (!showInactive && !(branchId && dateParam)) query = query.eq("is_active", true);
+  if (!showInactive) query = query.eq("is_active", true);
 
   const { data, error } = await query;
 
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
   if (rules?.length) {
     const { error: rulesError } = await supabase
       .from("promotion_rules")
-      .insert(rules.map((r: Record<string, unknown>) => ({ ...r, promotion_id: promo.id })));
+      .insert(rules.map(({ id: _id, ...r }: Record<string, unknown>) => ({ ...r, promotion_id: promo.id })))
     if (rulesError) return NextResponse.json({ error: rulesError.message }, { status: 500 });
   }
 

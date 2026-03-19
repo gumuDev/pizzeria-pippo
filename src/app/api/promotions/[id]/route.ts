@@ -28,7 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   if (rules?.length) {
     const { error: rulesError } = await supabase
       .from("promotion_rules")
-      .insert(rules.map((r: Record<string, unknown>) => ({ ...r, promotion_id: params.id })));
+      .insert(rules.map(({ id: _id, ...r }: Record<string, unknown>) => ({ ...r, promotion_id: params.id })));
     if (rulesError) return NextResponse.json({ error: rulesError.message }, { status: 500 });
   }
 

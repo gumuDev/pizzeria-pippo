@@ -113,7 +113,7 @@ export default function PosPage() {
       <PosHeader
         identity={identity}
         activeTab={activeTab}
-        pendingCount={dayOrders.filter((o) => o.kitchen_status === "pending").length}
+        pendingCount={dayOrders.filter((o) => o.kitchen_status === "pending" && !o.cancelled_at).length}
         onTabChange={setActiveTab}
         onLogout={handleLogout}
       />

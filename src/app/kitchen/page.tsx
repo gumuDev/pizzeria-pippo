@@ -197,6 +197,7 @@ export default function KitchenPage() {
       `)
       .eq("branch_id", branchId)
       .eq("kitchen_status", "pending")
+      .is("cancelled_at", null)
       .order("created_at", { ascending: true });
 
     if (data) setOrders(data as unknown as KitchenOrder[]);
@@ -235,7 +236,7 @@ export default function KitchenPage() {
           filter: `branch_id=eq.${branchId}`,
         },
         (payload) => {
-          if (payload.new.kitchen_status === "ready") {
+          if (payload.new.kitchen_status === "ready" || payload.new.cancelled_at) {
             setOrders((prev) => prev.filter((o) => o.id !== payload.new.id));
           }
         }

@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   if (cashierId) ordersQuery = ordersQuery.eq("cashier_id", cashierId);
   if (from) ordersQuery = ordersQuery.gte("created_at", dateRangeFrom(from));
   if (to) ordersQuery = ordersQuery.lte("created_at", dateRangeTo(to));
-  ordersQuery = ordersQuery.order("created_at", { ascending: false });
+  ordersQuery = ordersQuery.is("cancelled_at", null).order("created_at", { ascending: false });
 
   const { data, error } = await ordersQuery;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

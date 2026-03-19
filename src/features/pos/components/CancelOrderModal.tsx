@@ -24,6 +24,7 @@ export function CancelOrderModal({ order, loading, onConfirm, onClose }: Props) 
   const handleConfirm = () => {
     if (!order || !reason.trim()) return;
     onConfirm(order.id, reason.trim());
+    setReason("");
   };
 
   const handleClose = () => {
