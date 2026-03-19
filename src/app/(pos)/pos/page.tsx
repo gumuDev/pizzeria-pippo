@@ -18,6 +18,7 @@ import { PaymentModal } from "@/features/pos/components/PaymentModal";
 import { ConfirmSaleModal } from "@/features/pos/components/ConfirmSaleModal";
 import { TicketModal } from "@/features/pos/components/TicketModal";
 import { BranchSelector } from "@/features/pos/components/BranchSelector";
+import { CancelOrderModal } from "@/features/pos/components/CancelOrderModal";
 import { PosService } from "@/features/pos/services/pos.service";
 import type { Product, TicketData, OrderType } from "@/features/pos/types/pos.types";
 
@@ -27,7 +28,7 @@ export default function PosPage() {
   const { products, promotions, loading, getVariantPrice, getPromoLabel } = usePosProducts(effectiveBranchId ?? undefined);
   const cart = usePosCart(promotions, effectiveBranchId ?? undefined, broadcast);
   const [activeTab, setActiveTab] = useState<PosTab>("sale");
-  const { dayOrders, markingReady, fetchDayOrders, handleMarkReady } = useDayOrders(effectiveBranchId ?? undefined, activeTab !== "sale");
+  const { dayOrders, markingReady, fetchDayOrders, handleMarkReady, cancelModal, cancelling, openCancelModal, closeCancelModal, handleCancelOrder } = useDayOrders(effectiveBranchId ?? undefined, activeTab !== "sale");
 
   const [variantModal, setVariantModal] = useState<Product | null>(null);
   const [paymentModal, setPaymentModal] = useState(false);
@@ -144,6 +145,7 @@ export default function PosPage() {
           dayOrders={dayOrders}
           markingReady={markingReady}
           onMarkReady={handleMarkReady}
+          onCancel={openCancelModal}
         />
       )}
 
@@ -177,6 +179,12 @@ export default function PosPage() {
         onCancel={() => { setConfirmModal(false); setPaymentMethod(null); }}
       />
       <TicketModal ticket={ticket} onClose={() => setTicket(null)} />
+      <CancelOrderModal
+        order={cancelModal}
+        loading={cancelling}
+        onConfirm={handleCancelOrder}
+        onClose={closeCancelModal}
+      />
     </div>
   );
 }

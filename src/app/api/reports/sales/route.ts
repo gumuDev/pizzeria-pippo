@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
   if (branchId) query = query.eq("branch_id", branchId);
   if (from) query = query.gte("created_at", dateRangeFrom(from));
   if (to) query = query.lte("created_at", dateRangeTo(to));
+  query = query.is("cancelled_at", null);
 
   const { data: orders, error } = await query;
   if (error) {

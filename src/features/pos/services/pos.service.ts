@@ -45,7 +45,7 @@ export const PosService = {
     const { data } = await supabase
       .from("orders")
       .select(`
-        id, daily_number, created_at, total, kitchen_status, payment_method, order_type,
+        id, daily_number, created_at, total, kitchen_status, payment_method, order_type, cancelled_at,
         order_items (
           qty,
           product_variants ( name, products ( name ) )
@@ -95,5 +95,16 @@ export const PosService = {
 
   async markOrderReady(orderId: string): Promise<void> {
     await supabase.from("orders").update({ kitchen_status: "ready" }).eq("id", orderId);
+  },
+
+  async cancelOrder(orderId: string, reason: string, token: string): Promise<{ ok: boolean; error?: string }> {
+    const res = await fetch(`/api/orders/${orderId}/cancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ reason }),
+    });
+    if (res.ok) return { ok: true };
+    const data = await res.json().catch(() => ({}));
+    return { ok: false, error: data.error ?? "Error al anular la orden" };
   },
 };

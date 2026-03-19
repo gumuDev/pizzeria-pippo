@@ -45,12 +45,15 @@ export interface OrderItem {
 }
 export interface Order {
   id: string;
+  daily_number: number;
   total: number;
   created_at: string;
   branch_id: string;
   cashier_name: string;
   payment_method: "efectivo" | "qr" | null;
   order_type: "dine_in" | "takeaway";
+  cancelled_at: string | null;
+  cancel_reason: string | null;
   branches: { name: string } | null;
   order_items: OrderItem[];
 }

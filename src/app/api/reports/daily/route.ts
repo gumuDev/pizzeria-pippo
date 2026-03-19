@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
   if (branchId) query = query.eq("branch_id", branchId);
   if (from) query = query.gte("created_at", dateRangeFrom(from));
   if (to) query = query.lte("created_at", dateRangeTo(to));
+  query = query.is("cancelled_at", null);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -65,6 +65,17 @@ export const ReportsService = {
     return { data: [], total: 0 };
   },
 
+  async cancelOrder(orderId: string, reason: string, token: string): Promise<{ ok: boolean; error?: string }> {
+    const res = await fetch(`/api/orders/${orderId}/cancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ reason }),
+    });
+    if (res.ok) return { ok: true };
+    const data = await res.json().catch(() => ({}));
+    return { ok: false, error: data.error ?? "Error al anular la orden" };
+  },
+
   async fetchAllOrdersForExport(params: string, token: string): Promise<Order[]> {
     const res = await fetch(`/api/reports/orders?${params}&page=1&pageSize=9999`, {
       headers: { Authorization: `Bearer ${token}` },

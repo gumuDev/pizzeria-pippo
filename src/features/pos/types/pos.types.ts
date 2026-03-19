@@ -39,6 +39,7 @@ export interface DayOrder {
   kitchen_status: string;
   payment_method: "efectivo" | "qr" | null;
   order_type: OrderType;
+  cancelled_at: string | null;
   order_items: {
     qty: number;
     product_variants: { name: string; products: { name: string } | null } | null;

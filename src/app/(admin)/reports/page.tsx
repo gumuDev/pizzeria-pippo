@@ -12,6 +12,8 @@ import { useReportFilters } from "@/features/reports/hooks/useReportFilters";
 import { useSalesReport } from "@/features/reports/hooks/useSalesReport";
 import { useCashierReport } from "@/features/reports/hooks/useCashierReport";
 import { useOrdersReport } from "@/features/reports/hooks/useOrdersReport";
+import { useOrderCancellation } from "@/features/reports/hooks/useOrderCancellation";
+import { CancelOrderModal } from "@/features/pos/components/CancelOrderModal";
 
 const DailySalesChart = dynamic(() =>
   import("@/features/reports/components/DailySalesChart").then(m => m.DailySalesChart),
@@ -44,6 +46,7 @@ export default function ReportsPage() {
   const sales = useSalesReport();
   const cashier = useCashierReport();
   const ordersReport = useOrdersReport();
+  const cancellation = useOrderCancellation(() => ordersReport.fetch(filters.buildParams(), ordersReport.ordersPage));
 
   const { buildParams, selectedBranch, activeTab } = filters;
 
@@ -96,6 +99,7 @@ export default function ReportsPage() {
                 exporting={ordersReport.exporting}
                 onPageChange={(p) => { ordersReport.setOrdersPage(p); ordersReport.fetch(buildParams(), p); }}
                 onExport={() => ordersReport.exportToExcel(buildParams())}
+                onCancel={cancellation.openCancelModal}
               />
             ),
           },
@@ -105,6 +109,12 @@ export default function ReportsPage() {
             children: <CashierReportTable cashierReports={cashier.cashierReports} loading={cashier.loading} />,
           },
         ]}
+      />
+      <CancelOrderModal
+        order={cancellation.cancelModal}
+        loading={cancellation.cancelling}
+        onConfirm={cancellation.handleCancel}
+        onClose={cancellation.closeCancelModal}
       />
     </div>
   );

@@ -106,7 +106,7 @@ CREATE TABLE public.stock_movements (
   branch_id uuid NOT NULL,
   ingredient_id uuid NOT NULL,
   quantity numeric NOT NULL,
-  type text NOT NULL CHECK (type = ANY (ARRAY['compra'::text, 'venta'::text, 'ajuste'::text])),
+  type text NOT NULL CHECK (type = ANY (ARRAY['compra'::text, 'venta'::text, 'ajuste'::text, 'anulacion'::text])),
   origin text CHECK (origin = ANY (ARRAY['transferencia'::text, 'venta'::text, 'ajuste'::text])),
   notes text,
   created_by uuid,
@@ -143,6 +143,10 @@ CREATE TABLE public.promotion_rules (
   get_qty integer CHECK (get_qty > 0),
   discount_percent numeric CHECK (discount_percent > 0::numeric AND discount_percent <= 100::numeric),
   combo_price numeric CHECK (combo_price >= 0::numeric),
+  -- Campos para combos flexibles (migración 014): si category/variant_size están presentes,
+  -- el slot matchea cualquier variante que cumpla ambos criterios (variant_id debe ser NULL).
+  category text CHECK (category IS NULL OR category = ANY (ARRAY['pizza', 'bebida', 'otro'])),
+  variant_size text CHECK (variant_size IS NULL OR variant_size = ANY (ARRAY['Personal', 'Mediana', 'Familiar'])),
   CONSTRAINT promotion_rules_pkey PRIMARY KEY (id),
   CONSTRAINT promotion_rules_promotion_id_fkey FOREIGN KEY (promotion_id) REFERENCES public.promotions(id),
   CONSTRAINT promotion_rules_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.product_variants(id)
@@ -158,6 +162,9 @@ CREATE TABLE public.orders (
   daily_number integer NOT NULL DEFAULT 0,
   payment_method text CHECK (payment_method = ANY (ARRAY['efectivo'::text, 'qr'::text])),
   order_type text NOT NULL DEFAULT 'dine_in' CHECK (order_type = ANY (ARRAY['dine_in'::text, 'takeaway'::text])),
+  cancelled_at timestamptz DEFAULT NULL,
+  cancelled_by uuid DEFAULT NULL REFERENCES auth.users(id) ON DELETE SET NULL,
+  cancel_reason text DEFAULT NULL,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
   CONSTRAINT orders_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
   CONSTRAINT orders_cashier_id_fkey FOREIGN KEY (cashier_id) REFERENCES auth.users(id)

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { message } from "antd";
 import { supabase } from "@/lib/supabase";
 import { PosService } from "../services/pos.service";
 import type { DayOrder } from "../types/pos.types";
@@ -8,6 +9,8 @@ import type { DayOrder } from "../types/pos.types";
 export function useDayOrders(branchId: string | undefined, showOrders: boolean) {
   const [dayOrders, setDayOrders] = useState<DayOrder[]>([]);
   const [markingReady, setMarkingReady] = useState<string | null>(null);
+  const [cancelModal, setCancelModal] = useState<DayOrder | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   const fetchDayOrders = useCallback(async (bid: string) => {
     const data = await PosService.getDayOrders(bid);
@@ -43,5 +46,24 @@ export function useDayOrders(branchId: string | undefined, showOrders: boolean) 
     setMarkingReady(null);
   };
 
-  return { dayOrders, markingReady, fetchDayOrders, handleMarkReady };
+  const openCancelModal = (order: DayOrder) => setCancelModal(order);
+  const closeCancelModal = () => setCancelModal(null);
+
+  const handleCancelOrder = async (orderId: string, reason: string) => {
+    setCancelling(true);
+    const token = await PosService.getToken();
+    const result = await PosService.cancelOrder(orderId, reason, token);
+    setCancelling(false);
+    if (result.ok) {
+      setDayOrders((prev) =>
+        prev.map((o) => o.id === orderId ? { ...o, cancelled_at: new Date().toISOString() } : o)
+      );
+      setCancelModal(null);
+      message.success("Orden anulada correctamente. Stock restaurado.");
+    } else {
+      message.error(result.error ?? "Error al anular la orden");
+    }
+  };
+
+  return { dayOrders, markingReady, fetchDayOrders, handleMarkReady, cancelModal, cancelling, openCancelModal, closeCancelModal, handleCancelOrder };
 }
