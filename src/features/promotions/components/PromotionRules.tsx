@@ -12,12 +12,6 @@ const CATEGORY_OPTIONS = [
   { value: "otro", label: "Otro" },
 ];
 
-const SIZE_OPTIONS = [
-  { value: "Personal", label: "Personal" },
-  { value: "Mediana", label: "Mediana" },
-  { value: "Familiar", label: "Familiar" },
-];
-
 interface Props {
   promoType: string;
   rules: Rule[];
@@ -29,6 +23,7 @@ interface Props {
 
 export function PromotionRules({ promoType, rules, variants, onAdd, onUpdate, onRemove }: Props) {
   const variantOptions = variants.map((v) => ({ value: v.id, label: `${v.product_name} — ${v.name}` }));
+  const sizeOptions = Array.from(new Set(variants.map((v) => v.name))).map((s) => ({ value: s, label: s }));
   const filterOption = (input: string, option?: { label: string }) =>
     (option?.label ?? "").toLowerCase().includes(input.toLowerCase());
 
@@ -121,7 +116,7 @@ export function PromotionRules({ promoType, rules, variants, onAdd, onUpdate, on
                   </Col>
                   <Col span={i === 0 ? 7 : 8}>
                     <Text type="secondary" className="text-xs block mb-1">Tamaño</Text>
-                    <Select value={rule.variant_size ?? undefined} options={SIZE_OPTIONS} onChange={(v) => onUpdate(i, "variant_size", v)} style={{ width: "100%" }} placeholder="Tamaño" allowClear />
+                    <Select value={rule.variant_size ?? undefined} options={sizeOptions} onChange={(v) => onUpdate(i, "variant_size", v)} style={{ width: "100%" }} placeholder="Tamaño" allowClear />
                   </Col>
                   {i === 0 && (
                     <Col span={6}>
