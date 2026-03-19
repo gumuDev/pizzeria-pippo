@@ -5,6 +5,11 @@ import { PosService } from "../services/pos.service";
 import type { Product } from "../types/pos.types";
 import type { Promotion } from "@/lib/promotions";
 
+interface VariantMeta {
+  category: string;
+  variantName: string;
+}
+
 export function usePosProducts(branchId: string | undefined) {
   const [products, setProducts] = useState<Product[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -28,7 +33,20 @@ export function usePosProducts(branchId: string | undefined) {
     return override ? override.price : variant.base_price;
   };
 
+  // Build a lookup map: variantId → { category, variantName }
+  const buildVariantMeta = (): Map<string, VariantMeta> => {
+    const map = new Map<string, VariantMeta>();
+    for (const product of products) {
+      for (const variant of product.product_variants) {
+        map.set(variant.id, { category: product.category, variantName: variant.name });
+      }
+    }
+    return map;
+  };
+
   const getPromoLabel = (variantId: string): string | null => {
+    const variantMeta = buildVariantMeta();
+
     for (const promo of promotions) {
       for (const rule of promo.promotion_rules) {
         if (rule.variant_id === variantId) {
@@ -38,8 +56,18 @@ export function usePosProducts(branchId: string | undefined) {
             return `${rule.discount_percent}% OFF`;
           if (promo.type === "COMBO") return "COMBO";
         }
-        if (!rule.variant_id && promo.type === "PERCENTAGE" && rule.discount_percent)
-          return `${rule.discount_percent}% OFF`;
+
+        if (!rule.variant_id) {
+          if (promo.type === "PERCENTAGE" && rule.discount_percent)
+            return `${rule.discount_percent}% OFF`;
+
+          if (promo.type === "COMBO") {
+            const meta = variantMeta.get(variantId);
+            const categoryMatch = !rule.category || meta?.category === rule.category;
+            const sizeMatch = !rule.variant_size || meta?.variantName === rule.variant_size;
+            if (categoryMatch && sizeMatch) return "COMBO";
+          }
+        }
       }
     }
     return null;

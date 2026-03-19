@@ -6,6 +6,18 @@ import type { Rule, Variant } from "../types/promotion.types";
 
 const { Text } = Typography;
 
+const CATEGORY_OPTIONS = [
+  { value: "pizza", label: "Pizza" },
+  { value: "bebida", label: "Bebida" },
+  { value: "otro", label: "Otro" },
+];
+
+const SIZE_OPTIONS = [
+  { value: "Personal", label: "Personal" },
+  { value: "Mediana", label: "Mediana" },
+  { value: "Familiar", label: "Familiar" },
+];
+
 interface Props {
   promoType: string;
   rules: Rule[];
@@ -19,6 +31,19 @@ export function PromotionRules({ promoType, rules, variants, onAdd, onUpdate, on
   const variantOptions = variants.map((v) => ({ value: v.id, label: `${v.product_name} — ${v.name}` }));
   const filterOption = (input: string, option?: { label: string }) =>
     (option?.label ?? "").toLowerCase().includes(input.toLowerCase());
+
+  const getSlotType = (rule: Rule): "specific" | "flexible" =>
+    rule.slot_type ?? "specific";
+
+  const handleSlotTypeChange = (index: number, type: "specific" | "flexible") => {
+    onUpdate(index, "slot_type", type);
+    if (type === "specific") {
+      onUpdate(index, "category", null);
+      onUpdate(index, "variant_size", null);
+    } else {
+      onUpdate(index, "variant_id", null);
+    }
+  };
 
   return (
     <>
@@ -62,15 +87,49 @@ export function PromotionRules({ promoType, rules, variants, onAdd, onUpdate, on
 
           {promoType === "COMBO" && (
             <Row gutter={8}>
-              <Col span={14}>
-                <Text type="secondary" className="text-xs block mb-1">Variante del combo</Text>
-                <Select value={rule.variant_id ?? undefined} options={variantOptions} onChange={(v) => onUpdate(i, "variant_id", v)} style={{ width: "100%" }} showSearch placeholder="Seleccionar variante" filterOption={filterOption} />
+              <Col span={8}>
+                <Text type="secondary" className="text-xs block mb-1">Tipo de slot</Text>
+                <Select
+                  value={getSlotType(rule)}
+                  onChange={(v) => handleSlotTypeChange(i, v)}
+                  style={{ width: "100%" }}
+                  options={[
+                    { value: "specific", label: "Variante específica" },
+                    { value: "flexible", label: "Categoría + Tamaño" },
+                  ]}
+                />
               </Col>
-              {i === 0 && (
-                <Col span={10}>
-                  <Text type="secondary" className="text-xs block mb-1">Precio especial del combo (Bs)</Text>
-                  <InputNumber value={rule.combo_price ?? undefined} min={0} prefix="Bs" style={{ width: "100%" }} placeholder="Ej: 150" onChange={(v) => onUpdate(i, "combo_price", v)} />
-                </Col>
+
+              {getSlotType(rule) === "specific" ? (
+                <>
+                  <Col span={i === 0 ? 10 : 16}>
+                    <Text type="secondary" className="text-xs block mb-1">Variante del combo</Text>
+                    <Select value={rule.variant_id ?? undefined} options={variantOptions} onChange={(v) => onUpdate(i, "variant_id", v)} style={{ width: "100%" }} showSearch placeholder="Seleccionar variante" filterOption={filterOption} />
+                  </Col>
+                  {i === 0 && (
+                    <Col span={6}>
+                      <Text type="secondary" className="text-xs block mb-1">Precio combo (Bs)</Text>
+                      <InputNumber value={rule.combo_price ?? undefined} min={0} prefix="Bs" style={{ width: "100%" }} placeholder="Ej: 150" onChange={(v) => onUpdate(i, "combo_price", v)} />
+                    </Col>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Col span={i === 0 ? 7 : 8}>
+                    <Text type="secondary" className="text-xs block mb-1">Categoría</Text>
+                    <Select value={rule.category ?? undefined} options={CATEGORY_OPTIONS} onChange={(v) => onUpdate(i, "category", v)} style={{ width: "100%" }} placeholder="Categoría" allowClear />
+                  </Col>
+                  <Col span={i === 0 ? 7 : 8}>
+                    <Text type="secondary" className="text-xs block mb-1">Tamaño</Text>
+                    <Select value={rule.variant_size ?? undefined} options={SIZE_OPTIONS} onChange={(v) => onUpdate(i, "variant_size", v)} style={{ width: "100%" }} placeholder="Tamaño" allowClear />
+                  </Col>
+                  {i === 0 && (
+                    <Col span={6}>
+                      <Text type="secondary" className="text-xs block mb-1">Precio combo (Bs)</Text>
+                      <InputNumber value={rule.combo_price ?? undefined} min={0} prefix="Bs" style={{ width: "100%" }} placeholder="Ej: 150" onChange={(v) => onUpdate(i, "combo_price", v)} />
+                    </Col>
+                  )}
+                </>
               )}
             </Row>
           )}

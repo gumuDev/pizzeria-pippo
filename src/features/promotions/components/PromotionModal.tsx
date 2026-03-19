@@ -1,9 +1,11 @@
 "use client";
 
-import { Modal, Form, Input, Select, Switch, DatePicker, Row, Col } from "antd";
+import { Modal, Form, Input, Select, Switch, DatePicker, Row, Col, Checkbox } from "antd";
 import type { FormInstance } from "antd";
 import { PromotionRules } from "./PromotionRules";
 import { TYPE_OPTIONS, DAYS } from "../constants/promotion.constants";
+
+const ALL_DAYS = DAYS.map((d) => d.value);
 import type { Promotion, Branch, Variant, Rule } from "../types/promotion.types";
 
 interface Props {
@@ -23,6 +25,13 @@ interface Props {
 }
 
 export function PromotionModal({ open, editing, branches, variants, promoType, rules, form, onClose, onSave, onTypeChange, onAddRule, onUpdateRule, onRemoveRule }: Props) {
+  const selectedDays: number[] = Form.useWatch("days_of_week", form) ?? [];
+  const allDaysSelected = ALL_DAYS.every((d) => selectedDays.includes(d));
+
+  const handleAllDaysToggle = (checked: boolean) => {
+    form.setFieldValue("days_of_week", checked ? ALL_DAYS : []);
+  };
+
   return (
     <Modal
       title={editing ? "Editar promoción" : "Nueva promoción"}
@@ -59,7 +68,17 @@ export function PromotionModal({ open, editing, branches, variants, promoType, r
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item label="Días de la semana" name="days_of_week">
+        <Form.Item
+          label={
+            <span className="flex items-center gap-3">
+              Días de la semana
+              <Checkbox checked={allDaysSelected} onChange={(e) => handleAllDaysToggle(e.target.checked)}>
+                Toda la semana
+              </Checkbox>
+            </span>
+          }
+          name="days_of_week"
+        >
           <Select mode="multiple" options={DAYS.map((d) => ({ value: d.value, label: d.label }))} placeholder="Todos los días si se deja vacío" />
         </Form.Item>
         <Form.Item label="Vigencia" name="dates" rules={[{ required: true, message: "Requerido" }]}>

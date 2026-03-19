@@ -27,6 +27,8 @@ export interface PromotionRule {
   get_qty: number | null;
   discount_percent: number | null;
   combo_price: number | null;
+  category: string | null;      // "pizza" | "bebida" | "otro" | null — solo para combos flexibles
+  variant_size: string | null;  // "Personal" | "Mediana" | "Familiar" | null — solo para combos flexibles
 }
 
 export interface Promotion {
@@ -79,9 +81,9 @@ export function applyPromotions(
   cartItems: CartItem[],
   activePromotions: Promotion[]
 ): DiscountedItem[] {
-  const result: DiscountedItem[] = cartItems.map((item) => ({
+  let result: DiscountedItem[] = cartItems.map((item) => ({
     ...item,
-    qty_physical: item.qty,   // default: all units are physical (no free units)
+    qty_physical: item.qty,
     discount_applied: 0,
     final_price: item.unit_price,
     promo_label: null,
@@ -93,7 +95,7 @@ export function applyPromotions(
     } else if (promo.type === "PERCENTAGE") {
       applyPercentage(result, promo);
     } else if (promo.type === "COMBO") {
-      applyCombo(result, promo);
+      result = applyCombo(result, promo);
     }
   }
 
@@ -145,41 +147,95 @@ function applyPercentage(items: DiscountedItem[], promo: Promotion) {
   }
 }
 
-function applyCombo(items: DiscountedItem[], promo: Promotion) {
-  // Check if all required variants are present in the cart
-  const requiredVariants = promo.promotion_rules
-    .filter((r) => r.variant_id)
-    .map((r) => r.variant_id!);
+function ruleMatchesItem(rule: PromotionRule, item: DiscountedItem): boolean {
+  if (rule.variant_id) return item.variant_id === rule.variant_id;
+  const categoryMatch = !rule.category || item.category === rule.category;
+  const sizeMatch = !rule.variant_size || item.variant_name === rule.variant_size;
+  return categoryMatch && sizeMatch;
+}
 
-  const allPresent = requiredVariants.every((vId) =>
-    items.some((i) => i.variant_id === vId && i.qty > 0)
-  );
-
-  if (!allPresent) return;
-
+/**
+ * Applies a COMBO promotion.
+ * Returns a new items array. Items that are partially consumed by the combo
+ * (qty > 1 but only 1 unit goes to the combo) are split into two separate
+ * DiscountedItem entries so only the combo unit gets the label and discount.
+ */
+function applyCombo(items: DiscountedItem[], promo: Promotion): DiscountedItem[] {
   const comboPrice = promo.promotion_rules[0]?.combo_price;
   if (comboPrice == null) {
     console.warn(`[Combo] "${promo.name}" no tiene combo_price definido en regla 0`);
-    return;
+    return items;
   }
 
-  // Calculate total original price of combo items
-  const comboItems = items.filter((i) => requiredVariants.includes(i.variant_id));
-  const originalTotal = comboItems.reduce((sum, i) => sum + i.unit_price * i.qty, 0);
+  // Step 1 — match each rule to one item, tracking units claimed per item index
+  const claimedPerIndex = new Map<number, number>();
+  const matchedIndices: number[] = []; // one entry per rule, may repeat if same item matches multiple rules
+
+  for (const rule of promo.promotion_rules) {
+    let found = false;
+    for (let i = 0; i < items.length; i++) {
+      if (!ruleMatchesItem(rule, items[i])) continue;
+      const claimed = claimedPerIndex.get(i) ?? 0;
+      if (items[i].qty - claimed < 1) continue;
+      claimedPerIndex.set(i, claimed + 1);
+      matchedIndices.push(i);
+      found = true;
+      break;
+    }
+    if (!found) return items; // combo incompleto
+  }
+
+  // Step 2 — calculate total discount
+  const originalTotal = matchedIndices.reduce((sum, idx) => sum + items[idx].unit_price, 0);
   const totalDiscount = originalTotal - comboPrice;
+  if (totalDiscount <= 0) return items;
 
-  if (totalDiscount <= 0) return;
+  // Step 3 — build output: split items that are partially claimed, label combo slices
+  // Process indices in ascending order so splits don't shift unprocessed positions
+  const sortedIndices = Array.from(claimedPerIndex.keys()).sort((a, b) => a - b);
+  const result: DiscountedItem[] = [];
+  const comboSliceByOrigIndex = new Map<number, DiscountedItem>(); // for discount application
 
-  // Distribute discount proportionally across combo items
-  for (const item of comboItems) {
-    const share = item.unit_price / originalTotal;
-    const discount = totalDiscount * share;
-    if (discount > item.discount_applied) {
-      item.discount_applied = discount;
-      item.final_price = item.unit_price - discount;
-      item.promo_label = `Combo — ${promo.name}`;
+  for (let i = 0; i < items.length; i++) {
+    const item = { ...items[i] };
+    if (!claimedPerIndex.has(i)) {
+      result.push(item);
+      continue;
+    }
+    const claimed = claimedPerIndex.get(i)!;
+    if (item.qty > claimed) {
+      // Split: combo slice first, then remainder
+      const comboSlice: DiscountedItem = { ...item, qty: claimed, qty_physical: claimed };
+      const remainder: DiscountedItem = { ...item, qty: item.qty - claimed, qty_physical: item.qty - claimed };
+      result.push(comboSlice, remainder);
+      comboSliceByOrigIndex.set(i, comboSlice);
+    } else {
+      // All units of this item go to the combo
+      result.push(item);
+      comboSliceByOrigIndex.set(i, item);
     }
   }
+
+  void sortedIndices; // used implicitly via claimedPerIndex iteration order above
+
+  // Step 4 — apply discount proportionally to each combo slice (once per unique orig index)
+  const processed = new Set<number>();
+  for (const origIndex of matchedIndices) {
+    if (processed.has(origIndex)) continue;
+    processed.add(origIndex);
+
+    const comboSlice = comboSliceByOrigIndex.get(origIndex);
+    if (!comboSlice) continue;
+
+    const claimed = claimedPerIndex.get(origIndex) ?? 1;
+    const share = (comboSlice.unit_price * claimed) / originalTotal;
+    const discount = totalDiscount * share;
+    comboSlice.discount_applied = discount;
+    comboSlice.final_price = comboSlice.unit_price - discount;
+    comboSlice.promo_label = `Combo — ${promo.name}`;
+  }
+
+  return result;
 }
 
 /**

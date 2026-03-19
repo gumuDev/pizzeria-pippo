@@ -37,6 +37,7 @@ function buildGroups(discountedCart: DiscountedItem[]): CartGroup[] {
       groups.push({ type: "item", item });
     }
   }
+  // Combos go after individual items
   for (const [name, items] of Array.from(comboMap)) {
     groups.push({ type: "combo", name, items });
   }
@@ -147,7 +148,7 @@ export function PosCart({ discountedCart, total, totalDiscount, onUpdateQty, onR
             {groups.map((group, idx) => {
               if (group.type === "item") {
                 return (
-                  <div key={group.item.variant_id} style={{ padding: "10px 12px", background: "#f9fafb", borderRadius: 10, border: "1px solid #f3f4f6" }}>
+                  <div key={`item-${idx}-${group.item.variant_id}`} style={{ padding: "10px 12px", background: "#f9fafb", borderRadius: 10, border: "1px solid #f3f4f6" }}>
                     <CartItemRow item={group.item} onUpdateQty={onUpdateQty} onRemove={onRemove} />
                   </div>
                 );

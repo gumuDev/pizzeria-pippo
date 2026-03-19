@@ -45,7 +45,12 @@ export function usePromotions() {
   const openEdit = (record: Promotion) => {
     setEditing(record);
     setPromoType(record.type);
-    setRules(record.promotion_rules ?? []);
+    setRules(
+      (record.promotion_rules ?? []).map((r) => ({
+        ...r,
+        slot_type: (r.category || r.variant_size) ? "flexible" : "specific",
+      }))
+    );
     form.setFieldsValue({
       name: record.name,
       type: record.type,
@@ -69,7 +74,8 @@ export function usePromotions() {
       end_date: values.dates[1].format("YYYY-MM-DD"),
       branch_id: values.branch_id === "all" ? null : values.branch_id,
       active: values.active ?? true,
-      rules,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      rules: rules.map(({ slot_type: _, ...r }) => r),
     };
     const ok = editing
       ? await PromotionsService.updatePromotion(editing.id, payload)
@@ -91,7 +97,7 @@ export function usePromotions() {
   };
 
   const addRule = () => {
-    setRules((prev) => [...prev, { variant_id: null, buy_qty: null, get_qty: null, discount_percent: null, combo_price: null }]);
+    setRules((prev) => [...prev, { variant_id: null, buy_qty: null, get_qty: null, discount_percent: null, combo_price: null, category: null, variant_size: null, slot_type: "specific" }]);
   };
 
   const updateRule = (index: number, field: keyof Rule, value: unknown) => {

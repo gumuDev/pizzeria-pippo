@@ -7,6 +7,9 @@ export interface Rule {
   get_qty: number | null;
   discount_percent: number | null;
   combo_price: number | null;
+  category: string | null;      // "pizza" | "bebida" | "otro" | null — solo para combos flexibles
+  variant_size: string | null;  // "Personal" | "Mediana" | "Familiar" | null — solo para combos flexibles
+  slot_type?: "specific" | "flexible"; // estado del toggle UI, no se persiste en BD
 }
 
 export interface Promotion {
