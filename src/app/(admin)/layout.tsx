@@ -25,6 +25,7 @@ import {
   BarChartOutlined,
   HomeOutlined,
   TagsOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "1.0.0";
@@ -130,6 +131,11 @@ export default function AdminLayout({
               name: "reports",
               list: "/reports",
               meta: { label: "Reportes", icon: <BarChartOutlined /> },
+            },
+            {
+              name: "settings",
+              list: "/settings",
+              meta: { label: "Configuración", icon: <SettingOutlined /> },
             },
           ]}
           options={{

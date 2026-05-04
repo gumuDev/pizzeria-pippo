@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { ok, fail, type ServiceResult } from "@/lib/errors";
 import type { Product, Ingredient, Branch, Variant } from "../types/product.types";
 
 export const ProductsService = {
@@ -35,22 +36,26 @@ export const ProductsService = {
     return data ?? [];
   },
 
-  async createProduct(payload: unknown, token: string): Promise<boolean> {
+  async createProduct(payload: unknown, token: string): Promise<ServiceResult> {
     const res = await fetch("/api/products", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
     });
-    return res.ok;
+    if (res.ok) return ok(undefined);
+    const data = await res.json().catch(() => ({}));
+    return fail(data.error ?? "Error al crear el producto");
   },
 
-  async updateProduct(id: string, payload: unknown, token: string): Promise<boolean> {
+  async updateProduct(id: string, payload: unknown, token: string): Promise<ServiceResult> {
     const res = await fetch(`/api/products/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
     });
-    return res.ok;
+    if (res.ok) return ok(undefined);
+    const data = await res.json().catch(() => ({}));
+    return fail(data.error ?? "Error al actualizar el producto");
   },
 
   async patchProduct(id: string, payload: unknown, token: string): Promise<{ ok: boolean; error?: string }> {

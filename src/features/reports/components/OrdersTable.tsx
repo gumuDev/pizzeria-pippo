@@ -2,8 +2,7 @@
 
 import { Card, Table, Tag, Tooltip, Typography, Button } from "antd";
 import { StopOutlined } from "@ant-design/icons";
-import dayjs from "dayjs";
-import { UTC_OFFSET_HOURS } from "@/lib/timezone";
+import { formatDateTimeBolivia } from "@/lib/timezone";
 import { OrderItemsTable } from "./OrderItemsTable";
 import { OrdersMobileList } from "./OrdersMobileList";
 import { OrdersSummary } from "./OrdersSummary";
@@ -22,9 +21,10 @@ interface Props {
   orders: Order[];
   ordersTotal: number;
   ordersPage: number;
+  ordersPageSize: number;
   loading: boolean;
   exporting: boolean;
-  onPageChange: (page: number) => void;
+  onPageChange: (page: number, pageSize: number) => void;
   onExport: () => void;
   onCancel: (order: Order) => void;
 }
@@ -35,7 +35,7 @@ function buildOrderColumns(onCancel: (order: Order) => void) {
       title: "Fecha y hora",
       dataIndex: "created_at",
       key: "created_at",
-      render: (d: string) => dayjs(d).add(UTC_OFFSET_HOURS, "hour").format("DD/MM/YYYY HH:mm"),
+      render: (d: string) => formatDateTimeBolivia(d),
     },
     { title: "Sucursal", key: "branch", render: (_: unknown, o: Order) => o.branches?.name ?? "—" },
     { title: "Cajero", key: "cashier", render: (_: unknown, o: Order) => o.cashier_name },
@@ -102,7 +102,7 @@ function buildOrderColumns(onCancel: (order: Order) => void) {
   ];
 }
 
-export function OrdersTable({ orders, ordersTotal, ordersPage, loading, exporting, onPageChange, onExport, onCancel }: Props) {
+export function OrdersTable({ orders, ordersTotal, ordersPage, ordersPageSize, loading, exporting, onPageChange, onExport, onCancel }: Props) {
   const isMobile = useIsMobile();
 
   if (isMobile) {
@@ -111,6 +111,7 @@ export function OrdersTable({ orders, ordersTotal, ordersPage, loading, exportin
         orders={orders}
         ordersTotal={ordersTotal}
         ordersPage={ordersPage}
+        ordersPageSize={ordersPageSize}
         loading={loading}
         exporting={exporting}
         onPageChange={onPageChange}
@@ -138,9 +139,10 @@ export function OrdersTable({ orders, ordersTotal, ordersPage, loading, exportin
         rowClassName={(o) => o.cancelled_at ? "opacity-60 bg-gray-50" : ""}
         pagination={{
           current: ordersPage,
-          pageSize: 20,
+          pageSize: ordersPageSize,
           total: ordersTotal,
-          showSizeChanger: false,
+          showSizeChanger: true,
+          pageSizeOptions: ["10", "20", "50"],
           showTotal: (t) => `${t} ventas`,
           onChange: onPageChange,
         }}

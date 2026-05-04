@@ -1,8 +1,7 @@
 "use client";
 
 import { Card, Tag, Typography, Collapse, Button } from "antd";
-import dayjs from "dayjs";
-import { UTC_OFFSET_HOURS } from "@/lib/timezone";
+import { formatDateTimeBolivia } from "@/lib/timezone";
 import { OrderItemsTable } from "./OrderItemsTable";
 import { OrdersSummary } from "./OrdersSummary";
 import type { Order } from "../types/reports.types";
@@ -19,13 +18,14 @@ interface Props {
   orders: Order[];
   ordersTotal: number;
   ordersPage: number;
+  ordersPageSize: number;
   loading: boolean;
   exporting: boolean;
-  onPageChange: (page: number) => void;
+  onPageChange: (page: number, pageSize: number) => void;
   onExport: () => void;
 }
 
-export function OrdersMobileList({ orders, ordersTotal, ordersPage, loading, exporting, onPageChange, onExport }: Props) {
+export function OrdersMobileList({ orders, ordersTotal, ordersPage, ordersPageSize, loading, exporting, onPageChange, onExport }: Props) {
   return (
     <Card
       size="small"
@@ -44,7 +44,8 @@ export function OrdersMobileList({ orders, ordersTotal, ordersPage, loading, exp
           <Collapse
             size="small"
             items={orders.map((order) => {
-              const fecha = dayjs(order.created_at).add(UTC_OFFSET_HOURS, "hour").format("DD/MM HH:mm");
+              const full = formatDateTimeBolivia(order.created_at); // DD/MM/YYYY HH:mm
+              const fecha = `${full.slice(0, 5)} ${full.slice(11)}`; // DD/MM HH:mm
               const nombres = order.order_items
                 .map((i) => `${i.qty}x ${i.product_variants?.products?.name}`)
                 .join(", ");
@@ -80,7 +81,7 @@ export function OrdersMobileList({ orders, ordersTotal, ordersPage, loading, exp
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 disabled={ordersPage === 1}
-                onClick={() => onPageChange(ordersPage - 1)}
+                onClick={() => onPageChange(ordersPage - 1, ordersPageSize)}
                 style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid #d9d9d9", background: ordersPage === 1 ? "#f5f5f5" : "#fff", cursor: ordersPage === 1 ? "not-allowed" : "pointer", color: ordersPage === 1 ? "#bfbfbf" : "#374151" }}
               >
                 ‹ Ant.
@@ -88,7 +89,7 @@ export function OrdersMobileList({ orders, ordersTotal, ordersPage, loading, exp
               <Text type="secondary" style={{ lineHeight: "30px", fontSize: 13 }}>Pág. {ordersPage}</Text>
               <button
                 disabled={ordersPage * 20 >= ordersTotal}
-                onClick={() => onPageChange(ordersPage + 1)}
+                onClick={() => onPageChange(ordersPage + 1, ordersPageSize)}
                 style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid #d9d9d9", background: ordersPage * 20 >= ordersTotal ? "#f5f5f5" : "#fff", cursor: ordersPage * 20 >= ordersTotal ? "not-allowed" : "pointer", color: ordersPage * 20 >= ordersTotal ? "#bfbfbf" : "#374151" }}
               >
                 Sig. ›

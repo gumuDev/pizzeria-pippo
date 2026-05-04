@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { ok, fail, type ServiceResult } from "@/lib/errors";
 import type { StockRow, Movement, Ingredient, Branch } from "../types/stock.types";
 
 async function getToken(): Promise<string> {
@@ -38,24 +39,28 @@ export const StockService = {
     return Array.isArray(data) ? data : [];
   },
 
-  async purchase(payload: { branch_id: string; ingredient_id: string; quantity: number; min_quantity?: number }): Promise<boolean> {
+  async purchase(payload: { branch_id: string; ingredient_id: string; quantity: number; min_quantity?: number }): Promise<ServiceResult> {
     const token = await getToken();
     const res = await fetch("/api/stock/purchase", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
     });
-    return res.ok;
+    if (res.ok) return ok(undefined);
+    const data = await res.json().catch(() => ({}));
+    return fail(data.error ?? "Error al registrar la compra");
   },
 
-  async adjust(payload: { branch_id: string; ingredient_id: string; real_quantity: number; notes?: string }): Promise<boolean> {
+  async adjust(payload: { branch_id: string; ingredient_id: string; real_quantity: number; notes?: string }): Promise<ServiceResult> {
     const token = await getToken();
     const res = await fetch("/api/stock/adjust", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
     });
-    return res.ok;
+    if (res.ok) return ok(undefined);
+    const data = await res.json().catch(() => ({}));
+    return fail(data.error ?? "Error al registrar el ajuste");
   },
 
   async updateMinQuantity(stockId: string, min_quantity: number): Promise<boolean> {

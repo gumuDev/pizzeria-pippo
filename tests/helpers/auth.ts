@@ -21,10 +21,8 @@ export async function login(page: Page, role: keyof typeof credentials) {
   await page.getByLabel("Correo electrónico").fill(email);
   await page.getByLabel("Contraseña").fill(password);
   await page.getByRole("button", { name: "Iniciar sesión" }).click();
-  // Espera a que la navegación post-login termine
-  await page.waitForURL((url) => !url.pathname.includes("/login"), {
-    timeout: 10000,
-  });
+  // Espera a que el dashboard cargue (post-login redirect)
+  await page.waitForURL("**/dashboard", { timeout: 15000 });
 }
 
 export async function logout(page: Page) {

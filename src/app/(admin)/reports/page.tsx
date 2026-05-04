@@ -95,9 +95,14 @@ export default function ReportsPage() {
                 orders={ordersReport.orders}
                 ordersTotal={ordersReport.ordersTotal}
                 ordersPage={ordersReport.ordersPage}
+                ordersPageSize={ordersReport.ordersPageSize}
                 loading={ordersReport.loading}
                 exporting={ordersReport.exporting}
-                onPageChange={(p) => { ordersReport.setOrdersPage(p); ordersReport.fetch(buildParams(), p); }}
+                onPageChange={(p, ps) => {
+                  ordersReport.setOrdersPage(p);
+                  ordersReport.setOrdersPageSize(ps);
+                  ordersReport.fetch(buildParams(), p, ps);
+                }}
                 onExport={() => ordersReport.exportToExcel(buildParams())}
                 onCancel={cancellation.openCancelModal}
               />

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { apiHandler } from "@/lib/api-handler";
 
 function getSupabaseWithAuth(request: NextRequest) {
   const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
@@ -10,7 +11,8 @@ function getSupabaseWithAuth(request: NextRequest) {
   );
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export const PUT = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   const supabase = getSupabaseWithAuth(request);
   const body = await request.json();
   const { name, category, description, image_url, variants } = body;
@@ -90,43 +92,45 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 
   return NextResponse.json({ success: true });
-}
+});
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export const PATCH = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
   const supabase = getSupabaseWithAuth(request);
   const { is_active } = await request.json();
+  const id = ctx?.params?.id ?? "";
 
   // Cascade to variants
   const { error: variantError } = await supabase
     .from("product_variants")
     .update({ is_active })
-    .eq("product_id", params.id);
+    .eq("product_id", id);
 
   if (variantError) return NextResponse.json({ error: variantError.message }, { status: 500 });
 
   const { error } = await supabase
     .from("products")
     .update({ is_active })
-    .eq("id", params.id);
+    .eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export const DELETE = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
   // Soft delete — cascades to variants
   const supabase = getSupabaseWithAuth(request);
+  const id = ctx?.params?.id ?? "";
 
   await supabase
     .from("product_variants")
     .update({ is_active: false })
-    .eq("product_id", params.id);
+    .eq("product_id", id);
 
   const { error } = await supabase
     .from("products")
     .update({ is_active: false })
-    .eq("id", params.id);
+    .eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});

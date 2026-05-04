@@ -105,11 +105,12 @@ export function useProductForm(onSuccess: () => void) {
     setSaving(true);
     const payload = ProductsService.buildPayload(step1Data, imageUrl, selectedBranchId, variants);
     const token = await getToken();
-    const ok = editing
+    const result = editing
       ? await ProductsService.updateProduct(editing.id, payload, token)
       : await ProductsService.createProduct(payload, token);
     setSaving(false);
-    if (ok) onSuccess();
+    if (result.ok) onSuccess();
+    else notification.error({ message: result.error });
   };
 
   const updateVariant = (index: number, field: keyof Variant, value: unknown) => {
