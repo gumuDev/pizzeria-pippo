@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { deductStock } from "@/lib/recipes";
 import { dateRangeFrom, dateRangeTo, todayInBolivia } from "@/lib/timezone";
+import { apiHandler } from "@/lib/api-handler";
+import { AuthError, ValidationError } from "@/lib/errors";
 
 function getAuthClient(token: string) {
   return createClient(
@@ -34,26 +36,38 @@ async function getNextDailyNumber(supabase: any, branchId: string): Promise<numb
   return (data?.daily_number ?? 0) + 1;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
 
   // Verify auth with anon client
   const authClient = getAuthClient(token);
   const { data: { user }, error: authError } = await authClient.auth.getUser();
-  if (authError || !user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  if (authError || !user) throw new AuthError();
 
   const body = await request.json();
-  const { branch_id, items, total, payment_method, order_type } = body;
+  const { branch_id, items, total, payment_method, order_type, idempotency_key } = body;
 
-  if (!branch_id) return NextResponse.json({ error: "branch_id requerido" }, { status: 400 });
-  if (!items?.length) return NextResponse.json({ error: "items requeridos" }, { status: 400 });
+  if (!branch_id) throw new ValidationError("branch_id requerido");
+  if (!items?.length) throw new ValidationError("items requeridos");
   if (!order_type || !["dine_in", "takeaway"].includes(order_type)) {
-    return NextResponse.json({ error: "order_type requerido: 'dine_in' o 'takeaway'" }, { status: 400 });
+    throw new ValidationError("order_type requerido: 'dine_in' o 'takeaway'");
   }
 
   // Use service role for writes — avoids RLS issues with cashier role
   const supabase = getServiceClient();
   const cashier_id = user.id;
+
+  // 0. Idempotency check — if this key was already used, return the existing order
+  if (idempotency_key) {
+    const { data: existing } = await supabase
+      .from("orders")
+      .select("id, daily_number")
+      .eq("idempotency_key", idempotency_key)
+      .single();
+    if (existing) {
+      return NextResponse.json({ order_id: existing.id, daily_number: existing.daily_number }, { status: 200 });
+    }
+  }
 
   // 1. Calculate daily order number for this branch
   const daily_number = await getNextDailyNumber(supabase, branch_id);
@@ -61,7 +75,7 @@ export async function POST(request: NextRequest) {
   // 2. Create order
   const { data: order, error: orderError } = await supabase
     .from("orders")
-    .insert({ branch_id, cashier_id, total, daily_number, payment_method: payment_method ?? null, order_type })
+    .insert({ branch_id, cashier_id, total, daily_number, payment_method: payment_method ?? null, order_type, idempotency_key: idempotency_key ?? null })
     .select()
     .single();
 
@@ -116,4 +130,4 @@ export async function POST(request: NextRequest) {
   if (!success) return NextResponse.json({ error: stockError }, { status: 500 });
 
   return NextResponse.json({ order_id: order.id, daily_number: order.daily_number }, { status: 201 });
-}
+});

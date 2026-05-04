@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import useSWR from "swr";
-import { Form } from "antd";
+import { Form, message } from "antd";
 import { StockService } from "../services/stock.service";
 import type { Branch, Ingredient, StockRow, Movement } from "../types/stock.types";
 
@@ -85,13 +85,15 @@ export function useStock() {
   };
 
   const handlePurchase = async (values: { ingredient_id: string; quantity: number; min_quantity?: number }) => {
-    const ok = await StockService.purchase({ branch_id: selectedBranch, ...values });
-    if (ok) { purchaseForm.resetFields(); setPurchaseIngredientIsNew(false); resetStockPage(); refreshAll(); }
+    const result = await StockService.purchase({ branch_id: selectedBranch, ...values });
+    if (result.ok) { purchaseForm.resetFields(); setPurchaseIngredientIsNew(false); resetStockPage(); refreshAll(); }
+    else message.error(result.error);
   };
 
   const handleAdjust = async (values: { ingredient_id: string; real_quantity: number; notes?: string }) => {
-    const ok = await StockService.adjust({ branch_id: selectedBranch, ...values });
-    if (ok) { adjustForm.resetFields(); resetStockPage(); resetMovementsPage(); refreshAll(); }
+    const result = await StockService.adjust({ branch_id: selectedBranch, ...values });
+    if (result.ok) { adjustForm.resetFields(); resetStockPage(); resetMovementsPage(); refreshAll(); }
+    else message.error(result.error);
   };
 
   const openMinQty = (record: StockRow) => {

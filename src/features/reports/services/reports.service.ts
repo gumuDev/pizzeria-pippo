@@ -56,8 +56,8 @@ export const ReportsService = {
     return Array.isArray(data) ? data : [];
   },
 
-  async fetchOrders(params: string, page: number, token: string): Promise<{ data: Order[]; total: number }> {
-    const res = await fetch(`/api/reports/orders?${params}&page=${page}&pageSize=20`, {
+  async fetchOrders(params: string, page: number, pageSize: number, token: string): Promise<{ data: Order[]; total: number }> {
+    const res = await fetch(`/api/reports/orders?${params}&page=${page}&pageSize=${pageSize}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();

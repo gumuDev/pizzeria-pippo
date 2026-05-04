@@ -64,33 +64,44 @@ export const PosService = {
     total: number,
     paymentMethod: "efectivo" | "qr" | null,
     orderType: OrderType,
-    token: string
+    token: string,
+    signal?: AbortSignal,
+    idempotencyKey?: string
   ): Promise<{ ok: boolean; order_id?: string; daily_number?: number; error?: string }> {
-    const res = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        branch_id: branchId,
-        total,
-        payment_method: paymentMethod,
-        order_type: orderType,
-        items: discountedCart.map((i) => ({
-          variant_id: i.variant_id,
-          qty: i.qty_physical,
-          qty_physical: i.qty_physical,
-          unit_price: i.unit_price,
-          discount_applied: i.discount_applied,
-          promo_label: i.promo_label ?? null,
-          flavors: (i.flavors as FlavorItem[] | undefined) ?? null,
-        })),
-      }),
-    });
-    if (res.ok) {
-      const { order_id, daily_number } = await res.json();
-      return { ok: true, order_id, daily_number };
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        signal,
+        body: JSON.stringify({
+          branch_id: branchId,
+          total,
+          payment_method: paymentMethod,
+          order_type: orderType,
+          idempotency_key: idempotencyKey ?? null,
+          items: discountedCart.map((i) => ({
+            variant_id: i.variant_id,
+            qty: i.qty_physical,
+            qty_physical: i.qty_physical,
+            unit_price: i.unit_price,
+            discount_applied: i.discount_applied,
+            promo_label: i.promo_label ?? null,
+            flavors: (i.flavors as FlavorItem[] | undefined) ?? null,
+          })),
+        }),
+      });
+      if (res.ok) {
+        const { order_id, daily_number } = await res.json();
+        return { ok: true, order_id, daily_number };
+      }
+      const { error } = await res.json();
+      return { ok: false, error };
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return { ok: false, error: "La solicitud fue cancelada (sin conexión o tiempo agotado)." };
+      }
+      return { ok: false, error: "Sin conexión. Verificá el internet e intentá de nuevo." };
     }
-    const { error } = await res.json();
-    return { ok: false, error };
   },
 
   async markOrderReady(orderId: string): Promise<void> {

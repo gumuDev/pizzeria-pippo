@@ -36,6 +36,7 @@ export default function PosPage() {
   const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "qr" | null>(null);
   const [ticket, setTicket] = useState<TicketData | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
 
   if (!identity) {
     return (
@@ -76,6 +77,7 @@ export default function PosPage() {
   const handlePaymentConfirm = (orderType: OrderType, method: "efectivo" | "qr" | null) => {
     setPaymentMethod(method);
     cart.setOrderType(orderType);
+    setIdempotencyKey(crypto.randomUUID());
     setPaymentModal(false);
     setConfirmModal(true);
   };
@@ -89,22 +91,29 @@ export default function PosPage() {
       message.error("Seleccioná el tipo de pedido antes de confirmar.");
       return;
     }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     setConfirmLoading(true);
-    const token = await PosService.getToken();
-    const result = await PosService.confirmSale(branchId, cart.discountedCart, cart.total, paymentMethod, cart.orderType, token);
-    setConfirmLoading(false);
+    try {
+      const token = await PosService.getToken();
+      const result = await PosService.confirmSale(branchId, cart.discountedCart, cart.total, paymentMethod, cart.orderType, token, controller.signal, idempotencyKey ?? undefined);
 
-    if (result.ok) {
-      broadcast("ORDER_COMPLETE");
-      cart.suppressNextClear();
-      setConfirmModal(false);
-      setPaymentMethod(null);
-      setActiveTab("sale");
-      setTicket({ orderId: result.order_id!, dailyNumber: result.daily_number!, items: cart.discountedCart, total: cart.total, paymentMethod, orderType: cart.orderType });
-      cart.clearCart();
-      fetchDayOrders(branchId);
-    } else {
-      message.error(`Error al confirmar venta: ${result.error}`);
+      if (result.ok) {
+        broadcast("ORDER_COMPLETE");
+        cart.suppressNextClear();
+        setConfirmModal(false);
+        setPaymentMethod(null);
+        setIdempotencyKey(null);
+        setActiveTab("sale");
+        setTicket({ orderId: result.order_id!, dailyNumber: result.daily_number!, items: cart.discountedCart, total: cart.total, paymentMethod, orderType: cart.orderType });
+        cart.clearCart();
+        fetchDayOrders(branchId);
+      } else {
+        message.error(`Error al confirmar venta: ${result.error}`, 5);
+      }
+    } finally {
+      clearTimeout(timeout);
+      setConfirmLoading(false);
     }
   };
 

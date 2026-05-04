@@ -11,13 +11,14 @@ export function useOrdersReport() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersTotal, setOrdersTotal] = useState(0);
   const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersPageSize, setOrdersPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  const fetch = useCallback(async (params: string, page = 1) => {
+  const fetch = useCallback(async (params: string, page = 1, pageSize = 10) => {
     setLoading(true);
     const token = await ReportsService.getToken();
-    const result = await ReportsService.fetchOrders(params, page, token);
+    const result = await ReportsService.fetchOrders(params, page, pageSize, token);
     setOrders(result.data);
     setOrdersTotal(result.total);
     setLoading(false);
@@ -51,5 +52,5 @@ export function useOrdersReport() {
     XLSX.writeFile(wb, `ventas_${dayjs().format("YYYY-MM-DD")}.xlsx`);
   }, []);
 
-  return { orders, ordersTotal, ordersPage, setOrdersPage, loading, exporting, fetch, exportToExcel };
+  return { orders, ordersTotal, ordersPage, setOrdersPage, ordersPageSize, setOrdersPageSize, loading, exporting, fetch, exportToExcel };
 }

@@ -77,17 +77,20 @@ export function usePromotions() {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       rules: rules.map(({ slot_type: _, ...r }) => r),
     };
-    const ok = editing
+    const result = editing
       ? await PromotionsService.updatePromotion(editing.id, payload)
       : await PromotionsService.createPromotion(payload);
-    if (ok) { setModalOpen(false); fetchAll(); }
+    if (result.ok) { setModalOpen(false); fetchAll(); }
+    else notification.error({ message: result.error });
   };
 
   const handleToggleIsActive = async (promo: Promotion) => {
-    const ok = await PromotionsService.patchPromotion(promo.id, { is_active: !promo.is_active });
-    if (ok) {
+    const result = await PromotionsService.patchPromotion(promo.id, { is_active: !promo.is_active });
+    if (result.ok) {
       fetchAll();
       notification.success({ message: promo.is_active ? "Promoción desactivada" : "Promoción reactivada" });
+    } else {
+      notification.error({ message: result.error });
     }
   };
 

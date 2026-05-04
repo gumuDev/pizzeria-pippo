@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { buildStockAlertMessage, sendTelegramAlert, type StockAlert } from "@/lib/notifications";
 
 type OrderType = "dine_in" | "takeaway";
 
@@ -114,6 +115,38 @@ export async function deductStock(
     if (result.error) return { success: false, error: result.error.message };
   }
   if (movError) return { success: false, error: movError.message };
+
+  // 5. Check for low-stock alerts and notify via Telegram (fire-and-forget)
+  (async () => {
+    try {
+      const { data: alertRows } = await supabase
+        .from("branch_stock")
+        .select("ingredient_id, quantity, min_quantity, ingredients(name, unit), branches(name)")
+        .eq("branch_id", branchId)
+        .in("ingredient_id", ingredientIds);
+
+      const alerts: StockAlert[] = (alertRows ?? [])
+        .filter((row) => row.quantity < row.min_quantity)
+        .map((row) => {
+          const ingredient = row.ingredients as unknown as { name: string; unit: string } | null;
+          const branch = row.branches as unknown as { name: string } | null;
+          return {
+            ingredientName: ingredient?.name ?? row.ingredient_id,
+            currentQty: row.quantity,
+            minQty: row.min_quantity,
+            unit: ingredient?.unit ?? "",
+            branchName: branch?.name ?? branchId,
+          };
+        });
+
+      if (alerts.length > 0) {
+        const message = buildStockAlertMessage(alerts);
+        sendTelegramAlert(message).catch(console.error);
+      }
+    } catch (err) {
+      console.error("[recipes] stock alert check error:", err);
+    }
+  })();
 
   return { success: true };
 }

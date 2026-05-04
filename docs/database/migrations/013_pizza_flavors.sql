@@ -23,3 +23,8 @@ CREATE POLICY "order_item_flavors_select" ON public.order_item_flavors
 -- Insertar: solo usuarios autenticados (el backend usa service role, pero por completitud)
 CREATE POLICY "order_item_flavors_insert" ON public.order_item_flavors
   FOR INSERT TO authenticated WITH CHECK (true);
+
+-- Grants necesarios para que Supabase pueda operar sobre la tabla
+GRANT ALL ON public.order_item_flavors TO anon;
+GRANT ALL ON public.order_item_flavors TO authenticated;
+GRANT ALL ON public.order_item_flavors TO service_role;

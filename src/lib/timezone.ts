@@ -36,6 +36,20 @@ export function toBoliviaDate(utcDate: Date): Date {
 }
 
 /**
+ * Formats a full date+time string in Bolivia local time (DD/MM/YYYY HH:mm).
+ * Safe: works from UTC ISO strings regardless of browser timezone.
+ */
+export function formatDateTimeBolivia(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const boliviaDate = toBoliviaDate(d);
+  const iso = boliviaDate.toISOString(); // always UTC representation of shifted time
+  const [datePart, timePart] = iso.split("T");
+  const [year, month, day] = datePart.split("-");
+  const [h, m] = timePart.split(":");
+  return `${day}/${month}/${year} ${h}:${m}`;
+}
+
+/**
  * Formats a time string (HH:MM) from a Date or ISO string in Bolivia local time.
  * Extracts H/M directly from the adjusted ISO string — avoids browser timezone re-interpretation.
  */

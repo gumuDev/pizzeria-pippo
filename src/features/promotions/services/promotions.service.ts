@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { ok, fail, type ServiceResult } from "@/lib/errors";
 import type { Promotion, Variant } from "../types/promotion.types";
 
 async function getToken(): Promise<string> {
@@ -28,33 +29,39 @@ export const PromotionsService = {
     }));
   },
 
-  async createPromotion(payload: object): Promise<boolean> {
+  async createPromotion(payload: object): Promise<ServiceResult> {
     const token = await getToken();
     const res = await fetch("/api/promotions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
     });
-    return res.ok;
+    if (res.ok) return ok(undefined);
+    const data = await res.json().catch(() => ({}));
+    return fail(data.error ?? "Error al crear la promoción");
   },
 
-  async updatePromotion(id: string, payload: object): Promise<boolean> {
+  async updatePromotion(id: string, payload: object): Promise<ServiceResult> {
     const token = await getToken();
     const res = await fetch(`/api/promotions/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
     });
-    return res.ok;
+    if (res.ok) return ok(undefined);
+    const data = await res.json().catch(() => ({}));
+    return fail(data.error ?? "Error al actualizar la promoción");
   },
 
-  async patchPromotion(id: string, patch: object): Promise<boolean> {
+  async patchPromotion(id: string, patch: object): Promise<ServiceResult> {
     const token = await getToken();
     const res = await fetch(`/api/promotions/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(patch),
     });
-    return res.ok;
+    if (res.ok) return ok(undefined);
+    const data = await res.json().catch(() => ({}));
+    return fail(data.error ?? "Error al actualizar la promoción");
   },
 };

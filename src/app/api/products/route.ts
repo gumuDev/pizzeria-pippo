@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { apiHandler } from "@/lib/api-handler";
 
 function getSupabaseWithAuth(request: NextRequest) {
   const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
@@ -10,7 +11,7 @@ function getSupabaseWithAuth(request: NextRequest) {
   );
 }
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const supabase = getSupabaseWithAuth(request);
   const showInactive = new URL(request.url).searchParams.get("showInactive") === "true";
 
@@ -34,9 +35,9 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const supabase = getSupabaseWithAuth(request);
   const body = await request.json();
   const { name, category, description, image_url, variants } = body;
@@ -83,4 +84,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json(product, { status: 201 });
-}
+});

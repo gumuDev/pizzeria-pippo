@@ -4,7 +4,7 @@ import { getUserProfile } from "./auth";
 
 export const authProvider: AuthProvider = {
   login: async ({ email, password }) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       return { success: false, error: { message: error.message, name: "Login failed" } };
     }
