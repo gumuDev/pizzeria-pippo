@@ -52,9 +52,9 @@ function useTimer(createdAt: string) {
   return minutes;
 }
 
-function OrderCard({ order, onReady }: { order: KitchenOrder; onReady: (id: string) => void }) {
+function OrderCard({ order, onReady, lateThreshold }: { order: KitchenOrder; onReady: (id: string) => void; lateThreshold: number }) {
   const minutes = useTimer(order.created_at);
-  const isLate = minutes >= 10;
+  const isLate = minutes >= lateThreshold;
   const localTime = formatTimeBolivia(order.created_at);
   const orderLabel = `#${String(order.daily_number).padStart(2, "0")}`;
 
@@ -150,6 +150,19 @@ export default function KitchenPage() {
   const [branchId, setBranchId] = useState<string | null>(null);
   const [branchName, setBranchName] = useState("");
   const [currentTime, setCurrentTime] = useState("");
+  const [lateThreshold, setLateThreshold] = useState(10);
+
+  // Load kitchen late threshold from settings
+  useEffect(() => {
+    supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "kitchen_late_threshold_minutes")
+      .single()
+      .then(({ data }) => {
+        if (data?.value) setLateThreshold(parseInt(data.value, 10));
+      });
+  }, []);
 
   // Clock
   useEffect(() => {
@@ -258,7 +271,7 @@ export default function KitchenPage() {
   const pendingCount = orders.length;
   const lateCount = orders.filter((o) => {
     const minutes = Math.floor((Date.now() - new Date(o.created_at).getTime()) / 60000);
-    return minutes >= 10;
+    return minutes >= lateThreshold;
   }).length;
 
   return (
@@ -311,6 +324,7 @@ export default function KitchenPage() {
                 key={order.id}
                 order={order}
                 onReady={handleReady}
+                lateThreshold={lateThreshold}
               />
             ))}
           </div>

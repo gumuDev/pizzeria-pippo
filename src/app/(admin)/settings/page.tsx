@@ -1,8 +1,9 @@
 "use client";
 
 import { Tabs } from "antd";
-import { BellOutlined, RobotOutlined } from "@ant-design/icons";
+import { BellOutlined, RobotOutlined, FireOutlined } from "@ant-design/icons";
 import { TelegramSettingsForm } from "@/features/settings/components/TelegramSettingsForm";
+import { KitchenSettingsForm } from "@/features/settings/components/KitchenSettingsForm";
 import { BotSettingsForm } from "@/features/telegram-bot/components/BotSettingsForm";
 import { AuthorizedChatsTable } from "@/features/telegram-bot/components/AuthorizedChatsTable";
 import { ChatModal } from "@/features/telegram-bot/components/ChatModal";
@@ -35,6 +36,11 @@ export default function SettingsPage() {
             key: "notifications",
             label: <span><BellOutlined /> Notificaciones</span>,
             children: <TelegramSettingsForm />,
+          },
+          {
+            key: "kitchen",
+            label: <span><FireOutlined /> Cocina</span>,
+            children: <KitchenSettingsForm />,
           },
           {
             key: "bot",

@@ -10,6 +10,7 @@ export function useSettings() {
     telegram_bot_token: "",
     telegram_chat_id: "",
     telegram_enabled: false,
+    kitchen_late_threshold_minutes: 10,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -31,7 +32,7 @@ export function useSettings() {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleChange = useCallback((field: keyof AppSettings, value: string | boolean) => {
+  const handleChange = useCallback((field: keyof AppSettings, value: string | boolean | number) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
     setTestResult("idle");
   }, []);
