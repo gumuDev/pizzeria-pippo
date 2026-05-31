@@ -1,13 +1,14 @@
 "use client";
 
 import { Tabs } from "antd";
-import { BellOutlined, RobotOutlined, FireOutlined } from "@ant-design/icons";
+import { BellOutlined, RobotOutlined, FireOutlined, ShopOutlined } from "@ant-design/icons";
 import { TelegramSettingsForm } from "@/features/settings/components/TelegramSettingsForm";
 import { KitchenSettingsForm } from "@/features/settings/components/KitchenSettingsForm";
 import { BotSettingsForm } from "@/features/telegram-bot/components/BotSettingsForm";
 import { AuthorizedChatsTable } from "@/features/telegram-bot/components/AuthorizedChatsTable";
 import { ChatModal } from "@/features/telegram-bot/components/ChatModal";
 import { useTelegramChats } from "@/features/telegram-bot/hooks/useTelegramChats";
+import { BusinessConfigForm } from "@/features/business-config/components/BusinessConfigForm";
 
 function BotTab() {
   const { chats, loading, modalOpen, editing, openCreate, openEdit, closeModal, handleSave, handleToggleActive, handleDelete } = useTelegramChats();
@@ -32,6 +33,11 @@ export default function SettingsPage() {
     <div className="p-6">
       <Tabs
         items={[
+          {
+            key: "business",
+            label: <span><ShopOutlined /> Negocio</span>,
+            children: <BusinessConfigForm />,
+          },
           {
             key: "notifications",
             label: <span><BellOutlined /> Notificaciones</span>,

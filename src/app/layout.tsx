@@ -4,14 +4,14 @@ import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Pizzería Pippo",
-  description: "Sistema de gestión para Pizzería Pippo",
+  title: "Mi Negocio",
+  description: "Sistema de gestión",
   manifest: "/manifest.json",
-  themeColor: "#c0392b",
+  themeColor: "#f97316",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Pippo",
+    title: "Mi Negocio",
   },
   icons: {
     apple: "/icons/apple-touch-icon.png",

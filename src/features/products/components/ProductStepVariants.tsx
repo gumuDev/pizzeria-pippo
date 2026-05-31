@@ -17,13 +17,15 @@ interface Props {
   onRemoveVariant: (index: number) => void;
   onPrev: () => void;
   onNext: () => void;
+  nextLabel?: string;
+  saving?: boolean;
 }
 
 export function ProductStepVariants({
   variants, branches, variantTypeOptions, selectedBranchId,
   onUpdateVariant, onUpdateBranchPrice,
   onAddVariant, onRemoveVariant,
-  onPrev, onNext,
+  onPrev, onNext, nextLabel, saving,
 }: Props) {
   if (variantTypeOptions.length === 0) {
     return (
@@ -94,8 +96,8 @@ export function ProductStepVariants({
 
       <div className="flex justify-between mt-4">
         <Button onClick={onPrev}>Anterior</Button>
-        <Button type="primary" onClick={onNext} disabled={variants.length === 0}>
-          Siguiente
+        <Button type="primary" onClick={onNext} disabled={variants.length === 0} loading={saving}>
+          {nextLabel ?? "Siguiente"}
         </Button>
       </div>
     </div>

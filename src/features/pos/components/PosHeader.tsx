@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Button, Tag, Typography } from "antd";
 import { LogoutOutlined, ShoppingCartOutlined, UnorderedListOutlined, BarChartOutlined } from "@ant-design/icons";
 import { formatTimeBolivia } from "@/lib/timezone";
+import { useBusinessConfigPublic } from "@/features/business-config/hooks/useBusinessConfigPublic";
 import type { Identity } from "../types/pos.types";
 
 const { Text } = Typography;
@@ -21,6 +22,7 @@ interface Props {
 
 export function PosHeader({ identity, activeTab, pendingCount, onTabChange, onLogout }: Props) {
   const [currentTime, setCurrentTime] = useState("");
+  const { config } = useBusinessConfigPublic();
 
   useEffect(() => {
     const tick = () => setCurrentTime(formatTimeBolivia(new Date()));
@@ -64,8 +66,12 @@ export function PosHeader({ identity, activeTab, pendingCount, onTabChange, onLo
       <div style={{ padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Image src="/pippo.jpg" alt="Pippo Pizza" width={34} height={34} style={{ borderRadius: "50%", objectFit: "cover" }} />
-            <Text strong style={{ fontSize: 16, color: "#ea580c" }}>Pizzería Pippo — POS</Text>
+            {config.business_logo_url ? (
+              <Image src={config.business_logo_url} alt={config.business_name} width={34} height={34} style={{ borderRadius: "50%", objectFit: "contain", background: "#f3f4f6", padding: 2 }} />
+            ) : (
+              <div style={{ width: 34, height: 34, borderRadius: "50%", background: config.business_primary_color, flexShrink: 0 }} />
+            )}
+            <Text strong style={{ fontSize: 16, color: config.business_primary_color }}>{config.business_name || "POS"}</Text>
           </div>
           <Tag color="blue" style={{ margin: 0 }}>{identity.name}</Tag>
           {identity.branch_id && <Tag color="green" style={{ margin: 0 }}>Sucursal</Tag>}

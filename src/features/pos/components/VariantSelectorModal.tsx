@@ -5,6 +5,7 @@ import { Modal, Button, Tag, Typography, Space, Select } from "antd";
 import { PlusOutlined, MinusOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { Product, Variant } from "../types/pos.types";
 import type { FlavorItem } from "@/lib/promotions";
+import { useProductCategoriesPublic } from "@/features/product-categories/hooks/useProductCategoriesPublic";
 
 const { Text } = Typography;
 
@@ -50,13 +51,15 @@ export function VariantSelectorModal({
     setFlavors([{ variantId: baseVariantId, productName: product?.name ?? "", parts: 1 }]);
   };
 
+  const { categoryAllowsMixing } = useProductCategoriesPublic();
+
   if (!product) return null;
 
-  const isPizza = product.category === "pizza";
+  const allowsMixing = categoryAllowsMixing(product.category);
   const variants = product.product_variants ?? [];
 
-  // All active pizza products
-  const pizzaProducts = allProducts.filter((p) => p.category === "pizza" && p.is_active !== false);
+  // All active products in categories that allow mixing
+  const pizzaProducts = allProducts.filter((p) => categoryAllowsMixing(p.category) && p.is_active !== false);
 
   // Flavor options for the current size (excluding already selected)
   const selectedVariantIds = new Set(flavors.map((f) => f.variantId));
@@ -102,7 +105,7 @@ export function VariantSelectorModal({
   };
 
   // Non-pizza: direct size selection
-  if (!isPizza) {
+  if (!allowsMixing) {
     return (
       <Modal title={product.name} open={!!product} onCancel={onClose} footer={null} width={360}>
         <div className="flex flex-col gap-3 mt-4">
@@ -256,7 +259,7 @@ export function VariantSelectorModal({
             >
               {flavors.length === 1
                 ? `Agregar al carrito — Bs ${getVariantPrice(selectedSize, branchId)}`
-                : `Agregar pizza mixta — Bs ${getVariantPrice(selectedSize, branchId)}`}
+                : `Agregar producto mixto — Bs ${getVariantPrice(selectedSize, branchId)}`}
             </Button>
           </div>
         )}

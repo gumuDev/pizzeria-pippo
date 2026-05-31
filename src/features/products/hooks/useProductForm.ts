@@ -12,7 +12,7 @@ export function useProductForm(onSuccess: () => void) {
   const [saving, setSaving] = useState(false);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("");
-  const [step1Data, setStep1Data] = useState<Step1Data>({ name: "", category: "", description: "", branch_id: "" });
+  const [step1Data, setStep1Data] = useState<Step1Data>({ name: "", category: "", description: "", branch_id: "", track_stock: true });
   const [variantTypeOptions, setVariantTypeOptions] = useState<VariantTypeOption[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [formStep1] = Form.useForm();
@@ -48,7 +48,7 @@ export function useProductForm(onSuccess: () => void) {
     setCurrentStep(0);
     setImageUrl("");
     setSelectedBranchId("");
-    setStep1Data({ name: "", category: "", description: "", branch_id: "" });
+    setStep1Data({ name: "", category: "", description: "", branch_id: "", track_stock: true });
     formStep1.resetFields();
     setVariants(variantTypeOptions.length > 0
       ? [{ name: variantTypeOptions[0].value, base_price: 0, branch_prices: [], recipes: [] }]
@@ -76,6 +76,7 @@ export function useProductForm(onSuccess: () => void) {
       category: record.category,
       description: record.description,
       branch_id: existingBranchId || undefined,
+      track_stock: record.track_stock ?? true,
     });
 
     setStep1Data({
@@ -83,6 +84,7 @@ export function useProductForm(onSuccess: () => void) {
       category: record.category,
       description: record.description ?? "",
       branch_id: existingBranchId,
+      track_stock: record.track_stock ?? true,
     });
 
     setVariants(loadedVariants);

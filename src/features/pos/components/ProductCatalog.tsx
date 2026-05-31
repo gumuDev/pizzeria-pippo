@@ -3,22 +3,10 @@
 import { useState } from "react";
 import { Tag, Typography, Empty, Spin, Button } from "antd";
 import NextImage from "next/image";
+import { useProductCategoriesPublic } from "@/features/product-categories/hooks/useProductCategoriesPublic";
 import type { Product } from "../types/pos.types";
 
 const { Text } = Typography;
-
-const CATEGORY_OPTIONS = [
-  { value: "all", label: "Todos" },
-  { value: "pizza", label: "Pizza" },
-  { value: "bebida", label: "Bebida" },
-  { value: "otro", label: "Otro" },
-];
-
-const CATEGORY_COLORS: Record<string, string> = {
-  pizza: "red",
-  bebida: "blue",
-  otro: "green",
-};
 
 interface Props {
   products: Product[];
@@ -31,6 +19,12 @@ interface Props {
 
 export function ProductCatalog({ products, loading, branchId, getVariantPrice, getPromoLabel, onProductClick }: Props) {
   const [filterCategory, setFilterCategory] = useState("all");
+  const { categories } = useProductCategoriesPublic();
+
+  const categoryOptions = [
+    { value: "all", label: "Todos" },
+    ...categories.map((c) => ({ value: c.name, label: c.name })),
+  ];
 
   const filteredProducts = filterCategory === "all"
     ? products
@@ -39,8 +33,8 @@ export function ProductCatalog({ products, loading, branchId, getVariantPrice, g
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#f5f5f5" }}>
       {/* Filtros */}
-      <div style={{ display: "flex", gap: 8, padding: "12px 16px", background: "#fff", borderBottom: "1px solid #f0f0f0" }}>
-        {CATEGORY_OPTIONS.map((c) => (
+      <div style={{ display: "flex", gap: 8, padding: "12px 16px", background: "#fff", borderBottom: "1px solid #f0f0f0", flexWrap: "wrap" }}>
+        {categoryOptions.map((c) => (
           <Button
             key={c.value}
             type={filterCategory === c.value ? "primary" : "default"}
@@ -98,11 +92,11 @@ export function ProductCatalog({ products, loading, branchId, getVariantPrice, g
                       <NextImage src={product.image_url} alt={product.name} width={300} height={130} style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }} />
                     ) : (
                       <div style={{ width: "100%", height: 130, background: "linear-gradient(135deg, #fff7ed, #fed7aa)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44 }}>
-                        {product.category === "pizza" ? "🍕" : product.category === "bebida" ? "🥤" : "🍽️"}
+                        📦
                       </div>
                     )}
                     <div style={{ position: "absolute", top: 8, left: 8 }}>
-                      <Tag color={CATEGORY_COLORS[product.category]} style={{ margin: 0, fontSize: 11 }}>{product.category}</Tag>
+                      <Tag style={{ margin: 0, fontSize: 11 }}>{product.category}</Tag>
                     </div>
                     {promoLabel && (
                       <div style={{ position: "absolute", top: 8, right: 8 }}>

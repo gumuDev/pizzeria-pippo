@@ -1,7 +1,6 @@
 "use client";
 
 import NextImage from "next/image";
-import { CATEGORY_BG } from "../constants/product.constants";
 import { CategoryIcon } from "./CategoryIcon";
 
 interface Props {
@@ -26,10 +25,10 @@ export function ProductImage({ url, category, width = 48, height = 48 }: Props) 
   return (
     <div style={{
       width, height, borderRadius: 8,
-      background: CATEGORY_BG[category] ?? "#f3f4f6",
+      background: "#f3f4f6",
       display: "flex", alignItems: "center", justifyContent: "center",
     }}>
-      <CategoryIcon category={category} size={width * 0.45} />
+      <CategoryIcon size={width * 0.45} />
     </div>
   );
 }

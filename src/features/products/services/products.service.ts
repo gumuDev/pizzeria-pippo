@@ -86,7 +86,7 @@ export const ProductsService = {
   },
 
   buildPayload(
-    step1Data: { name: string; category: string; description: string; branch_id: string },
+    step1Data: { name: string; category: string; description: string; branch_id: string; track_stock: boolean },
     imageUrl: string,
     selectedBranchId: string,
     variants: Variant[]
@@ -95,7 +95,6 @@ export const ProductsService = {
       if (!selectedBranchId) return v;
       const alreadyHas = v.branch_prices.some((bp) => bp.branch_id === selectedBranchId);
       const withBranch = alreadyHas ? v : { ...v, branch_prices: [...v.branch_prices, { branch_id: selectedBranchId, price: v.base_price }] };
-      // Filter out incomplete recipe rows before sending to API
       return { ...withBranch, recipes: withBranch.recipes.filter((r) => r.ingredient_id && r.quantity > 0) };
     });
     return {
@@ -104,6 +103,7 @@ export const ProductsService = {
       description: step1Data.description,
       image_url: imageUrl,
       branch_id: selectedBranchId,
+      track_stock: step1Data.track_stock,
       variants: variantsWithBranch,
     };
   },

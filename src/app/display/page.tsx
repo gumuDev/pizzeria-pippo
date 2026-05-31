@@ -5,23 +5,29 @@ import { useDisplay } from "@/features/display/hooks/useDisplay";
 import { DisplayMenu } from "@/features/display/components/DisplayMenu";
 import { DisplayCart } from "@/features/display/components/DisplayCart";
 import { DisplayThankYou } from "@/features/display/components/DisplayThankYou";
+import { useBusinessConfigPublic } from "@/features/business-config/hooks/useBusinessConfigPublic";
 
 export default function DisplayPage() {
   const { mode, cartItems, cartTotal, orderType, products, menuPage } = useDisplay();
+  const { config } = useBusinessConfigPublic();
 
   return (
     <div style={{ height: "100vh", width: "100vw", overflow: "hidden", background: "#030712", color: "#fff", display: "flex", flexDirection: "column" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 32px", background: "#ea580c", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 32px", background: config.business_primary_color, flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Image
-            src="/pippo.jpg"
-            alt="Pippo Pizza"
-            width={44}
-            height={44}
-            style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
-          />
-          <span style={{ fontSize: 26, fontWeight: 800, letterSpacing: "0.02em" }}>Pizzería Pippo</span>
+          {config.business_logo_url ? (
+            <Image
+              src={config.business_logo_url}
+              alt={config.business_name}
+              width={44}
+              height={44}
+              style={{ borderRadius: "50%", objectFit: "contain", background: "rgba(255,255,255,0.15)", padding: 4, flexShrink: 0 }}
+            />
+          ) : (
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.2)", flexShrink: 0 }} />
+          )}
+          <span style={{ fontSize: 26, fontWeight: 800, letterSpacing: "0.02em" }}>{config.business_name || "Mi Negocio"}</span>
         </div>
         <span style={{ color: "#fed7aa", fontSize: 16 }}>
           {mode === "order"

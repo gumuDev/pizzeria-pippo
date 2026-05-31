@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { todayInBolivia } from "@/lib/timezone";
+import { getBusinessName } from "@/lib/business-name";
 
 export interface StockAlert {
   ingredientName: string;
@@ -12,7 +13,8 @@ export interface StockAlert {
 /**
  * Builds a Telegram message from stock alerts, grouped by branch.
  */
-export function buildStockAlertMessage(alerts: StockAlert[]): string {
+export async function buildStockAlertMessage(alerts: StockAlert[]): Promise<string> {
+  const businessName = await getBusinessName();
   const byBranch: Record<string, StockAlert[]> = {};
   for (const alert of alerts) {
     (byBranch[alert.branchName] ??= []).push(alert);
@@ -30,7 +32,7 @@ export function buildStockAlertMessage(alerts: StockAlert[]): string {
       const lines = items
         .map((a) => `• ${a.ingredientName}: ${a.currentQty} ${a.unit} (mínimo: ${a.minQty} ${a.unit})`)
         .join("\n");
-      return `⚠️ *Stock bajo — ${branch}*\n\n${lines}\n\n_Pizzería Pippo — ${dateStr} ${timeStr}_`;
+      return `⚠️ *Stock bajo — ${branch}*\n\n${lines}\n\n_${businessName} — ${dateStr} ${timeStr}_`;
     })
     .join("\n\n---\n\n");
 }

@@ -6,6 +6,7 @@ import { ProductStepGeneral } from "./ProductStepGeneral";
 import { ProductStepVariants } from "./ProductStepVariants";
 import { ProductStepRecipes } from "./ProductStepRecipes";
 import { useProductForm } from "../hooks/useProductForm";
+import { useBusinessConfigPublic } from "@/features/business-config/hooks/useBusinessConfigPublic";
 import type { Product, Branch, Ingredient } from "../types/product.types";
 
 interface Props {
@@ -17,14 +18,22 @@ interface Props {
   onSave: () => void;
 }
 
-const STEPS = [
+const STEPS_WITH_RECIPES = [
   { title: "Datos generales" },
   { title: "Variantes y precios" },
   { title: "Recetas" },
 ];
 
+const STEPS_WITHOUT_RECIPES = [
+  { title: "Datos generales" },
+  { title: "Variantes y precios" },
+];
+
 export function ProductModal({ open, editing, branches, ingredients, onClose, onSave }: Props) {
   const form = useProductForm(onSave);
+  const { config } = useBusinessConfigPublic();
+  const showRecipes = config.business_type === "pizzeria";
+  const steps = showRecipes ? STEPS_WITH_RECIPES : STEPS_WITHOUT_RECIPES;
 
   useEffect(() => {
     if (!open) return;
@@ -45,7 +54,7 @@ export function ProductModal({ open, editing, branches, ingredients, onClose, on
       width={700}
       destroyOnHidden
     >
-      <Steps current={form.currentStep} items={STEPS} className="my-6" />
+      <Steps current={form.currentStep} items={steps} className="my-6" />
 
       {form.currentStep === 0 && (
         <ProductStepGeneral
@@ -74,11 +83,13 @@ export function ProductModal({ open, editing, branches, ingredients, onClose, on
           onAddVariant={form.addVariant}
           onRemoveVariant={form.removeVariant}
           onPrev={() => form.setCurrentStep(0)}
-          onNext={() => form.setCurrentStep(2)}
+          onNext={() => showRecipes ? form.setCurrentStep(2) : form.handleSave(editing)}
+          nextLabel={showRecipes ? undefined : (editing ? "Guardar" : "Crear")}
+          saving={!showRecipes ? form.saving : false}
         />
       )}
 
-      {form.currentStep === 2 && (
+      {showRecipes && form.currentStep === 2 && (
         <ProductStepRecipes
           variants={form.variants}
           ingredients={ingredients}

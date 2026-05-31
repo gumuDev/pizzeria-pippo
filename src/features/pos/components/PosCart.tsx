@@ -57,7 +57,7 @@ function CartItemRow({ item, onUpdateQty, onRemove, showPromoTag = true }: {
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <Text strong style={{ fontSize: 13, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {item.flavors?.length ? "Pizza mixta" : item.product_name}
+          {item.flavors?.length ? "Producto mixto" : item.product_name}
         </Text>
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, flexWrap: "wrap" }}>
           {item.flavors?.length ? (

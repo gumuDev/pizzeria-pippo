@@ -40,7 +40,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-sm bg-white rounded-lg shadow-md p-8">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-semibold text-gray-800 mb-1">Pizzería Pippo</h1>
+          <h1 className="text-2xl font-semibold text-gray-800 mb-1">Login</h1>
           <p className="text-gray-500 text-sm">Ingresá con tu cuenta</p>
         </div>
 
@@ -61,7 +61,7 @@ export default function LoginPage() {
               name="email"
               type="email"
               required
-              placeholder="admin@pizzeria.com"
+              placeholder="correo@negocio.com"
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>

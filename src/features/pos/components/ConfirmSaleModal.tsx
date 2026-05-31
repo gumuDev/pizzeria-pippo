@@ -37,7 +37,7 @@ export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, p
             <div>
               <Text>
                 {item.qty_physical}x{" "}
-                {item.flavors?.length ? "Pizza mixta" : item.product_name}
+                {item.flavors?.length ? "Producto mixto" : item.product_name}
                 {" "}({item.variant_name})
               </Text>
               {item.flavors?.length && (

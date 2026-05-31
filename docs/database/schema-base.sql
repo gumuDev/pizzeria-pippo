@@ -6,6 +6,14 @@
 -- Para aplicar cambios usar los archivos en migrations/
 -- ============================================================
 
+CREATE TABLE public.businesses (
+  id         uuid        NOT NULL DEFAULT gen_random_uuid(),
+  name       text        NOT NULL,
+  is_active  boolean     NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT businesses_pkey PRIMARY KEY (id)
+);
+
 CREATE TABLE public.branches (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name text NOT NULL,
@@ -19,11 +27,13 @@ CREATE TABLE public.profiles (
   id uuid NOT NULL,
   role text NOT NULL CHECK (role = ANY (ARRAY['admin'::text, 'cajero'::text, 'cocinero'::text])),
   branch_id uuid,
+  business_id uuid,
   full_name text,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
-  CONSTRAINT profiles_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id)
+  CONSTRAINT profiles_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
+  CONSTRAINT profiles_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(id)
 );
 
 CREATE TABLE public.products (
@@ -226,3 +236,27 @@ CREATE TABLE public.order_item_flavors (
   CONSTRAINT order_item_flavors_order_item_id_fkey FOREIGN KEY (order_item_id) REFERENCES public.order_items(id) ON DELETE CASCADE,
   CONSTRAINT order_item_flavors_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.product_variants(id)
 );
+
+-- ── Migración 022: kitchen_late_threshold en app_settings ──────────────────
+-- Ver docs/database/migrations/022_kitchen_late_threshold.sql
+
+-- ── Migración 023: Configuración del negocio (business config) ─────────────
+-- Claves en app_settings (tabla ya existente):
+--   business_name, business_type, business_logo_url, business_primary_color
+-- Bucket "business-assets" en Supabase Storage (crear manualmente, público).
+-- Ver docs/database/migrations/023_business_config.sql
+
+-- ── Migración 027: track_stock en products ────────────────────────────────
+-- ALTER TABLE public.products ADD COLUMN IF NOT EXISTS track_stock boolean NOT NULL DEFAULT true;
+
+-- ── Migraciones 024-025: Categorías de productos dinámicas ────────────────
+CREATE TABLE IF NOT EXISTS public.product_categories (
+  id         uuid        NOT NULL DEFAULT gen_random_uuid(),
+  name       text        NOT NULL,
+  is_active  boolean     NOT NULL DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  CONSTRAINT product_categories_pkey        PRIMARY KEY (id),
+  CONSTRAINT product_categories_name_unique UNIQUE (name)
+);
+-- Seed inicial: pizza, bebida, otro
+-- CHECK constraints eliminados: products_category_check, promotion_rules_category_check

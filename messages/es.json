@@ -142,5 +142,45 @@
   "branches": {
     "branchA": "Sucursal A",
     "branchB": "Sucursal B"
+  },
+  "businessConfig": {
+    "title": "Negocio",
+    "businessName": "Nombre del negocio",
+    "businessType": "Tipo de negocio",
+    "logoUrl": "Logo",
+    "primaryColor": "Color primario",
+    "save": "Guardar configuración",
+    "saved": "Configuración guardada",
+    "uploadLogo": "Subir logo",
+    "logoHint": "PNG o SVG, máximo 2MB",
+    "types": {
+      "pizzeria": "Pizzería",
+      "snack": "Snack",
+      "store": "Tienda",
+      "other": "Otro"
+    },
+    "labels": {
+      "product": "Producto",
+      "kitchen": "Cocina",
+      "ingredients": "Insumos",
+      "dispatch": "Despacho",
+      "item": "Artículo"
+    }
+  },
+  "onboarding": {
+    "title": "Bienvenido al sistema",
+    "subtitle": "Configurá tu negocio antes de comenzar",
+    "step1Title": "Datos del negocio",
+    "step2Title": "Logo e identidad",
+    "step3Title": "Vista previa",
+    "step1Description": "¿Cómo se llama tu negocio y qué tipo es?",
+    "step2Description": "Subí tu logo y elegí un color principal",
+    "step3Description": "Así se verá tu sistema",
+    "namePlaceholder": "Ej: Snack El Buen Sabor",
+    "next": "Siguiente",
+    "back": "Volver",
+    "finish": "Comenzar",
+    "preview": "Vista previa",
+    "colorHint": "Este color se usará en el POS y el panel"
   }
 }

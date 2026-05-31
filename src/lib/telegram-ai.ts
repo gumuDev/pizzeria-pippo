@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import * as XLSX from "xlsx";
 import { todayInBolivia, dateRangeFrom, dateRangeTo } from "@/lib/timezone";
+import { getBusinessName } from "@/lib/business-name";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -76,9 +77,10 @@ async function resolveBranches(): Promise<{ id: string; name: string }[]> {
 // System prompt
 // ---------------------------------------------------------------------------
 
-function buildSystemPrompt(today: string, branches: { id: string; name: string }[]): string {
+async function buildSystemPrompt(today: string, branches: { id: string; name: string }[]): Promise<string> {
+  const businessName = await getBusinessName();
   const branchList = branches.map((b) => `- "${b.name}" → id: ${b.id}`).join("\n");
-  return `Eres el asistente de gestión de Pizzería Pippo. Solo respondes preguntas sobre ventas, stock, reportes y promociones del restaurante. Si te preguntan algo fuera de ese contexto, responde amablemente que solo puedes ayudar con información del restaurante.
+  return `Eres el asistente de gestión de ${businessName}. Solo respondes preguntas sobre ventas, stock, reportes y promociones del restaurante. Si te preguntan algo fuera de ese contexto, responde amablemente que solo puedes ayudar con información del restaurante.
 
 Fecha de hoy en Bolivia: ${today}
 
@@ -455,7 +457,7 @@ export async function processAIMessage(
 
   let aiResult: AIResult;
   try {
-    const text = await callAI(providerConfig, buildSystemPrompt(today, branches), userMessage);
+    const text = await callAI(providerConfig, await buildSystemPrompt(today, branches), userMessage);
     aiResult = JSON.parse(text) as AIResult;
   } catch (err) {
     console.error("[telegram-ai] processAIMessage error:", err);

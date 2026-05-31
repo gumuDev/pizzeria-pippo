@@ -10,23 +10,12 @@ import { ArrowLeftOutlined, EditOutlined } from "@ant-design/icons";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { useIsMobile } from "@/lib/useIsMobile";
-
 const { Title, Text } = Typography;
 
-const CATEGORY_COLORS: Record<string, string> = {
-  pizza: "red", bebida: "blue", otro: "green",
-};
-const CATEGORY_BG: Record<string, string> = {
-  pizza: "#fef2f2", bebida: "#eff6ff", otro: "#f0fdf4",
-};
-const CATEGORY_EMOJI: Record<string, string> = {
-  pizza: "🍕", bebida: "🥤", otro: "🍽️",
-};
-
-function CategoryPlaceholder({ category, size = 220 }: { category: string; size?: number }) {
+function CategoryPlaceholder({ size = 220 }: { size?: number }) {
   return (
-    <div style={{ width: size, height: size, borderRadius: 12, background: CATEGORY_BG[category] ?? "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <span style={{ fontSize: size * 0.35, lineHeight: 1 }}>{CATEGORY_EMOJI[category] ?? "🍽️"}</span>
+    <div style={{ width: size, height: size, borderRadius: 12, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <span style={{ fontSize: size * 0.35, lineHeight: 1 }}>📦</span>
     </div>
   );
 }
@@ -142,12 +131,12 @@ export default function ProductDetailPage() {
                   style={{ borderRadius: 12, objectFit: "cover" }}
                 />
               ) : (
-                <CategoryPlaceholder category={product.category} size={imgSize} />
+                <CategoryPlaceholder size={imgSize} />
               )}
               <div style={{ textAlign: "center" }}>
                 <Title level={3} style={{ margin: 0 }}>{product.name}</Title>
                 <Space style={{ marginTop: 8 }}>
-                  <Tag color={CATEGORY_COLORS[product.category] ?? "default"} style={{ fontSize: 13 }}>
+                  <Tag style={{ fontSize: 13 }}>
                     {product.category}
                   </Tag>
                   {product.is_active

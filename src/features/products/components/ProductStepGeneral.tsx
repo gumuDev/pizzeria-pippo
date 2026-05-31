@@ -1,9 +1,9 @@
 "use client";
 
-import { Form, Input, Select, Button, Space, Upload } from "antd";
+import { Form, Input, Select, Button, Space, Upload, Alert, Checkbox } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd";
-import { CATEGORY_OPTIONS } from "../constants/product.constants";
+import { useProductCategoriesPublic } from "@/features/product-categories/hooks/useProductCategoriesPublic";
 import { ProductImage } from "./ProductImage";
 import type { Branch, Step1Data } from "../types/product.types";
 
@@ -24,6 +24,10 @@ export function ProductStepGeneral({
   form, branches, uploading, imageUrl, step1Data,
   onBranchChange, onImageUpload, onNext,
 }: Props) {
+  const { categories, loading: categoriesLoading } = useProductCategoriesPublic();
+  const categoryOptions = categories.map((c) => ({ value: c.name, label: c.name }));
+  const currentCategoryInactive = !categoriesLoading && !!step1Data.category && !categories.find((c) => c.name === step1Data.category);
+
   return (
     <Form form={form} layout="vertical">
       <Form.Item label="Sucursal" name="branch_id" rules={[{ required: true, message: "Requerido" }]}>
@@ -34,13 +38,24 @@ export function ProductStepGeneral({
         />
       </Form.Item>
       <Form.Item label="Nombre" name="name" rules={[{ required: true, message: "Requerido" }]}>
-        <Input placeholder="Ej: Pizza Pepperoni" />
+        <Input placeholder="Nombre del producto" />
       </Form.Item>
       <Form.Item label="Categoría" name="category" rules={[{ required: true, message: "Requerido" }]}>
-        <Select options={CATEGORY_OPTIONS} placeholder="Seleccionar categoría" />
+        <Select options={categoryOptions} placeholder="Seleccionar categoría" />
       </Form.Item>
+      {currentCategoryInactive && (
+        <Alert
+          type="warning"
+          showIcon
+          message={`La categoría "${step1Data.category}" fue desactivada. Selecciona una nueva categoría para continuar.`}
+          style={{ marginBottom: 16 }}
+        />
+      )}
       <Form.Item label="Descripción para el cliente" name="description">
         <TextArea rows={3} placeholder="Ej: Pepperoni, mozzarella, salsa de tomate" />
+      </Form.Item>
+      <Form.Item name="track_stock" valuePropName="checked">
+        <Checkbox>Descontar stock al vender</Checkbox>
       </Form.Item>
       <Form.Item label="Imagen">
         <Space direction="vertical">

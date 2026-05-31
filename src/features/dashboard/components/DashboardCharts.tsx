@@ -39,7 +39,7 @@ const topColumns = [
     dataIndex: "category",
     key: "category",
     render: (cat: string) => (
-      <Tag color={cat === "pizza" ? "red" : cat === "bebida" ? "blue" : "green"}>{cat}</Tag>
+      <Tag color={cat === "pizza" ? "red" : cat === "bebida" ? "blue" : "default"}>{cat}</Tag>
     ),
   },
   {

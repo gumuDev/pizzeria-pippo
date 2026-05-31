@@ -6,9 +6,9 @@ import {
   PlusOutlined, EditOutlined, StopOutlined,
   CheckCircleOutlined, EyeOutlined,
 } from "@ant-design/icons";
-import { CATEGORY_OPTIONS, CATEGORY_COLORS } from "../constants/product.constants";
 import { ProductImage } from "./ProductImage";
 import { useIsMobile } from "@/lib/useIsMobile";
+import { useProductCategoriesPublic } from "@/features/product-categories/hooks/useProductCategoriesPublic";
 import type { Product } from "../types/product.types";
 
 const { Title, Text } = Typography;
@@ -31,6 +31,7 @@ export function ProductsTable({
 }: Props) {
   const router = useRouter();
   const isMobile = useIsMobile();
+  const { categories } = useProductCategoriesPublic();
 
   const columns = [
     {
@@ -58,9 +59,7 @@ export function ProductsTable({
       title: "Categoría",
       dataIndex: "category",
       key: "category",
-      render: (cat: string) => (
-        <Tag color={CATEGORY_COLORS[cat]}>{CATEGORY_OPTIONS.find((c) => c.value === cat)?.label ?? cat}</Tag>
-      ),
+      render: (cat: string) => <Tag>{cat}</Tag>,
     },
     {
       title: "Variantes",
@@ -118,14 +117,14 @@ export function ProductsTable({
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
       {!isMobile && <Text style={{ lineHeight: "24px" }}>Filtrar:</Text>}
       <Button size="small" type={!filterCategory ? "primary" : "default"} onClick={() => onFilterCategory(null)}>Todos</Button>
-      {CATEGORY_OPTIONS.map((c) => (
+      {categories.map((c) => (
         <Button
-          key={c.value}
+          key={c.name}
           size="small"
-          type={filterCategory === c.value ? "primary" : "default"}
-          onClick={() => onFilterCategory(c.value)}
+          type={filterCategory === c.name ? "primary" : "default"}
+          onClick={() => onFilterCategory(c.name)}
         >
-          {c.label}
+          {c.name}
         </Button>
       ))}
     </div>
@@ -161,9 +160,7 @@ export function ProductsTable({
                       {!product.is_active && <Tag color="default" style={{ margin: 0 }}>Inactivo</Tag>}
                     </div>
                     <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap" }}>
-                      <Tag color={CATEGORY_COLORS[product.category]} style={{ margin: 0 }}>
-                        {CATEGORY_OPTIONS.find((c) => c.value === product.category)?.label ?? product.category}
-                      </Tag>
+                      <Tag style={{ margin: 0 }}>{product.category}</Tag>
                       {product.product_variants?.map((v) => (
                         <Tag key={v.id} style={{ margin: 0 }}>{v.name}</Tag>
                       ))}

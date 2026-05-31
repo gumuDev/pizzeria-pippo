@@ -32,7 +32,7 @@ export async function deductStock(
     .from("order_items")
     .select(`
       qty, qty_physical, variant_id,
-      product_variants(recipes(ingredient_id, quantity, apply_condition)),
+      product_variants(recipes(ingredient_id, quantity, apply_condition), products(track_stock)),
       order_item_flavors(variant_id, proportion)
     `)
     .eq("order_id", orderId);
@@ -47,6 +47,9 @@ export async function deductStock(
   // Mixed pizzas: deduct each flavor's recipe proportionally
   const deductions: Record<string, number> = {};
   for (const item of orderItems) {
+    const trackStock = (item.product_variants as unknown as { products: { track_stock: boolean } | null } | null)?.products?.track_stock ?? true;
+    if (!trackStock) continue;
+
     const physicalQty = (item as { qty_physical?: number }).qty_physical ?? item.qty;
     const flavors = (item as unknown as { order_item_flavors: FlavorRow[] }).order_item_flavors ?? [];
 
@@ -140,8 +143,7 @@ export async function deductStock(
         });
 
       if (alerts.length > 0) {
-        const message = buildStockAlertMessage(alerts);
-        sendTelegramAlert(message).catch(console.error);
+        buildStockAlertMessage(alerts).then((message) => sendTelegramAlert(message)).catch(console.error);
       }
     } catch (err) {
       console.error("[recipes] stock alert check error:", err);

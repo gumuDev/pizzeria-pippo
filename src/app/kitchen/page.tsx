@@ -5,6 +5,7 @@ import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { getUserProfile } from "@/lib/auth";
 import { formatTimeBolivia } from "@/lib/timezone";
+import { useBusinessConfigPublic } from "@/features/business-config/hooks/useBusinessConfigPublic";
 
 interface FlavorRow {
   variant_id: string;
@@ -108,7 +109,7 @@ function OrderCard({ order, onReady, lateThreshold }: { order: KitchenOrder; onR
               <div className="flex items-baseline gap-2">
                 <span className="text-orange-400 font-black text-xl w-8 shrink-0">{qty}x</span>
                 <span className="text-white font-semibold text-base leading-tight">
-                  {isMixed ? "Pizza mixta" : productName}
+                  {isMixed ? "Producto mixto" : productName}
                   {variantName && (
                     <span className="text-gray-400 font-normal text-sm ml-1">— {variantName}</span>
                   )}
@@ -151,6 +152,7 @@ export default function KitchenPage() {
   const [branchName, setBranchName] = useState("");
   const [currentTime, setCurrentTime] = useState("");
   const [lateThreshold, setLateThreshold] = useState(10);
+  const { config } = useBusinessConfigPublic();
 
   // Load kitchen late threshold from settings
   useEffect(() => {
@@ -279,13 +281,17 @@ export default function KitchenPage() {
       {/* Header */}
       <div className="bg-gray-950 border-b border-gray-800 px-6 py-3 flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <Image
-            src="/pippo.jpg"
-            alt="Pippo"
-            width={36}
-            height={36}
-            style={{ borderRadius: "50%", objectFit: "cover" }}
-          />
+          {config.business_logo_url ? (
+            <Image
+              src={config.business_logo_url}
+              alt={config.business_name || "Logo"}
+              width={36}
+              height={36}
+              style={{ borderRadius: "50%", objectFit: "cover" }}
+            />
+          ) : (
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: config.business_primary_color, flexShrink: 0 }} />
+          )}
           <div>
             <p className="text-white font-bold text-lg leading-none">Cocina</p>
             {branchName && (

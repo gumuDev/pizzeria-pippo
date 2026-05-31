@@ -2,15 +2,11 @@
 
 import { Row, Col, Select, InputNumber, Button, Typography, Divider } from "antd";
 import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { useProductCategoriesPublic } from "@/features/product-categories/hooks/useProductCategoriesPublic";
 import type { Rule, Variant } from "../types/promotion.types";
 
 const { Text } = Typography;
 
-const CATEGORY_OPTIONS = [
-  { value: "pizza", label: "Pizza" },
-  { value: "bebida", label: "Bebida" },
-  { value: "otro", label: "Otro" },
-];
 
 interface Props {
   promoType: string;
@@ -22,6 +18,8 @@ interface Props {
 }
 
 export function PromotionRules({ promoType, rules, variants, onAdd, onUpdate, onRemove }: Props) {
+  const { categories } = useProductCategoriesPublic();
+  const CATEGORY_OPTIONS = categories.map((c) => ({ value: c.name, label: c.name }));
   const variantOptions = variants.map((v) => ({ value: v.id, label: `${v.product_name} — ${v.name}` }));
   const sizeOptions = Array.from(new Set(variants.map((v) => v.name))).map((s) => ({ value: s, label: s }));
   const filterOption = (input: string, option?: { label: string }) =>

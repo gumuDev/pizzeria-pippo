@@ -42,6 +42,7 @@ export interface Product {
   description: string;
   image_url: string;
   is_active: boolean;
+  track_stock: boolean;
   product_variants: Array<{ id: string; name: string; base_price: number }>;
 }
 
@@ -50,4 +51,5 @@ export interface Step1Data {
   category: string;
   description: string;
   branch_id: string;
+  track_stock: boolean;
 }

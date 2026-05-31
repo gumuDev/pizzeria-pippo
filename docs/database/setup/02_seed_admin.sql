@@ -28,7 +28,7 @@ INSERT INTO auth.users (
 VALUES (
   gen_random_uuid(),
   '00000000-0000-0000-0000-000000000000',
-  'admin@pippo.com',
+  'admin@gmail.com',
   crypt('admin1234', gen_salt('bf')),
   now(),
   now(),
@@ -39,7 +39,7 @@ VALUES (
   'authenticated',
   'authenticated'
 )
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 -- Crear perfil admin vinculado al usuario recién creado
 INSERT INTO public.profiles (id, full_name, role, branch_id)
@@ -49,5 +49,5 @@ SELECT
   'admin',
   NULL
 FROM auth.users
-WHERE email = 'admin@pippo.com'
+WHERE email = 'admin@gmail.com'
 ON CONFLICT (id) DO NOTHING;

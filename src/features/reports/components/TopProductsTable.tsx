@@ -11,27 +11,26 @@ interface Props {
   loading: boolean;
 }
 
-const CATEGORY_COLOR: Record<string, string> = {
-  pizza: "red", bebida: "blue", otro: "green",
-};
+function TopProductsTableInner({ topProducts, loading }: Props) {
+  const isMobile = useIsMobile();
 
-const columns = [
-  {
-    title: "Producto",
-    key: "product",
-    render: (_: unknown, r: TopProduct) => (
-      <Space direction="vertical" size={0}>
-        <Text strong>{r.product_name}</Text>
-        <Text type="secondary" style={{ fontSize: 11 }}>{r.variant_name}</Text>
-      </Space>
-    ),
-  },
-  {
-    title: "Categoría",
-    dataIndex: "category",
-    key: "category",
-    render: (cat: string) => <Tag color={CATEGORY_COLOR[cat] ?? "default"}>{cat}</Tag>,
-  },
+  const columns = [
+    {
+      title: "Producto",
+      key: "product",
+      render: (_: unknown, r: TopProduct) => (
+        <Space direction="vertical" size={0}>
+          <Text strong>{r.product_name}</Text>
+          <Text type="secondary" style={{ fontSize: 11 }}>{r.variant_name}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: "Categoría",
+      dataIndex: "category",
+      key: "category",
+      render: (cat: string) => <Tag>{cat}</Tag>,
+    },
   {
     title: "Unidades",
     dataIndex: "qty",
@@ -47,9 +46,6 @@ const columns = [
     render: (rev: number) => <Text strong style={{ color: "#f97316" }}>Bs {rev.toFixed(2)}</Text>,
   },
 ];
-
-export function TopProductsTable({ topProducts, loading }: Props) {
-  const isMobile = useIsMobile();
 
   return (
     <Card title="Productos más vendidos" size="small" style={{ marginBottom: 24 }}>
@@ -71,7 +67,7 @@ export function TopProductsTable({ topProducts, loading }: Props) {
                     <Text strong style={{ fontSize: 13, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.product_name}</Text>
                     <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
                       <Text type="secondary" style={{ fontSize: 11 }}>{r.variant_name}</Text>
-                      <Tag color={CATEGORY_COLOR[r.category] ?? "default"} style={{ margin: 0, fontSize: 10, lineHeight: "16px" }}>{r.category}</Tag>
+                      <Tag style={{ margin: 0, fontSize: 10, lineHeight: "16px" }}>{r.category}</Tag>
                     </div>
                   </div>
                 </div>
@@ -95,4 +91,8 @@ export function TopProductsTable({ topProducts, loading }: Props) {
       )}
     </Card>
   );
+}
+
+export function TopProductsTable(props: Props) {
+  return <TopProductsTableInner {...props} />;
 }
