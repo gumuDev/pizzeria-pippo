@@ -39,7 +39,7 @@ export function ProductsTable({
       key: "image_url",
       width: 72,
       render: (_: unknown, record: Product) => (
-        <ProductImage url={record.image_url} category={record.category} />
+        <ProductImage url={record.image_url} />
       ),
     },
     {
@@ -151,7 +151,7 @@ export function ProductsTable({
                 }}
               >
                 <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                  <ProductImage url={product.image_url} category={product.category} width={56} height={56} />
+                  <ProductImage url={product.image_url} width={56} height={56} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                       <Text strong style={{ fontSize: 15, textDecoration: product.is_active ? "none" : "line-through" }}>

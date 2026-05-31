@@ -64,7 +64,7 @@ export function ProductStepGeneral({
               {uploading ? "Subiendo..." : "Subir imagen"}
             </Button>
           </Upload>
-          <ProductImage url={imageUrl} category={step1Data.category} width={120} height={120} />
+          <ProductImage url={imageUrl} width={120} height={120} />
         </Space>
       </Form.Item>
       <div className="flex justify-end mt-4">

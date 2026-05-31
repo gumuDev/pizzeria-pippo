@@ -5,12 +5,11 @@ import { CategoryIcon } from "./CategoryIcon";
 
 interface Props {
   url: string;
-  category: string;
   width?: number;
   height?: number;
 }
 
-export function ProductImage({ url, category, width = 48, height = 48 }: Props) {
+export function ProductImage({ url, width = 48, height = 48 }: Props) {
   if (url) {
     return (
       <NextImage
