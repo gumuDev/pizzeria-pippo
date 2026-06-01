@@ -46,10 +46,13 @@ export interface Product {
   product_variants: Array<{ id: string; name: string; base_price: number }>;
 }
 
+export type ProductType = "made" | "resale";
+
 export interface Step1Data {
   name: string;
   category: string;
   description: string;
   branch_id: string;
   track_stock: boolean;
+  product_type: ProductType;
 }

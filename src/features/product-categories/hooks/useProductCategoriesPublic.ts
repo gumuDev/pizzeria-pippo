@@ -1,26 +1,37 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import useSWR, { mutate } from "swr";
 import type { ProductCategory } from "../types/product-category.types";
-import { getProductCategoriesPublic } from "../services/product-categories.service";
 
-let publicCache: ProductCategory[] | null = null;
+const SWR_KEY = "/api/product-categories/public";
+
+async function fetcher(url: string): Promise<ProductCategory[]> {
+  const { supabase } = await import("@/lib/supabase");
+  const { data: session } = await supabase.auth.getSession();
+  const token = session.session?.access_token ?? "";
+  const endpoint = token
+    ? "/api/product-categories"
+    : "/api/product-categories/public";
+  const res = await fetch(endpoint, token ? { headers: { Authorization: `Bearer ${token}` } } : {});
+  if (!res.ok) throw new Error("Error cargando categorías");
+  return res.json();
+}
+
+export function invalidatePublicCategoriesCache() {
+  mutate(SWR_KEY);
+}
 
 export function useProductCategoriesPublic() {
-  const [categories, setCategories] = useState<ProductCategory[]>(publicCache ?? []);
-  const [loading, setLoading] = useState(!publicCache);
+  const { data, isLoading } = useSWR<ProductCategory[]>(SWR_KEY, fetcher, {
+    revalidateOnFocus: true,
+    dedupingInterval: 5000,
+  });
 
-  useEffect(() => {
-    if (publicCache) return;
-    setLoading(true);
-    getProductCategoriesPublic()
-      .then((data) => { publicCache = data; setCategories(data); })
-      .finally(() => setLoading(false));
-  }, []);
+  const categories = data ?? [];
 
   const getCategoryNames = (): string[] => categories.map((c) => c.name);
   const categoryAllowsMixing = (name: string): boolean =>
     categories.find((c) => c.name === name)?.allow_mixing ?? false;
 
-  return { categories, loading, getCategoryNames, categoryAllowsMixing };
+  return { categories, loading: isLoading, getCategoryNames, categoryAllowsMixing };
 }

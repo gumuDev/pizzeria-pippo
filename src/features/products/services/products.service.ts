@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { ok, fail, type ServiceResult } from "@/lib/errors";
-import type { Product, Ingredient, Branch, Variant } from "../types/product.types";
+import type { Product, Ingredient, Branch, Variant, Step1Data } from "../types/product.types";
 
 export const ProductsService = {
   async getProducts(showInactive: boolean): Promise<Product[]> {
@@ -86,7 +86,7 @@ export const ProductsService = {
   },
 
   buildPayload(
-    step1Data: { name: string; category: string; description: string; branch_id: string; track_stock: boolean },
+    step1Data: Step1Data,
     imageUrl: string,
     selectedBranchId: string,
     variants: Variant[]
@@ -103,7 +103,7 @@ export const ProductsService = {
       description: step1Data.description,
       image_url: imageUrl,
       branch_id: selectedBranchId,
-      track_stock: step1Data.track_stock,
+      track_stock: true,
       variants: variantsWithBranch,
     };
   },

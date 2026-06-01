@@ -32,7 +32,9 @@ const STEPS_WITHOUT_RECIPES = [
 export function ProductModal({ open, editing, branches, ingredients, onClose, onSave }: Props) {
   const form = useProductForm(onSave);
   const { config } = useBusinessConfigPublic();
-  const showRecipes = config.business_type === "pizzeria";
+  const isPizzeria = config.business_type === "pizzeria";
+  const isMadeProduct = form.step1Data.product_type === "made";
+  const showRecipes = isPizzeria && isMadeProduct;
   const steps = showRecipes ? STEPS_WITH_RECIPES : STEPS_WITHOUT_RECIPES;
 
   useEffect(() => {
@@ -78,6 +80,8 @@ export function ProductModal({ open, editing, branches, ingredients, onClose, on
           branches={branches}
           variantTypeOptions={form.variantTypeOptions}
           selectedBranchId={form.selectedBranchId}
+          hasVariants={form.hasVariants}
+          onToggleVariants={form.setHasVariants}
           onUpdateVariant={form.updateVariant}
           onUpdateBranchPrice={form.updateBranchPrice}
           onAddVariant={form.addVariant}
@@ -95,6 +99,8 @@ export function ProductModal({ open, editing, branches, ingredients, onClose, on
           ingredients={ingredients}
           saving={form.saving}
           editing={!!editing}
+          hasRecipe={form.hasRecipe}
+          onToggleRecipe={form.setHasRecipe}
           onAddRecipeItem={form.addRecipeItem}
           onUpdateRecipeItem={form.updateRecipeItem}
           onRemoveRecipeItem={form.removeRecipeItem}

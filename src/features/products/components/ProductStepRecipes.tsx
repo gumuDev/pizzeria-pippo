@@ -1,9 +1,11 @@
 "use client";
 
-import { Button, Card, Select, InputNumber, Tooltip } from "antd";
+import { Button, Card, Select, InputNumber, Tooltip, Switch, Typography, Alert } from "antd";
 import { PlusOutlined, MinusCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { useIsMobile } from "@/lib/useIsMobile";
 import type { Ingredient, Variant, RecipeItem } from "../types/product.types";
+
+const { Text } = Typography;
 
 const CONDITION_OPTIONS = [
   { value: "always", label: "Siempre" },
@@ -16,6 +18,8 @@ interface Props {
   ingredients: Ingredient[];
   saving: boolean;
   editing: boolean;
+  hasRecipe: boolean;
+  onToggleRecipe: (val: boolean) => void;
   onAddRecipeItem: (variantIndex: number) => void;
   onUpdateRecipeItem: (variantIndex: number, recipeIndex: number, field: keyof RecipeItem, value: string | number) => void;
   onRemoveRecipeItem: (variantIndex: number, recipeIndex: number) => void;
@@ -25,6 +29,7 @@ interface Props {
 
 export function ProductStepRecipes({
   variants, ingredients, saving, editing,
+  hasRecipe, onToggleRecipe,
   onAddRecipeItem, onUpdateRecipeItem, onRemoveRecipeItem,
   onPrev, onSave,
 }: Props) {
@@ -32,7 +37,30 @@ export function ProductStepRecipes({
 
   return (
     <div>
-      {variants.map((variant, vi) => (
+      {/* Toggle: tiene receta */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, padding: "12px 16px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb" }}>
+        <Switch checked={hasRecipe} onChange={onToggleRecipe} />
+        <div>
+          <Text strong style={{ fontSize: 14 }}>Este producto usa ingredientes para elaborarse</Text>
+          <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
+            {hasRecipe
+              ? "Se descontarán ingredientes del stock al vender"
+              : "Se descontarán unidades del stock al vender (reventa)"}
+          </Text>
+        </div>
+      </div>
+
+      {!hasRecipe && (
+        <Alert
+          type="info"
+          showIcon
+          message="Producto de reventa"
+          description="Este producto se vende por unidades. Cargá el stock desde Stock → Productos al registrar una compra."
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      {hasRecipe && variants.map((variant, vi) => (
         <Card key={vi} style={{ marginBottom: 16 }} size="small" title={`Receta — ${variant.name}`}>
           {variant.recipes.map((recipe, ri) => (
             <div key={ri} style={{ marginBottom: 10 }}>

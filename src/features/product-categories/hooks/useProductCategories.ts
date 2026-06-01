@@ -8,6 +8,7 @@ import {
   getProductCategories, createProductCategory,
   updateProductCategory, deleteProductCategory,
 } from "../services/product-categories.service";
+import { invalidatePublicCategoriesCache } from "./useProductCategoriesPublic";
 
 async function getToken(): Promise<string> {
   const { data } = await supabase.auth.getSession();
@@ -47,6 +48,7 @@ export function useProductCategories() {
       } else {
         await createProductCategory(token, input);
       }
+      invalidatePublicCategoriesCache();
       await load();
       closeModal();
     } finally {
@@ -57,6 +59,7 @@ export function useProductCategories() {
   const handleDelete = async (id: string) => {
     const token = await getToken();
     const result = await deleteProductCategory(token, id);
+    invalidatePublicCategoriesCache();
     await load();
     if (result.soft) {
       message.warning(`Categoría desactivada — tiene ${result.count} producto(s). Cámbiales la categoría para que vuelvan a estar disponibles.`, 6);

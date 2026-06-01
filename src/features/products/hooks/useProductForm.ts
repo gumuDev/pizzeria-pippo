@@ -12,9 +12,37 @@ export function useProductForm(onSuccess: () => void) {
   const [saving, setSaving] = useState(false);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("");
-  const [step1Data, setStep1Data] = useState<Step1Data>({ name: "", category: "", description: "", branch_id: "", track_stock: true });
+  const [step1Data, setStep1Data] = useState<Step1Data>({ name: "", category: "", description: "", branch_id: "", track_stock: true, product_type: "made" });
   const [variantTypeOptions, setVariantTypeOptions] = useState<VariantTypeOption[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
+  const [hasRecipe, setHasRecipe] = useState(true);
+  const [hasVariants, setHasVariants] = useState(false);
+
+  const toggleHasRecipe = (val: boolean) => {
+    setHasRecipe(val);
+    if (!val) {
+      setVariants((prev) => prev.map((v) => ({ ...v, recipes: [] })));
+    }
+  };
+
+  const toggleHasVariants = (val: boolean) => {
+    setHasVariants(val);
+    if (!val) {
+      // Switch to simple mode: keep only first variant renamed to "Unidad"
+      setVariants((prev) => {
+        const first = prev[0] ?? { name: "Unidad", base_price: 0, branch_prices: [], recipes: [] };
+        return [{ ...first, name: "Unidad" }];
+      });
+    } else {
+      // Switch to multi-variant mode: rename "Unidad" to first available type
+      setVariants((prev) =>
+        prev.map((v, i) => i === 0 && v.name === "Unidad" && variantTypeOptions.length > 0
+          ? { ...v, name: variantTypeOptions[0].value }
+          : v
+        )
+      );
+    }
+  };
   const [formStep1] = Form.useForm();
 
   const getToken = async () => {
@@ -48,12 +76,11 @@ export function useProductForm(onSuccess: () => void) {
     setCurrentStep(0);
     setImageUrl("");
     setSelectedBranchId("");
-    setStep1Data({ name: "", category: "", description: "", branch_id: "", track_stock: true });
+    setStep1Data({ name: "", category: "", description: "", branch_id: "", track_stock: true, product_type: "made" });
+    setHasRecipe(true);
+    setHasVariants(false);
     formStep1.resetFields();
-    setVariants(variantTypeOptions.length > 0
-      ? [{ name: variantTypeOptions[0].value, base_price: 0, branch_prices: [], recipes: [] }]
-      : []
-    );
+    setVariants([{ name: "Unidad", base_price: 0, branch_prices: [], recipes: [] }]);
   };
 
   const loadForEdit = async (record: Product) => {
@@ -71,12 +98,16 @@ export function useProductForm(onSuccess: () => void) {
     const existingBranchId = loadedVariants[0]?.branch_prices?.[0]?.branch_id ?? "";
     setSelectedBranchId(existingBranchId);
 
+    const anyHasRecipeForType = loadedVariants.some((v) => v.recipes.length > 0);
+    const productType = anyHasRecipeForType ? "made" : "resale";
+
     formStep1.setFieldsValue({
       name: record.name,
       category: record.category,
       description: record.description,
       branch_id: existingBranchId || undefined,
       track_stock: record.track_stock ?? true,
+      product_type: productType,
     });
 
     setStep1Data({
@@ -85,9 +116,14 @@ export function useProductForm(onSuccess: () => void) {
       description: record.description ?? "",
       branch_id: existingBranchId,
       track_stock: record.track_stock ?? true,
+      product_type: productType,
     });
 
     setVariants(loadedVariants);
+    setHasRecipe(anyHasRecipeForType);
+    // Simple mode: single variant named "Unidad"
+    const isSimple = loadedVariants.length === 1 && loadedVariants[0].name === "Unidad";
+    setHasVariants(!isSimple);
   };
 
   const handleImageUpload = async (file: File) => {
@@ -156,12 +192,22 @@ export function useProductForm(onSuccess: () => void) {
     updateVariant(variantIndex, "recipes", variants[variantIndex].recipes.filter((_, i) => i !== recipeIndex));
   };
 
+  const handleSetStep1Data = (data: Step1Data) => {
+    setStep1Data(data);
+    // Sync hasRecipe and track_stock from product_type
+    const isMade = data.product_type === "made";
+    setHasRecipe(isMade);
+    setStep1Data({ ...data, track_stock: true });
+  };
+
   return {
     currentStep, setCurrentStep,
     uploading, saving,
     imageUrl, selectedBranchId, setSelectedBranchId,
-    step1Data, setStep1Data,
+    step1Data, setStep1Data: handleSetStep1Data,
     variants, variantTypeOptions,
+    hasRecipe, setHasRecipe: toggleHasRecipe,
+    hasVariants, setHasVariants: toggleHasVariants,
     formStep1,
     resetForm, loadForEdit,
     handleImageUpload, handleSave,
