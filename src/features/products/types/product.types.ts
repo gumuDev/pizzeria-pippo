@@ -52,7 +52,6 @@ export interface Step1Data {
   name: string;
   category: string;
   description: string;
-  branch_id: string;
   track_stock: boolean;
   product_type: ProductType;
 }

@@ -12,7 +12,8 @@ type OrderType = "dine_in" | "takeaway";
 export function usePosCart(
   promotions: Promotion[],
   branchId: string | undefined,
-  broadcast: (type: string, payload?: unknown) => void
+  broadcast: (type: string, payload?: unknown) => void,
+  getStockQty?: (variantId: string) => number | null
 ) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [discountedCart, setDiscountedCart] = useState<DiscountedItem[]>([]);
@@ -47,6 +48,9 @@ export function usePosCart(
         }];
       }
       const existing = prev.find((i) => i.variant_id === variant.id && !i.flavors);
+      const maxQty = getStockQty?.(variant.id) ?? null;
+      const currentQty = existing?.qty ?? 0;
+      if (maxQty !== null && currentQty >= maxQty) return prev; // at stock cap
       if (existing) return prev.map((i) => i.variant_id === variant.id && !i.flavors ? { ...i, qty: i.qty + 1 } : i);
       return [...prev, {
         variant_id: variant.id,
@@ -61,7 +65,13 @@ export function usePosCart(
 
   const updateQty = (variantId: string, delta: number) => {
     setCart((prev) =>
-      prev.map((i) => i.variant_id === variantId ? { ...i, qty: i.qty + delta } : i).filter((i) => i.qty > 0)
+      prev.map((i) => {
+        if (i.variant_id !== variantId) return i;
+        const maxQty = getStockQty?.(variantId) ?? null;
+        const newQty = i.qty + delta;
+        if (delta > 0 && maxQty !== null && newQty > maxQty) return i; // cap at stock
+        return { ...i, qty: newQty };
+      }).filter((i) => i.qty > 0)
     );
   };
 
@@ -84,5 +94,6 @@ export function usePosCart(
     cart, discountedCart, total, totalDiscount,
     orderType, setOrderType,
     addToCart, updateQty, removeFromCart, clearCart, suppressNextClear,
+    getStockQty: getStockQty ?? (() => null),
   };
 }

@@ -11,8 +11,7 @@ export function useProductForm(onSuccess: () => void) {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [imageUrl, setImageUrl] = useState<string>("");
-  const [selectedBranchId, setSelectedBranchId] = useState<string>("");
-  const [step1Data, setStep1Data] = useState<Step1Data>({ name: "", category: "", description: "", branch_id: "", track_stock: true, product_type: "made" });
+  const [step1Data, setStep1Data] = useState<Step1Data>({ name: "", category: "", description: "", track_stock: true, product_type: "made" });
   const [variantTypeOptions, setVariantTypeOptions] = useState<VariantTypeOption[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [hasRecipe, setHasRecipe] = useState(true);
@@ -75,8 +74,7 @@ export function useProductForm(onSuccess: () => void) {
   const resetForm = () => {
     setCurrentStep(0);
     setImageUrl("");
-    setSelectedBranchId("");
-    setStep1Data({ name: "", category: "", description: "", branch_id: "", track_stock: true, product_type: "made" });
+    setStep1Data({ name: "", category: "", description: "", track_stock: true, product_type: "made" });
     setHasRecipe(true);
     setHasVariants(false);
     formStep1.resetFields();
@@ -95,9 +93,6 @@ export function useProductForm(onSuccess: () => void) {
       recipes: v.recipes ?? [],
     }));
 
-    const existingBranchId = loadedVariants[0]?.branch_prices?.[0]?.branch_id ?? "";
-    setSelectedBranchId(existingBranchId);
-
     const anyHasRecipeForType = loadedVariants.some((v) => v.recipes.length > 0);
     const productType = anyHasRecipeForType ? "made" : "resale";
 
@@ -105,7 +100,6 @@ export function useProductForm(onSuccess: () => void) {
       name: record.name,
       category: record.category,
       description: record.description,
-      branch_id: existingBranchId || undefined,
       track_stock: record.track_stock ?? true,
       product_type: productType,
     });
@@ -114,7 +108,6 @@ export function useProductForm(onSuccess: () => void) {
       name: record.name,
       category: record.category,
       description: record.description ?? "",
-      branch_id: existingBranchId,
       track_stock: record.track_stock ?? true,
       product_type: productType,
     });
@@ -141,7 +134,7 @@ export function useProductForm(onSuccess: () => void) {
 
   const handleSave = async (editing: Product | null) => {
     setSaving(true);
-    const payload = ProductsService.buildPayload(step1Data, imageUrl, selectedBranchId, variants);
+    const payload = ProductsService.buildPayload(step1Data, imageUrl, variants);
     const token = await getToken();
     const result = editing
       ? await ProductsService.updateProduct(editing.id, payload, token)
@@ -203,7 +196,7 @@ export function useProductForm(onSuccess: () => void) {
   return {
     currentStep, setCurrentStep,
     uploading, saving,
-    imageUrl, selectedBranchId, setSelectedBranchId,
+    imageUrl,
     step1Data, setStep1Data: handleSetStep1Data,
     variants, variantTypeOptions,
     hasRecipe, setHasRecipe: toggleHasRecipe,

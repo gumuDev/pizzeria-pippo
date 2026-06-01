@@ -5,6 +5,8 @@ export interface Variant {
   name: string;
   base_price: number;
   branch_prices: { branch_id: string; price: number }[];
+  recipes?: unknown[];
+  stock_quantity?: number | null;
 }
 
 export interface Product {
@@ -14,6 +16,7 @@ export interface Product {
   description: string;
   image_url: string;
   is_active: boolean;
+  track_stock: boolean;
   product_variants: Variant[];
 }
 

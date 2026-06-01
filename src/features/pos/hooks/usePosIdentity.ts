@@ -19,8 +19,8 @@ export function usePosIdentity() {
       }
       setIdentity(result);
 
-      // Admin sin sucursal asignada → cargar lista de sucursales para elegir
-      if (result.role === "admin" && !result.branch_id) {
+      // Admin siempre elige sucursal al entrar al POS
+      if (result.role === "admin") {
         const { data } = await supabase.from("branches").select("id, name").order("name");
         setBranches(data ?? []);
       }
@@ -33,21 +33,24 @@ export function usePosIdentity() {
     window.location.href = "/login";
   };
 
-  // Para admin: sucursal efectiva es la del perfil (si tiene) o la seleccionada manualmente
-  const effectiveBranchId = identity?.branch_id ?? selectedBranchId;
+  // Cajero: usa su branch_id del perfil. Admin: usa la sucursal elegida en esta sesión.
+  const effectiveBranchId = identity?.role === "admin" ? selectedBranchId : (identity?.branch_id ?? null);
 
   const isAdminChoosingBranch =
     identity !== null &&
     identity.role === "admin" &&
-    !identity.branch_id &&
     !selectedBranchId;
+
+  const selectedBranchName = branches.find((b) => b.id === selectedBranchId)?.name ?? null;
 
   return {
     identity,
     branches,
     effectiveBranchId,
+    selectedBranchName,
     isAdminChoosingBranch,
     selectBranch: setSelectedBranchId,
+    changeBranch: () => setSelectedBranchId(null),
     handleLogout,
   };
 }

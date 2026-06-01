@@ -5,7 +5,7 @@ import type { ProductCategory } from "../types/product-category.types";
 
 const SWR_KEY = "/api/product-categories/public";
 
-async function fetcher(url: string): Promise<ProductCategory[]> {
+async function fetcher(_url: string): Promise<ProductCategory[]> {
   const { supabase } = await import("@/lib/supabase");
   const { data: session } = await supabase.auth.getSession();
   const token = session.session?.access_token ?? "";

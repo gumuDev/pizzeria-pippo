@@ -13,7 +13,9 @@ function getSupabaseWithAuth(request: NextRequest) {
 
 export const GET = apiHandler(async (request: NextRequest) => {
   const supabase = getSupabaseWithAuth(request);
-  const showInactive = new URL(request.url).searchParams.get("showInactive") === "true";
+  const params = new URL(request.url).searchParams;
+  const showInactive = params.get("showInactive") === "true";
+  const branchId = params.get("branchId");
 
   let query = supabase
     .from("products")
@@ -34,6 +36,39 @@ export const GET = apiHandler(async (request: NextRequest) => {
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // If branchId provided, attach stock quantities for resale variants (track_stock=true, no recipes)
+  if (branchId && data) {
+    const variantIds = data.flatMap((p) =>
+      (p.product_variants ?? [])
+        .filter((v: { recipes?: unknown[] }) => !v.recipes?.length)
+        .map((v: { id: string }) => v.id)
+    );
+
+    if (variantIds.length > 0) {
+      const serviceSupabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      const { data: stockRows } = await serviceSupabase
+        .from("branch_product_stock")
+        .select("variant_id, quantity")
+        .eq("branch_id", branchId)
+        .in("variant_id", variantIds);
+
+      const stockMap: Record<string, number> = {};
+      for (const row of stockRows ?? []) stockMap[row.variant_id] = row.quantity;
+
+      for (const product of data) {
+        for (const variant of product.product_variants ?? []) {
+          if (!variant.recipes?.length) {
+            variant.stock_quantity = stockMap[variant.id] ?? null;
+          }
+        }
+      }
+    }
+  }
+
   return NextResponse.json(data);
 });
 

@@ -30,7 +30,7 @@ export const PosService = {
     const today = todayInBolivia();
     const headers = { Authorization: `Bearer ${token}` };
     const [productsRes, promoRes] = await Promise.all([
-      fetch("/api/products", { headers }),
+      fetch(`/api/products?branchId=${branchId}`, { headers }),
       fetch(`/api/promotions?branchId=${branchId}&date=${today}`, { headers }),
     ]);
     const [productsData, promoData] = await Promise.all([productsRes.json(), promoRes.json()]);

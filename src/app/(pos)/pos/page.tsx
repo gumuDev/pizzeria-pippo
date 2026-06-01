@@ -23,10 +23,10 @@ import { PosService } from "@/features/pos/services/pos.service";
 import type { Product, TicketData, OrderType } from "@/features/pos/types/pos.types";
 
 export default function PosPage() {
-  const { identity, branches, effectiveBranchId, isAdminChoosingBranch, selectBranch, handleLogout } = usePosIdentity();
+  const { identity, branches, effectiveBranchId, selectedBranchName, isAdminChoosingBranch, selectBranch, changeBranch, handleLogout } = usePosIdentity();
   const { broadcast } = usePosBroadcast();
-  const { products, promotions, loading, getVariantPrice, getPromoLabel } = usePosProducts(effectiveBranchId ?? undefined);
-  const cart = usePosCart(promotions, effectiveBranchId ?? undefined, broadcast);
+  const { products, promotions, loading, getVariantPrice, getPromoLabel, getStockQty, refreshProducts } = usePosProducts(effectiveBranchId ?? undefined);
+  const cart = usePosCart(promotions, effectiveBranchId ?? undefined, broadcast, getStockQty);
   const [activeTab, setActiveTab] = useState<PosTab>("sale");
   const { dayOrders, markingReady, fetchDayOrders, handleMarkReady, cancelModal, cancelling, openCancelModal, closeCancelModal, handleCancelOrder } = useDayOrders(effectiveBranchId ?? undefined, activeTab !== "sale");
 
@@ -108,6 +108,7 @@ export default function PosPage() {
         setTicket({ orderId: result.order_id!, dailyNumber: result.daily_number!, items: cart.discountedCart, total: cart.total, paymentMethod, orderType: cart.orderType });
         cart.clearCart();
         fetchDayOrders(branchId);
+        refreshProducts();
       } else {
         message.error(`Error al confirmar venta: ${result.error}`, 5);
       }
@@ -123,7 +124,9 @@ export default function PosPage() {
         identity={identity}
         activeTab={activeTab}
         pendingCount={dayOrders.filter((o) => o.kitchen_status === "pending" && !o.cancelled_at).length}
+        branchName={selectedBranchName ?? undefined}
         onTabChange={setActiveTab}
+        onChangeBranch={changeBranch}
         onLogout={handleLogout}
       />
 
@@ -145,6 +148,7 @@ export default function PosPage() {
             onRemove={cart.removeFromCart}
             onConfirm={() => setPaymentModal(true)}
             onClear={cart.clearCart}
+            getStockQty={cart.getStockQty}
           />
         </div>
       )}

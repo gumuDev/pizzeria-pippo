@@ -4,12 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { notification } from "antd";
 import { supabase } from "@/lib/supabase";
 import { ProductsService } from "../services/products.service";
-import type { Product, Ingredient, Branch } from "../types/product.types";
+import type { Product, Ingredient } from "../types/product.types";
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -18,14 +17,12 @@ export function useProducts() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [p, i, b] = await Promise.all([
+    const [p, i] = await Promise.all([
       ProductsService.getProducts(showInactive),
       ProductsService.getIngredients(),
-      ProductsService.getBranches(),
     ]);
     setProducts(p);
     setIngredients(i);
-    setBranches(b);
     setLoading(false);
   }, [showInactive]);
 
@@ -62,7 +59,6 @@ export function useProducts() {
     products: filteredProducts,
     allProducts: products,
     ingredients,
-    branches,
     loading,
     modalOpen,
     editing,

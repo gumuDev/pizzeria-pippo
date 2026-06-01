@@ -7,12 +7,11 @@ import { ProductStepVariants } from "./ProductStepVariants";
 import { ProductStepRecipes } from "./ProductStepRecipes";
 import { useProductForm } from "../hooks/useProductForm";
 import { useBusinessConfigPublic } from "@/features/business-config/hooks/useBusinessConfigPublic";
-import type { Product, Branch, Ingredient } from "../types/product.types";
+import type { Product, Ingredient } from "../types/product.types";
 
 interface Props {
   open: boolean;
   editing: Product | null;
-  branches: Branch[];
   ingredients: Ingredient[];
   onClose: () => void;
   onSave: () => void;
@@ -29,7 +28,7 @@ const STEPS_WITHOUT_RECIPES = [
   { title: "Variantes y precios" },
 ];
 
-export function ProductModal({ open, editing, branches, ingredients, onClose, onSave }: Props) {
+export function ProductModal({ open, editing, ingredients, onClose, onSave }: Props) {
   const form = useProductForm(onSave);
   const { config } = useBusinessConfigPublic();
   const isPizzeria = config.business_type === "pizzeria";
@@ -61,11 +60,9 @@ export function ProductModal({ open, editing, branches, ingredients, onClose, on
       {form.currentStep === 0 && (
         <ProductStepGeneral
           form={form.formStep1}
-          branches={branches}
           uploading={form.uploading}
           imageUrl={form.imageUrl}
           step1Data={form.step1Data}
-          onBranchChange={(val) => form.setSelectedBranchId(val)}
           onImageUpload={form.handleImageUpload}
           onNext={() => form.formStep1.validateFields().then((values) => {
             form.setStep1Data(values);
@@ -77,13 +74,10 @@ export function ProductModal({ open, editing, branches, ingredients, onClose, on
       {form.currentStep === 1 && (
         <ProductStepVariants
           variants={form.variants}
-          branches={branches}
           variantTypeOptions={form.variantTypeOptions}
-          selectedBranchId={form.selectedBranchId}
           hasVariants={form.hasVariants}
           onToggleVariants={form.setHasVariants}
           onUpdateVariant={form.updateVariant}
-          onUpdateBranchPrice={form.updateBranchPrice}
           onAddVariant={form.addVariant}
           onRemoveVariant={form.removeVariant}
           onPrev={() => form.setCurrentStep(0)}

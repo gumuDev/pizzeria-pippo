@@ -5,7 +5,7 @@ import { UploadOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd";
 import { useProductCategoriesPublic } from "@/features/product-categories/hooks/useProductCategoriesPublic";
 import { ProductImage } from "./ProductImage";
-import type { Branch, Step1Data, ProductType } from "../types/product.types";
+import type { Step1Data, ProductType } from "../types/product.types";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -18,18 +18,16 @@ const PRODUCT_TYPE_OPTIONS: { value: ProductType; icon: string; label: string; d
 
 interface Props {
   form: FormInstance;
-  branches: Branch[];
   uploading: boolean;
   imageUrl: string;
   step1Data: Step1Data;
-  onBranchChange: (val: string) => void;
   onImageUpload: (file: File) => Promise<boolean>;
   onNext: () => void;
 }
 
 export function ProductStepGeneral({
-  form, branches, uploading, imageUrl, step1Data,
-  onBranchChange, onImageUpload, onNext,
+  form, uploading, imageUrl, step1Data,
+  onImageUpload, onNext,
 }: Props) {
   const { categories, loading: categoriesLoading } = useProductCategoriesPublic();
   const categoryOptions = categories.map((c) => ({ value: c.name, label: c.name }));
@@ -38,13 +36,6 @@ export function ProductStepGeneral({
 
   return (
     <Form form={form} layout="vertical">
-      <Form.Item label="Sucursal" name="branch_id" rules={[{ required: true, message: "Requerido" }]}>
-        <Select
-          options={branches.map((b) => ({ value: b.id, label: b.name }))}
-          placeholder="Seleccionar sucursal"
-          onChange={onBranchChange}
-        />
-      </Form.Item>
       <Form.Item label="Nombre" name="name" rules={[{ required: true, message: "Requerido" }]}>
         <Input placeholder="Nombre del producto" />
       </Form.Item>

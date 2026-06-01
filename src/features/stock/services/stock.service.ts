@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { ok, fail, type ServiceResult } from "@/lib/errors";
-import type { StockRow, Movement, Ingredient, Branch } from "../types/stock.types";
+import type { StockRow, Movement, Ingredient, Branch, ProductStockRow } from "../types/stock.types";
 
 async function getToken(): Promise<string> {
   const { data } = await supabase.auth.getSession();
@@ -61,6 +61,44 @@ export const StockService = {
     if (res.ok) return ok(undefined);
     const data = await res.json().catch(() => ({}));
     return fail(data.error ?? "Error al registrar el ajuste");
+  },
+
+  async getResaleVariants(): Promise<{ id: string; name: string; products: { id: string; name: string } | null }[]> {
+    const token = await getToken();
+    const res = await fetch("/api/stock/resale-variants", { headers: { Authorization: `Bearer ${token}` } });
+    const json = await res.json();
+    return json.data ?? [];
+  },
+
+  async getProductStock(branchId: string): Promise<ProductStockRow[]> {
+    const token = await getToken();
+    const res = await fetch(`/api/stock/products?branchId=${branchId}`, { headers: { Authorization: `Bearer ${token}` } });
+    const json = await res.json();
+    return json.data ?? [];
+  },
+
+  async productAdjust(payload: { branch_id: string; variant_id: string; real_quantity: number; notes?: string }): Promise<ServiceResult> {
+    const token = await getToken();
+    const res = await fetch("/api/stock/product-adjust", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) return ok(undefined);
+    const data = await res.json().catch(() => ({}));
+    return fail(data.error ?? "Error al registrar el ajuste");
+  },
+
+  async productPurchase(payload: { branch_id: string; variant_id: string; quantity: number; min_quantity?: number }): Promise<ServiceResult> {
+    const token = await getToken();
+    const res = await fetch("/api/stock/product-purchase", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) return ok(undefined);
+    const data = await res.json().catch(() => ({}));
+    return fail(data.error ?? "Error al registrar la compra");
   },
 
   async updateMinQuantity(stockId: string, min_quantity: number): Promise<boolean> {

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Button, Tag, Typography } from "antd";
-import { LogoutOutlined, ShoppingCartOutlined, UnorderedListOutlined, BarChartOutlined } from "@ant-design/icons";
+import { Button, Tag, Typography, Tooltip } from "antd";
+import { LogoutOutlined, ShoppingCartOutlined, UnorderedListOutlined, BarChartOutlined, SwapOutlined } from "@ant-design/icons";
 import { formatTimeBolivia } from "@/lib/timezone";
 import { useBusinessConfigPublic } from "@/features/business-config/hooks/useBusinessConfigPublic";
 import type { Identity } from "../types/pos.types";
@@ -16,11 +16,13 @@ interface Props {
   identity: Identity;
   activeTab: PosTab;
   pendingCount: number;
+  branchName?: string | null;
   onTabChange: (tab: PosTab) => void;
+  onChangeBranch?: () => void;
   onLogout: () => void;
 }
 
-export function PosHeader({ identity, activeTab, pendingCount, onTabChange, onLogout }: Props) {
+export function PosHeader({ identity, activeTab, pendingCount, branchName, onTabChange, onChangeBranch, onLogout }: Props) {
   const [currentTime, setCurrentTime] = useState("");
   const { config } = useBusinessConfigPublic();
 
@@ -74,7 +76,12 @@ export function PosHeader({ identity, activeTab, pendingCount, onTabChange, onLo
             <Text strong style={{ fontSize: 16, color: config.business_primary_color }}>{config.business_name || "POS"}</Text>
           </div>
           <Tag color="blue" style={{ margin: 0 }}>{identity.name}</Tag>
-          {identity.branch_id && <Tag color="green" style={{ margin: 0 }}>Sucursal</Tag>}
+          {branchName && <Tag color="green" style={{ margin: 0 }}>{branchName}</Tag>}
+          {identity.role === "admin" && onChangeBranch && (
+            <Tooltip title="Cambiar sucursal">
+              <Button size="small" icon={<SwapOutlined />} onClick={onChangeBranch} type="text" style={{ color: "#6b7280" }} />
+            </Tooltip>
+          )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Text style={{ fontFamily: "monospace", fontSize: 16, fontWeight: 600, color: "#374151" }}>{currentTime}</Text>

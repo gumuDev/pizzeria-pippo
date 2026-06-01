@@ -88,23 +88,19 @@ export const ProductsService = {
   buildPayload(
     step1Data: Step1Data,
     imageUrl: string,
-    selectedBranchId: string,
     variants: Variant[]
   ) {
-    const variantsWithBranch = variants.map((v) => {
-      if (!selectedBranchId) return v;
-      const alreadyHas = v.branch_prices.some((bp) => bp.branch_id === selectedBranchId);
-      const withBranch = alreadyHas ? v : { ...v, branch_prices: [...v.branch_prices, { branch_id: selectedBranchId, price: v.base_price }] };
-      return { ...withBranch, recipes: withBranch.recipes.filter((r) => r.ingredient_id && r.quantity > 0) };
-    });
+    const cleanVariants = variants.map((v) => ({
+      ...v,
+      recipes: v.recipes.filter((r) => r.ingredient_id && r.quantity > 0),
+    }));
     return {
       name: step1Data.name,
       category: step1Data.category,
       description: step1Data.description,
       image_url: imageUrl,
-      branch_id: selectedBranchId,
       track_stock: true,
-      variants: variantsWithBranch,
+      variants: cleanVariants,
     };
   },
 };

@@ -2,19 +2,16 @@
 
 import { Button, Card, Select, InputNumber, Row, Col, Typography, Switch } from "antd";
 import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
-import type { Branch, Variant, VariantTypeOption } from "../types/product.types";
+import type { Variant, VariantTypeOption } from "../types/product.types";
 
 const { Text } = Typography;
 
 interface Props {
   variants: Variant[];
-  branches: Branch[];
   variantTypeOptions: VariantTypeOption[];
-  selectedBranchId: string;
   hasVariants: boolean;
   onToggleVariants: (val: boolean) => void;
   onUpdateVariant: (index: number, field: keyof Variant, value: unknown) => void;
-  onUpdateBranchPrice: (variantIndex: number, branchId: string, price: number) => void;
   onAddVariant: () => void;
   onRemoveVariant: (index: number) => void;
   onPrev: () => void;
@@ -23,39 +20,10 @@ interface Props {
   saving?: boolean;
 }
 
-function PriceInput({ variant, vi, selectedBranchId, variants, onUpdateVariant, onUpdateBranchPrice }: {
-  variant: Variant; vi: number; selectedBranchId: string;
-  variants: Variant[];
-  onUpdateVariant: (i: number, f: keyof Variant, v: unknown) => void;
-  onUpdateBranchPrice: (vi: number, branchId: string, price: number) => void;
-}) {
-  return (
-    <InputNumber
-      prefix="Bs"
-      value={variant.branch_prices.find((bp) => bp.branch_id === selectedBranchId)?.price ?? variant.base_price}
-      onChange={(val) => {
-        const price = val ?? 0;
-        onUpdateVariant(vi, "base_price", price);
-        const existing = variants[vi].branch_prices.find((bp) => bp.branch_id === selectedBranchId);
-        if (existing) {
-          onUpdateBranchPrice(vi, selectedBranchId, price);
-        } else if (selectedBranchId) {
-          onUpdateVariant(vi, "branch_prices", [
-            ...variants[vi].branch_prices,
-            { branch_id: selectedBranchId, price },
-          ]);
-        }
-      }}
-      style={{ width: "100%", marginTop: 4 }}
-      min={0}
-    />
-  );
-}
-
 export function ProductStepVariants({
-  variants, branches, variantTypeOptions, selectedBranchId,
+  variants, variantTypeOptions,
   hasVariants, onToggleVariants,
-  onUpdateVariant, onUpdateBranchPrice,
+  onUpdateVariant,
   onAddVariant, onRemoveVariant,
   onPrev, onNext, nextLabel, saving,
 }: Props) {
@@ -63,14 +31,6 @@ export function ProductStepVariants({
 
   return (
     <div>
-      {/* Branch info */}
-      {selectedBranchId && (
-        <div className="mb-4 px-3 py-2 bg-blue-50 rounded text-sm text-blue-700">
-          Sucursal: <strong>{branches.find((b) => b.id === selectedBranchId)?.name}</strong>
-        </div>
-      )}
-
-      {/* Toggle: tiene tamaños */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, padding: "12px 16px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb" }}>
         <Switch checked={hasVariants} onChange={onToggleVariants} />
         <div>
@@ -81,21 +41,19 @@ export function ProductStepVariants({
         </div>
       </div>
 
-      {/* Simple mode: single price */}
       {!hasVariants && simpleVariant && (
         <Card size="small" style={{ marginBottom: 16 }}>
-          <Text type="secondary">Precio</Text>
-          <PriceInput
-            variant={simpleVariant} vi={0}
-            selectedBranchId={selectedBranchId}
-            variants={variants}
-            onUpdateVariant={onUpdateVariant}
-            onUpdateBranchPrice={onUpdateBranchPrice}
+          <Text type="secondary">Precio base</Text>
+          <InputNumber
+            prefix="Bs"
+            value={simpleVariant.base_price}
+            onChange={(val) => onUpdateVariant(0, "base_price", val ?? 0)}
+            style={{ width: "100%", marginTop: 4 }}
+            min={0}
           />
         </Card>
       )}
 
-      {/* Multi-variant mode */}
       {hasVariants && (
         <>
           {variantTypeOptions.length === 0 ? (
@@ -125,13 +83,13 @@ export function ProductStepVariants({
                 >
                   <Row gutter={16}>
                     <Col span={12}>
-                      <Text type="secondary">Precio</Text>
-                      <PriceInput
-                        variant={variant} vi={vi}
-                        selectedBranchId={selectedBranchId}
-                        variants={variants}
-                        onUpdateVariant={onUpdateVariant}
-                        onUpdateBranchPrice={onUpdateBranchPrice}
+                      <Text type="secondary">Precio base</Text>
+                      <InputNumber
+                        prefix="Bs"
+                        value={variant.base_price}
+                        onChange={(val) => onUpdateVariant(vi, "base_price", val ?? 0)}
+                        style={{ width: "100%", marginTop: 4 }}
+                        min={0}
                       />
                     </Col>
                   </Row>

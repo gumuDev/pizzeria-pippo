@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Table, Button, Space, Tag, Typography, Switch, Tooltip } from "antd";
 import {
   PlusOutlined, EditOutlined, StopOutlined,
-  CheckCircleOutlined, EyeOutlined,
+  CheckCircleOutlined, EyeOutlined, DollarOutlined,
 } from "@ant-design/icons";
 import { ProductImage } from "./ProductImage";
 import { useIsMobile } from "@/lib/useIsMobile";
@@ -80,6 +80,9 @@ export function ProductsTable({
         <Space>
           <Tooltip title="Ver detalle">
             <Button icon={<EyeOutlined />} size="small" onClick={() => router.push(`/products/${record.id}`)} />
+          </Tooltip>
+          <Tooltip title="Precios por sucursal">
+            <Button icon={<DollarOutlined />} size="small" onClick={() => router.push(`/products/${record.id}/prices`)} />
           </Tooltip>
           <Tooltip title="Editar">
             <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} />
@@ -170,6 +173,9 @@ export function ProductsTable({
                 <div style={{ display: "flex", gap: 8, marginTop: 12, borderTop: "1px solid #f3f4f6", paddingTop: 10 }}>
                   <Button size="small" icon={<EyeOutlined />} onClick={() => router.push(`/products/${product.id}`)} style={{ flex: 1 }}>
                     Ver
+                  </Button>
+                  <Button size="small" icon={<DollarOutlined />} onClick={() => router.push(`/products/${product.id}/prices`)} style={{ flex: 1 }}>
+                    Precios
                   </Button>
                   <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(product)} style={{ flex: 1 }}>
                     Editar

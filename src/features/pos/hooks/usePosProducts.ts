@@ -73,5 +73,16 @@ export function usePosProducts(branchId: string | undefined) {
     return null;
   };
 
-  return { products, promotions, loading, getVariantPrice, getPromoLabel };
+  // Returns null for elaborated products (no stock cap), number for resale variants
+  const getStockQty = (variantId: string): number | null => {
+    for (const p of products) {
+      const v = p.product_variants?.find((pv) => pv.id === variantId);
+      if (v) return v.stock_quantity !== undefined ? (v.stock_quantity ?? null) : null;
+    }
+    return null;
+  };
+
+  const refreshProducts = () => { if (branchId) fetchData(branchId); };
+
+  return { products, promotions, loading, getVariantPrice, getPromoLabel, getStockQty, refreshProducts };
 }
