@@ -6,25 +6,31 @@ import { ProductStepGeneral } from "./ProductStepGeneral";
 import { ProductStepVariants } from "./ProductStepVariants";
 import { ProductStepRecipes } from "./ProductStepRecipes";
 import { useProductForm } from "../hooks/useProductForm";
-import type { Product, Branch, Ingredient } from "../types/product.types";
+import type { Product, Ingredient } from "../types/product.types";
 
 interface Props {
   open: boolean;
   editing: Product | null;
-  branches: Branch[];
   ingredients: Ingredient[];
   onClose: () => void;
   onSave: () => void;
 }
 
-const STEPS = [
+const STEPS_WITH_RECIPES = [
   { title: "Datos generales" },
   { title: "Variantes y precios" },
   { title: "Recetas" },
 ];
 
-export function ProductModal({ open, editing, branches, ingredients, onClose, onSave }: Props) {
+const STEPS_WITHOUT_RECIPES = [
+  { title: "Datos generales" },
+  { title: "Variantes y precios" },
+];
+
+export function ProductModal({ open, editing, ingredients, onClose, onSave }: Props) {
   const form = useProductForm(onSave);
+  const isMade = form.step1Data.product_type === "made";
+  const steps = isMade ? STEPS_WITH_RECIPES : STEPS_WITHOUT_RECIPES;
 
   useEffect(() => {
     if (!open) return;
@@ -45,16 +51,14 @@ export function ProductModal({ open, editing, branches, ingredients, onClose, on
       width={700}
       destroyOnHidden
     >
-      <Steps current={form.currentStep} items={STEPS} className="my-6" />
+      <Steps current={form.currentStep} items={steps} className="my-6" />
 
       {form.currentStep === 0 && (
         <ProductStepGeneral
           form={form.formStep1}
-          branches={branches}
           uploading={form.uploading}
           imageUrl={form.imageUrl}
           step1Data={form.step1Data}
-          onBranchChange={(val) => form.setSelectedBranchId(val)}
           onImageUpload={form.handleImageUpload}
           onNext={() => form.formStep1.validateFields().then((values) => {
             form.setStep1Data(values);
@@ -66,24 +70,27 @@ export function ProductModal({ open, editing, branches, ingredients, onClose, on
       {form.currentStep === 1 && (
         <ProductStepVariants
           variants={form.variants}
-          branches={branches}
           variantTypeOptions={form.variantTypeOptions}
-          selectedBranchId={form.selectedBranchId}
+          hasVariants={form.hasVariants}
+          onToggleVariants={form.setHasVariants}
           onUpdateVariant={form.updateVariant}
-          onUpdateBranchPrice={form.updateBranchPrice}
           onAddVariant={form.addVariant}
           onRemoveVariant={form.removeVariant}
           onPrev={() => form.setCurrentStep(0)}
-          onNext={() => form.setCurrentStep(2)}
+          onNext={() => isMade ? form.setCurrentStep(2) : form.handleSave(editing)}
+          nextLabel={isMade ? undefined : (editing ? "Guardar" : "Crear")}
+          saving={!isMade ? form.saving : false}
         />
       )}
 
-      {form.currentStep === 2 && (
+      {isMade && form.currentStep === 2 && (
         <ProductStepRecipes
           variants={form.variants}
           ingredients={ingredients}
           saving={form.saving}
           editing={!!editing}
+          hasRecipe={form.hasRecipe}
+          onToggleRecipe={form.setHasRecipe}
           onAddRecipeItem={form.addRecipeItem}
           onUpdateRecipeItem={form.updateRecipeItem}
           onRemoveRecipeItem={form.removeRecipeItem}

@@ -43,6 +43,9 @@ export function useDayOrders(branchId: string | undefined, showOrders: boolean) 
   const handleMarkReady = async (orderId: string) => {
     setMarkingReady(orderId);
     await PosService.markOrderReady(orderId);
+    setDayOrders((prev) =>
+      prev.map((o) => o.id === orderId ? { ...o, kitchen_status: "ready" } : o)
+    );
     setMarkingReady(null);
   };
 

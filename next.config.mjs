@@ -9,7 +9,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "kewrgrmyeisiruteuhnd.supabase.co",
+        hostname: "pftyqugovuximactyrro.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
     ],
@@ -21,6 +21,37 @@ const withPWAConfig = withPWA({
   disable: process.env.NODE_ENV === "development",
   register: true,
   skipWaiting: true,
+  runtimeCaching: [
+    {
+      // Imágenes de Supabase Storage — cache-first, 30 días
+      urlPattern: /^https:\/\/pftyqugovuximactyrro\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "supabase-images",
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 30 * 24 * 60 * 60,
+        },
+      },
+    },
+    {
+      // JS/CSS del bundle de Next.js — stale-while-revalidate
+      urlPattern: /^\/_next\/static\/.*/i,
+      handler: "StaleWhileRevalidate",
+      options: {
+        cacheName: "next-static",
+      },
+    },
+    {
+      // Páginas HTML — network-first con fallback offline
+      urlPattern: /^\/(pos|display)(\/.*)?$/i,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "pos-pages",
+        networkTimeoutSeconds: 5,
+      },
+    },
+  ],
 });
 
 export default withNextIntl(withPWAConfig(nextConfig));

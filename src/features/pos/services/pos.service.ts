@@ -30,7 +30,7 @@ export const PosService = {
     const today = todayInBolivia();
     const headers = { Authorization: `Bearer ${token}` };
     const [productsRes, promoRes] = await Promise.all([
-      fetch("/api/products", { headers }),
+      fetch(`/api/products?branchId=${branchId}`, { headers }),
       fetch(`/api/promotions?branchId=${branchId}&date=${today}`, { headers }),
     ]);
     const [productsData, promoData] = await Promise.all([productsRes.json(), promoRes.json()]);
@@ -105,7 +105,11 @@ export const PosService = {
   },
 
   async markOrderReady(orderId: string): Promise<void> {
-    await supabase.from("orders").update({ kitchen_status: "ready" }).eq("id", orderId);
+    const token = await PosService.getToken();
+    await fetch(`/api/orders/${orderId}/ready`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
   },
 
   async cancelOrder(orderId: string, reason: string, token: string): Promise<{ ok: boolean; error?: string }> {

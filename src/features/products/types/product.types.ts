@@ -9,6 +9,8 @@ export interface Branch {
   name: string;
 }
 
+export type ProductType = "made" | "resale";
+
 export type ApplyCondition = "always" | "takeaway" | "dine_in";
 
 export interface VariantTypeOption {
@@ -34,7 +36,6 @@ export interface Variant {
   recipes: RecipeItem[];
 }
 
-// branch_id is set once at step 1 and applied to all variants
 export interface Product {
   id: string;
   name: string;
@@ -42,6 +43,7 @@ export interface Product {
   description: string;
   image_url: string;
   is_active: boolean;
+  product_type: ProductType;
   product_variants: Array<{ id: string; name: string; base_price: number }>;
 }
 
@@ -49,5 +51,5 @@ export interface Step1Data {
   name: string;
   category: string;
   description: string;
-  branch_id: string;
+  product_type: ProductType;
 }

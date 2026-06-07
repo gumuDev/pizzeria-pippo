@@ -15,12 +15,12 @@ export const PUT = apiHandler(async (request: NextRequest, ctx?: { params: Recor
   const params = { id: ctx?.params?.id ?? "" };
   const supabase = getSupabaseWithAuth(request);
   const body = await request.json();
-  const { name, category, description, image_url, variants } = body;
+  const { name, category, description, image_url, product_type, variants } = body;
   const productId = params.id;
 
   const { error: productError } = await supabase
     .from("products")
-    .update({ name, category, description, image_url })
+    .update({ name, category, description, image_url, ...(product_type ? { product_type } : {}) })
     .eq("id", productId);
 
   if (productError) return NextResponse.json({ error: productError.message }, { status: 500 });

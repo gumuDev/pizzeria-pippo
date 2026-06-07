@@ -1,13 +1,42 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { PosService } from "../services/pos.service";
 import type { Product } from "../types/pos.types";
 import type { Promotion } from "@/lib/promotions";
+import { todayInBolivia } from "@/lib/timezone";
 
 interface VariantMeta {
   category: string;
   variantName: string;
+}
+
+interface PosCache {
+  date: string;
+  branchId: string;
+  products: Product[];
+  promotions: Promotion[];
+}
+
+function getCached(branchId: string): PosCache | null {
+  try {
+    const raw = sessionStorage.getItem("pos_cache");
+    if (!raw) return null;
+    const cached: PosCache = JSON.parse(raw);
+    if (cached.date !== todayInBolivia() || cached.branchId !== branchId) return null;
+    return cached;
+  } catch {
+    return null;
+  }
+}
+
+function setCache(branchId: string, products: Product[], promotions: Promotion[]) {
+  try {
+    const payload: PosCache = { date: todayInBolivia(), branchId, products, promotions };
+    sessionStorage.setItem("pos_cache", JSON.stringify(payload));
+  } catch {
+    // sessionStorage full or unavailable — continue without cache
+  }
 }
 
 export function usePosProducts(branchId: string | undefined) {
@@ -16,11 +45,18 @@ export function usePosProducts(branchId: string | undefined) {
   const [loading, setLoading] = useState(false);
 
   const fetchData = useCallback(async (id: string) => {
+    const cached = getCached(id);
+    if (cached) {
+      setProducts(cached.products);
+      setPromotions(cached.promotions);
+      return;
+    }
     setLoading(true);
     const token = await PosService.getToken();
     const result = await PosService.getProductsAndPromotions(id, token);
     setProducts(result.products);
     setPromotions(result.promotions);
+    setCache(id, result.products, result.promotions);
     setLoading(false);
   }, []);
 
@@ -33,8 +69,7 @@ export function usePosProducts(branchId: string | undefined) {
     return override ? override.price : variant.base_price;
   };
 
-  // Build a lookup map: variantId → { category, variantName }
-  const buildVariantMeta = (): Map<string, VariantMeta> => {
+  const variantMeta = useMemo((): Map<string, VariantMeta> => {
     const map = new Map<string, VariantMeta>();
     for (const product of products) {
       for (const variant of product.product_variants) {
@@ -42,11 +77,9 @@ export function usePosProducts(branchId: string | undefined) {
       }
     }
     return map;
-  };
+  }, [products]);
 
-  const getPromoLabel = (variantId: string): string | null => {
-    const variantMeta = buildVariantMeta();
-
+  const getPromoLabel = useCallback((variantId: string): string | null => {
     for (const promo of promotions) {
       for (const rule of promo.promotion_rules) {
         if (rule.variant_id === variantId) {
@@ -71,7 +104,15 @@ export function usePosProducts(branchId: string | undefined) {
       }
     }
     return null;
-  };
+  }, [promotions, variantMeta]);
 
-  return { products, promotions, loading, getVariantPrice, getPromoLabel };
+  const getStockQty = useCallback((variantId: string): number | null => {
+    for (const p of products) {
+      const v = p.product_variants?.find((pv) => pv.id === variantId);
+      if (v) return v.stock_quantity !== undefined ? (v.stock_quantity ?? null) : null;
+    }
+    return null;
+  }, [products]);
+
+  return { products, promotions, loading, getVariantPrice, getPromoLabel, getStockQty };
 }

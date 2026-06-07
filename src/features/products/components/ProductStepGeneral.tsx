@@ -1,40 +1,37 @@
 "use client";
 
-import { Form, Input, Select, Button, Space, Upload } from "antd";
+import { Form, Input, Select, Button, Space, Upload, Typography } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd";
 import { CATEGORY_OPTIONS } from "../constants/product.constants";
 import { ProductImage } from "./ProductImage";
-import type { Branch, Step1Data } from "../types/product.types";
+import type { Step1Data, ProductType } from "../types/product.types";
 
 const { TextArea } = Input;
+const { Text } = Typography;
+const { useWatch } = Form;
+
+const PRODUCT_TYPE_OPTIONS: { value: ProductType; icon: string; label: string; description: string }[] = [
+  { value: "made", icon: "🍳", label: "Elaboración propia", description: "Se prepara con ingredientes" },
+  { value: "resale", icon: "📦", label: "Reventa", description: "Se compra listo y se revende" },
+];
 
 interface Props {
   form: FormInstance;
-  branches: Branch[];
   uploading: boolean;
   imageUrl: string;
   step1Data: Step1Data;
-  onBranchChange: (val: string) => void;
   onImageUpload: (file: File) => Promise<boolean>;
   onNext: () => void;
 }
 
-export function ProductStepGeneral({
-  form, branches, uploading, imageUrl, step1Data,
-  onBranchChange, onImageUpload, onNext,
-}: Props) {
+export function ProductStepGeneral({ form, uploading, imageUrl, step1Data, onImageUpload, onNext }: Props) {
+  const selectedProductType = useWatch("product_type", form);
+
   return (
     <Form form={form} layout="vertical">
-      <Form.Item label="Sucursal" name="branch_id" rules={[{ required: true, message: "Requerido" }]}>
-        <Select
-          options={branches.map((b) => ({ value: b.id, label: b.name }))}
-          placeholder="Seleccionar sucursal"
-          onChange={onBranchChange}
-        />
-      </Form.Item>
       <Form.Item label="Nombre" name="name" rules={[{ required: true, message: "Requerido" }]}>
-        <Input placeholder="Ej: Pizza Pepperoni" />
+        <Input placeholder="Nombre del producto" />
       </Form.Item>
       <Form.Item label="Categoría" name="category" rules={[{ required: true, message: "Requerido" }]}>
         <Select options={CATEGORY_OPTIONS} placeholder="Seleccionar categoría" />
@@ -42,6 +39,38 @@ export function ProductStepGeneral({
       <Form.Item label="Descripción para el cliente" name="description">
         <TextArea rows={3} placeholder="Ej: Pepperoni, mozzarella, salsa de tomate" />
       </Form.Item>
+
+      <Form.Item
+        label="¿Cómo se elabora este producto?"
+        name="product_type"
+        rules={[{ required: true, message: "Seleccioná un tipo" }]}
+      >
+        <div style={{ display: "flex", gap: 12 }}>
+          {PRODUCT_TYPE_OPTIONS.map((opt) => {
+            const selected = selectedProductType === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => form.setFieldValue("product_type", opt.value)}
+                style={{
+                  flex: 1, padding: "14px 12px", borderRadius: 10, cursor: "pointer",
+                  border: `2px solid ${selected ? "#ea580c" : "#e5e7eb"}`,
+                  background: selected ? "#fff7ed" : "#fff",
+                  textAlign: "center", transition: "all 0.15s",
+                }}
+              >
+                <div style={{ fontSize: 28, marginBottom: 4 }}>{opt.icon}</div>
+                <Text strong style={{ fontSize: 13, color: selected ? "#ea580c" : "#374151", display: "block" }}>
+                  {opt.label}
+                </Text>
+                <Text type="secondary" style={{ fontSize: 11 }}>{opt.description}</Text>
+              </button>
+            );
+          })}
+        </div>
+      </Form.Item>
+
       <Form.Item label="Imagen">
         <Space direction="vertical">
           <Upload beforeUpload={onImageUpload} showUploadList={false} accept="image/*">

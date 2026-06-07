@@ -68,3 +68,33 @@ CREATE POLICY "admin_delete_nueva_tabla"
 > **Importante:** Usar siempre `get_user_role()` en las políticas, nunca un `EXISTS (SELECT 1 FROM profiles ...)` directo.
 > El `EXISTS` directo causa ciclos de RLS y falla silenciosamente.
 > El `GRANT` es independiente de RLS — sin él Postgres bloquea el acceso antes de evaluar las políticas.
+
+## Entorno local (Docker Compose)
+
+Para levantar Supabase localmente ver `docs/infrastructure/docker-compose.yml`.
+
+El seed inicial está en `docs/database/seed-admin.sql` — crea el usuario admin y asegura
+las políticas RLS mínimas para que el login funcione.
+
+### Gotcha conocido — RLS en `profiles` y login silencioso
+
+**Síntoma:** el login retorna 200 OK pero la app redirige de vuelta al login en loop.
+
+**Causa:** `auth.signInWithPassword()` funciona correctamente, pero el paso siguiente
+(`getIdentity`) hace un SELECT a `profiles`. Si RLS está habilitado sin una política
+`SELECT USING (auth.uid() = id)`, el query retorna vacío, `getIdentity` retorna `null`,
+y Refine interpreta eso como "no autenticado".
+
+**Solución** (ya incluida en `seed-admin.sql`):
+
+```sql
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "users can read own profile"
+  ON public.profiles
+  FOR SELECT
+  USING (auth.uid() = id);
+```
+
+Esto aplica tanto en local como en producción — cualquier instancia Supabase nueva
+necesita esta política antes de que el login funcione end-to-end.

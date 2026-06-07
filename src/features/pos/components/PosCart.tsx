@@ -6,6 +6,7 @@ import {
   CheckOutlined, CloseOutlined, ShoppingCartOutlined,
 } from "@ant-design/icons";
 import type { DiscountedItem } from "@/lib/promotions";
+import { useIsMobile } from "@/lib/useIsMobile";
 
 const { Text } = Typography;
 
@@ -17,6 +18,7 @@ interface Props {
   onRemove: (variantId: string) => void;
   onConfirm: () => void;
   onClear: () => void;
+  getStockQty: (variantId: string) => number | null;
 }
 
 type CartGroup =
@@ -44,11 +46,12 @@ function buildGroups(discountedCart: DiscountedItem[]): CartGroup[] {
   return groups;
 }
 
-function CartItemRow({ item, onUpdateQty, onRemove, showPromoTag = true }: {
+function CartItemRow({ item, onUpdateQty, onRemove, showPromoTag = true, maxQty }: {
   item: DiscountedItem;
   onUpdateQty: (id: string, delta: number) => void;
   onRemove: (id: string) => void;
   showPromoTag?: boolean;
+  maxQty?: number | null;
 }) {
   const lineTotal = item.unit_price * item.qty_physical - item.discount_applied;
 
@@ -89,9 +92,15 @@ function CartItemRow({ item, onUpdateQty, onRemove, showPromoTag = true }: {
         </div>
         <button
           onClick={() => onUpdateQty(item.variant_id, 1)}
-          style={{ width: 28, height: 28, borderRadius: "50%", border: "none", background: "#ffedd5", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          disabled={maxQty !== null && maxQty !== undefined && item.qty_physical >= maxQty}
+          style={{
+            width: 28, height: 28, borderRadius: "50%", border: "none",
+            background: (maxQty !== null && maxQty !== undefined && item.qty_physical >= maxQty) ? "#f3f4f6" : "#ffedd5",
+            cursor: (maxQty !== null && maxQty !== undefined && item.qty_physical >= maxQty) ? "not-allowed" : "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}
         >
-          <PlusOutlined style={{ fontSize: 10, color: "#ea580c" }} />
+          <PlusOutlined style={{ fontSize: 10, color: (maxQty !== null && maxQty !== undefined && item.qty_physical >= maxQty) ? "#d1d5db" : "#ea580c" }} />
         </button>
       </div>
 
@@ -118,12 +127,13 @@ function CartItemRow({ item, onUpdateQty, onRemove, showPromoTag = true }: {
   );
 }
 
-export function PosCart({ discountedCart, total, totalDiscount, onUpdateQty, onRemove, onConfirm, onClear }: Props) {
+export function PosCart({ discountedCart, total, totalDiscount, onUpdateQty, onRemove, onConfirm, onClear, getStockQty }: Props) {
   const groups = buildGroups(discountedCart);
   const isEmpty = discountedCart.length === 0;
+  const isMobile = useIsMobile();
 
   return (
-    <div style={{ width: 380, minWidth: 380, background: "#fff", borderLeft: "1px solid #e5e7eb", display: "flex", flexDirection: "column", boxShadow: "-4px 0 16px rgba(0,0,0,0.06)" }}>
+    <div style={{ width: isMobile ? "100%" : 380, minWidth: isMobile ? 0 : 380, background: "#fff", borderLeft: isMobile ? "none" : "1px solid #e5e7eb", display: "flex", flexDirection: "column", boxShadow: isMobile ? "none" : "-4px 0 16px rgba(0,0,0,0.06)", flex: isMobile ? 1 : undefined }}>
 
       {/* Header */}
       <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 8, background: "#ea580c" }}>
@@ -149,7 +159,7 @@ export function PosCart({ discountedCart, total, totalDiscount, onUpdateQty, onR
               if (group.type === "item") {
                 return (
                   <div key={`item-${idx}-${group.item.variant_id}`} style={{ padding: "10px 12px", background: "#f9fafb", borderRadius: 10, border: "1px solid #f3f4f6" }}>
-                    <CartItemRow item={group.item} onUpdateQty={onUpdateQty} onRemove={onRemove} />
+                    <CartItemRow item={group.item} onUpdateQty={onUpdateQty} onRemove={onRemove} maxQty={getStockQty(group.item.variant_id)} />
                   </div>
                 );
               }
@@ -162,7 +172,7 @@ export function PosCart({ discountedCart, total, totalDiscount, onUpdateQty, onR
                   </div>
                   {group.items.map((item, i) => (
                     <div key={item.variant_id} style={{ padding: "10px 12px", background: "rgba(255,247,237,0.4)", borderTop: i > 0 ? "1px solid #fed7aa" : undefined }}>
-                      <CartItemRow item={item} onUpdateQty={onUpdateQty} onRemove={onRemove} showPromoTag={false} />
+                      <CartItemRow item={item} onUpdateQty={onUpdateQty} onRemove={onRemove} showPromoTag={false} maxQty={getStockQty(item.variant_id)} />
                     </div>
                   ))}
                 </div>

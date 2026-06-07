@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Table, Button, Space, Tag, Typography, Switch, Tooltip } from "antd";
 import {
   PlusOutlined, EditOutlined, StopOutlined,
-  CheckCircleOutlined, EyeOutlined,
+  CheckCircleOutlined, EyeOutlined, DollarOutlined,
 } from "@ant-design/icons";
 import { CATEGORY_OPTIONS, CATEGORY_COLORS } from "../constants/product.constants";
 import { ProductImage } from "./ProductImage";
@@ -81,6 +81,9 @@ export function ProductsTable({
         <Space>
           <Tooltip title="Ver detalle">
             <Button icon={<EyeOutlined />} size="small" onClick={() => router.push(`/products/${record.id}`)} />
+          </Tooltip>
+          <Tooltip title="Precios por sucursal">
+            <Button icon={<DollarOutlined />} size="small" onClick={() => router.push(`/products/${record.id}/prices`)} />
           </Tooltip>
           <Tooltip title="Editar">
             <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} />
@@ -170,22 +173,29 @@ export function ProductsTable({
                     </div>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 8, marginTop: 12, borderTop: "1px solid #f3f4f6", paddingTop: 10 }}>
-                  <Button size="small" icon={<EyeOutlined />} onClick={() => router.push(`/products/${product.id}`)} style={{ flex: 1 }}>
-                    Ver
-                  </Button>
-                  <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(product)} style={{ flex: 1 }}>
-                    Editar
-                  </Button>
-                  <Button
-                    size="small"
-                    icon={product.is_active ? <StopOutlined /> : <CheckCircleOutlined />}
-                    danger={product.is_active}
-                    onClick={() => onToggleActive(product)}
-                    style={{ flex: 1 }}
-                  >
-                    {product.is_active ? "Desactivar" : "Reactivar"}
-                  </Button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 12, borderTop: "1px solid #f3f4f6", paddingTop: 10 }}>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <Button size="small" icon={<EyeOutlined />} onClick={() => router.push(`/products/${product.id}`)} style={{ flex: 1 }}>
+                      Ver
+                    </Button>
+                    <Button size="small" icon={<DollarOutlined />} onClick={() => router.push(`/products/${product.id}/prices`)} style={{ flex: 1 }}>
+                      Precios
+                    </Button>
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(product)} style={{ flex: 1 }}>
+                      Editar
+                    </Button>
+                    <Button
+                      size="small"
+                      icon={product.is_active ? <StopOutlined /> : <CheckCircleOutlined />}
+                      danger={product.is_active}
+                      onClick={() => onToggleActive(product)}
+                      style={{ flex: 1 }}
+                    >
+                      {product.is_active ? "Desactivar" : "Reactivar"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}

@@ -6,7 +6,7 @@ import { useProducts } from "@/features/products/hooks/useProducts";
 
 export default function ProductsPage() {
   const {
-    products, ingredients, branches, loading,
+    products, ingredients, loading,
     modalOpen, editing, showInactive, setShowInactive,
     filterCategory, setFilterCategory,
     openModal, closeModal,
@@ -29,7 +29,6 @@ export default function ProductsPage() {
       <ProductModal
         open={modalOpen}
         editing={editing}
-        branches={branches}
         ingredients={ingredients}
         onClose={closeModal}
         onSave={() => { closeModal(); fetchAll(); }}

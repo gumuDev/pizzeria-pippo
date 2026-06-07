@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { ok, fail, type ServiceResult } from "@/lib/errors";
-import type { Product, Ingredient, Branch, Variant } from "../types/product.types";
+import type { Product, Ingredient, Branch, Variant, Step1Data } from "../types/product.types";
 
 export const ProductsService = {
   async getProducts(showInactive: boolean): Promise<Product[]> {
@@ -85,26 +85,18 @@ export const ProductsService = {
     return { error };
   },
 
-  buildPayload(
-    step1Data: { name: string; category: string; description: string; branch_id: string },
-    imageUrl: string,
-    selectedBranchId: string,
-    variants: Variant[]
-  ) {
-    const variantsWithBranch = variants.map((v) => {
-      if (!selectedBranchId) return v;
-      const alreadyHas = v.branch_prices.some((bp) => bp.branch_id === selectedBranchId);
-      const withBranch = alreadyHas ? v : { ...v, branch_prices: [...v.branch_prices, { branch_id: selectedBranchId, price: v.base_price }] };
-      // Filter out incomplete recipe rows before sending to API
-      return { ...withBranch, recipes: withBranch.recipes.filter((r) => r.ingredient_id && r.quantity > 0) };
-    });
+  buildPayload(step1Data: Step1Data, imageUrl: string, variants: Variant[]) {
+    const cleanVariants = variants.map((v) => ({
+      ...v,
+      recipes: v.recipes.filter((r) => r.ingredient_id && r.quantity > 0),
+    }));
     return {
       name: step1Data.name,
       category: step1Data.category,
       description: step1Data.description,
       image_url: imageUrl,
-      branch_id: selectedBranchId,
-      variants: variantsWithBranch,
+      product_type: step1Data.product_type,
+      variants: cleanVariants,
     };
   },
 };

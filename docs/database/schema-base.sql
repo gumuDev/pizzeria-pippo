@@ -4,6 +4,8 @@
 -- Exportado desde Supabase. Solo para referencia/contexto.
 -- NO ejecutar directamente (el orden y las FK pueden no ser válidos).
 -- Para aplicar cambios usar los archivos en migrations/
+--
+-- Última migración aplicada: 017_stock_movements_add_anulacion_type.sql
 -- ============================================================
 
 CREATE TABLE public.branches (

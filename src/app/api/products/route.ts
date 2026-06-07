@@ -13,7 +13,9 @@ function getSupabaseWithAuth(request: NextRequest) {
 
 export const GET = apiHandler(async (request: NextRequest) => {
   const supabase = getSupabaseWithAuth(request);
-  const showInactive = new URL(request.url).searchParams.get("showInactive") === "true";
+  const params = new URL(request.url).searchParams;
+  const showInactive = params.get("showInactive") === "true";
+  const branchId = params.get("branchId");
 
   let query = supabase
     .from("products")
@@ -34,17 +36,52 @@ export const GET = apiHandler(async (request: NextRequest) => {
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // When called from POS with a branchId, attach stock_quantity for resale variants.
+  // Resale products are identified by product_type = 'resale'.
+  if (branchId && data) {
+    const resaleVariantIds = data.flatMap((p) =>
+      p.product_type === "resale"
+        ? (p.product_variants ?? []).map((v: { id: string }) => v.id)
+        : []
+    );
+
+    if (resaleVariantIds.length > 0) {
+      const serviceSupabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      const { data: stockRows } = await serviceSupabase
+        .from("branch_product_stock")
+        .select("variant_id, quantity")
+        .eq("branch_id", branchId)
+        .in("variant_id", resaleVariantIds);
+
+      const stockMap: Record<string, number> = {};
+      for (const row of stockRows ?? []) stockMap[row.variant_id] = row.quantity;
+
+      for (const product of data) {
+        for (const variant of product.product_variants ?? []) {
+          if (product.product_type === "resale") {
+            // null = no stock row in this branch (never transferred here)
+            variant.stock_quantity = stockMap[variant.id] ?? null;
+          }
+        }
+      }
+    }
+  }
+
   return NextResponse.json(data);
 });
 
 export const POST = apiHandler(async (request: NextRequest) => {
   const supabase = getSupabaseWithAuth(request);
   const body = await request.json();
-  const { name, category, description, image_url, variants } = body;
+  const { name, category, description, image_url, product_type, variants } = body;
 
   const { data: product, error: productError } = await supabase
     .from("products")
-    .insert({ name, category, description, image_url })
+    .insert({ name, category, description, image_url, product_type: product_type ?? "made" })
     .select()
     .single();
 
