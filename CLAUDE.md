@@ -67,6 +67,29 @@ src/features/<nombre>/
 - **`services/`** — comunicación con backend y Supabase, sin estado
 - **`components/`** — UI, recibe props, sin queries directas a Supabase
 
+### Regla estricta: hooks nunca tocan Supabase directamente
+
+**Los hooks NO deben importar `supabase` ni llamar a `supabase.from()`, `supabase.auth.*`, ni `supabase.channel()` directamente.**
+
+Toda comunicación con Supabase debe pasar por el service de la feature:
+
+```ts
+// ❌ MAL — hook hace query directa
+import { supabase } from "@/lib/supabase";
+const { data } = await supabase.from("branches").select("*");
+
+// ✅ BIEN — hook delega al service
+import { MyService } from "../services/my.service";
+const branches = await MyService.getBranches();
+```
+
+Esto aplica también para:
+- **Auth** → `supabase.auth.signOut()` debe estar en el service, no en el hook
+- **Realtime** → `supabase.channel(...)` debe encapsularse en métodos del service (`subscribeToX`, `unsubscribe`)
+- **Token** → nunca llamar `supabase.auth.getSession()` en un hook; usar `getToken()` de `@/lib/auth`
+
+La única excepción es `src/lib/auth.ts` que centraliza `getToken()` — esa es la única función que llama a `supabase.auth.getSession()` en toda la app.
+
 ### Ejemplo de estructura para una feature
 
 Usar `branches` como referencia al implementar cualquier feature nuevo:

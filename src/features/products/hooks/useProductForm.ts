@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Form, notification } from "antd";
-import { supabase } from "@/lib/supabase";
+import { getToken } from "@/lib/auth";
 import { ProductsService } from "../services/products.service";
 import type { Product, Variant, Step1Data, RecipeItem, VariantTypeOption } from "../types/product.types";
 
@@ -18,11 +18,6 @@ export function useProductForm(onSuccess: () => void) {
   const [hasVariants, setHasVariants] = useState(false);
   const savedVariantsRef = useRef<Variant[]>([]);
   const [formStep1] = Form.useForm();
-
-  const getToken = async () => {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? "";
-  };
 
   useEffect(() => {
     const loadVariantTypes = async () => {
@@ -89,7 +84,11 @@ export function useProductForm(onSuccess: () => void) {
       name: v.name,
       base_price: v.base_price,
       branch_prices: v.branch_prices ?? [],
-      recipes: v.recipes ?? [],
+      recipes: (v.recipes ?? []).map((r: { ingredient_id: string; quantity: number; apply_condition?: string }) => ({
+        ingredient_id: r.ingredient_id,
+        quantity: r.quantity,
+        apply_condition: r.apply_condition ?? "always",
+      })),
       is_active: v.is_active ?? true,
     }));
 

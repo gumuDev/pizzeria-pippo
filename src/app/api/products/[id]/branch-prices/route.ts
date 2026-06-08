@@ -1,18 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-function getSupabaseWithAuth(request: NextRequest) {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
+import { createAuthClient } from "@/lib/supabase-server";
 
 // GET /api/products/[id]/branch-prices
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getSupabaseWithAuth(request);
+  const { client: supabase } = await createAuthClient(request);
   const { id } = params;
 
   const [variantsRes, branchesRes] = await Promise.all([
@@ -37,7 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 // POST /api/products/[id]/branch-prices
 export async function POST(request: NextRequest) {
-  const supabase = getSupabaseWithAuth(request);
+  const { client: supabase } = await createAuthClient(request);
   const { variant_id, branch_id, price } = await request.json();
 
   if (!variant_id || !branch_id || price === undefined) {

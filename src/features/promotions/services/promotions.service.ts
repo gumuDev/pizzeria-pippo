@@ -1,13 +1,21 @@
 import { supabase } from "@/lib/supabase";
+import { getToken } from "@/lib/auth";
 import { ok, fail, type ServiceResult } from "@/lib/errors";
-import type { Promotion, Variant } from "../types/promotion.types";
-
-async function getToken(): Promise<string> {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? "";
-}
+import type { Promotion, Variant, Branch } from "../types/promotion.types";
 
 export const PromotionsService = {
+  async getBranches(): Promise<Branch[]> {
+    const { data } = await supabase.from("branches").select("id, name").order("name");
+    return data ?? [];
+  },
+
+  async getPromotion(id: string): Promise<Promotion | null> {
+    const token = await getToken();
+    const res = await fetch(`/api/promotions/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) return null;
+    return res.json();
+  },
+
   async getPromotions(showInactive = false): Promise<Promotion[]> {
     const token = await getToken();
     const url = showInactive ? "/api/promotions?showInactive=true" : "/api/promotions";

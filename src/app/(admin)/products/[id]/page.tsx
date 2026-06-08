@@ -1,14 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Row, Col, Card, Tag, Typography, Space, Button, Table, Divider, Skeleton, Badge } from "antd";
 import { ArrowLeftOutlined, EditOutlined } from "@ant-design/icons";
 import Image from "next/image";
 import { useIsMobile } from "@/lib/useIsMobile";
 import { useProductDetail } from "@/features/products/hooks/useProductDetail";
-import { ProductModal } from "@/features/products/components/ProductModal";
-import type { Product as ProductFormType } from "@/features/products/types/product.types";
 
 const { Title, Text } = Typography;
 
@@ -36,8 +33,7 @@ export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const isMobile = useIsMobile();
-  const { product, ingredients, loading, loadProduct } = useProductDetail(id);
-  const [editOpen, setEditOpen] = useState(false);
+  const { product, loading } = useProductDetail(id);
 
   const recipeColumns = [
     { title: "Insumo", key: "name", render: (_: unknown, r: RecipeItem) => <Text>{r.ingredients?.name}</Text> },
@@ -66,7 +62,7 @@ export default function ProductDetailPage() {
           <Title level={4} style={{ margin: 0 }}>{product.name}</Title>
           {!product.is_active && <Tag color="default">Inactivo</Tag>}
         </Space>
-        <Button icon={<EditOutlined />} type="primary" onClick={() => setEditOpen(true)}>Editar</Button>
+        <Button icon={<EditOutlined />} type="primary" onClick={() => router.push(`/products/${id}/edit`)}>Editar</Button>
       </div>
 
       <Row gutter={[16, 16]}>
@@ -148,13 +144,6 @@ export default function ProductDetailPage() {
         </Col>
       </Row>
 
-      <ProductModal
-        open={editOpen}
-        editing={product as unknown as ProductFormType}
-        ingredients={ingredients}
-        onClose={() => setEditOpen(false)}
-        onSave={async () => { setEditOpen(false); await loadProduct(); }}
-      />
     </div>
   );
 }

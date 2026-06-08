@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { getToken } from "@/lib/auth";
 import { DashboardService } from "../services/dashboard.service";
 import type { SalesSummary, TopProduct, DailyData, StockAlert, WarehouseAlert } from "../services/dashboard.service";
 
@@ -15,8 +15,7 @@ export function useDashboard() {
 
   useEffect(() => {
     const load = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token ?? "";
+      const token = await getToken();
 
       const data = await DashboardService.getDashboardData(token);
       setSummary(data.summary);

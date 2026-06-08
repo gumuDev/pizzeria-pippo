@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { DisplayService } from "../services/display.service";
 import type { DisplayMode, DisplayCartItem, DisplayProduct, OrderType } from "../types/display.types";
 
 export function useDisplay() {
@@ -15,16 +15,7 @@ export function useDisplay() {
   const channelRef = useRef<BroadcastChannel | null>(null);
 
   useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from("products")
-        .select("id, name, category, description, image_url, product_variants(id, name, base_price)")
-        .eq("is_active", true)
-        .order("category")
-        .order("name");
-      if (data) setProducts(data);
-    };
-    load();
+    DisplayService.getMenuProducts().then(setProducts);
   }, []);
 
   useEffect(() => {

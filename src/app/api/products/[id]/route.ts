@@ -1,19 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { apiHandler } from "@/lib/api-handler";
-
-function getSupabaseWithAuth(request: NextRequest) {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
+import { createAuthClient } from "@/lib/supabase-server";
 
 export const PUT = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
   const params = { id: ctx?.params?.id ?? "" };
-  const supabase = getSupabaseWithAuth(request);
+  const { client: supabase } = await createAuthClient(request);
   const body = await request.json();
   const { name, category, description, image_url, product_type, variants } = body;
   const productId = params.id;
@@ -95,7 +86,7 @@ export const PUT = apiHandler(async (request: NextRequest, ctx?: { params: Recor
 });
 
 export const PATCH = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
-  const supabase = getSupabaseWithAuth(request);
+  const { client: supabase } = await createAuthClient(request);
   const { is_active } = await request.json();
   const id = ctx?.params?.id ?? "";
 
@@ -118,7 +109,7 @@ export const PATCH = apiHandler(async (request: NextRequest, ctx?: { params: Rec
 
 export const DELETE = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
   // Soft delete — cascades to variants
-  const supabase = getSupabaseWithAuth(request);
+  const { client: supabase } = await createAuthClient(request);
   const id = ctx?.params?.id ?? "";
 
   await supabase

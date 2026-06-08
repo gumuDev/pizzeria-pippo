@@ -1,17 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-function getSupabaseWithAuth(request: NextRequest) {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
+import { createAuthClient } from "@/lib/supabase-server";
 
 export async function GET(request: NextRequest) {
-  const supabase = getSupabaseWithAuth(request);
+  const { client: supabase } = await createAuthClient(request);
   const { searchParams } = new URL(request.url);
   const branchId = searchParams.get("branchId");
 

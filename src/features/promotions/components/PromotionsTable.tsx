@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Table, Button, Space, Tag, Typography, Switch, Tooltip } from "antd";
 import { PlusOutlined, EditOutlined, StopOutlined, CheckCircleOutlined, EyeOutlined } from "@ant-design/icons";
 import { TYPE_OPTIONS, TYPE_COLORS, DAYS } from "../constants/promotion.constants";
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function PromotionsTable({ promotions, branches, loading, showInactive, onToggleInactive, onCreate, onEdit, onToggleActive, onToggleIsActive }: Props) {
+  const router = useRouter();
   const isMobile = useIsMobile();
 
   const columns = [
@@ -71,6 +73,9 @@ export function PromotionsTable({ promotions, branches, loading, showInactive, o
       width: 100,
       render: (_: unknown, r: Promotion) => (
         <Space>
+          <Tooltip title="Ver detalle">
+            <Button icon={<EyeOutlined />} size="small" onClick={() => router.push(`/promotions/${r.id}`)} />
+          </Tooltip>
           <Tooltip title="Editar">
             <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(r)} />
           </Tooltip>
@@ -146,6 +151,9 @@ export function PromotionsTable({ promotions, branches, loading, showInactive, o
                   </div>
                   <Text type="secondary" style={{ fontSize: 12 }}>{promo.start_date} → {promo.end_date}</Text>
                   <div style={{ display: "flex", gap: 8, marginTop: 10, borderTop: "1px solid #f3f4f6", paddingTop: 10 }}>
+                    <Button size="small" icon={<EyeOutlined />} onClick={() => router.push(`/promotions/${promo.id}`)} style={{ flex: 1 }}>
+                      Ver
+                    </Button>
                     <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(promo)} style={{ flex: 1 }}>
                       Editar
                     </Button>

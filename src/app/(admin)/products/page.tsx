@@ -1,19 +1,15 @@
 "use client";
 
 import { ProductsTable } from "@/features/products/components/ProductsTable";
-import { ProductModal } from "@/features/products/components/ProductModal";
 import { useProducts } from "@/features/products/hooks/useProducts";
 
 export default function ProductsPage() {
   const {
     products, total, page, PAGE_SIZE, setPage,
-    ingredients, loading,
-    modalOpen, editing,
-    showInactive, setShowInactive,
+    loading, showInactive, setShowInactive,
     filterCategory, setFilterCategory,
     search, setSearch,
-    openModal, closeModal,
-    handleToggleActive, handleSaved,
+    handleToggleActive,
   } = useProducts();
 
   return (
@@ -31,16 +27,7 @@ export default function ProductsPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
-        onCreate={() => openModal()}
-        onEdit={openModal}
         onToggleActive={handleToggleActive}
-      />
-      <ProductModal
-        open={modalOpen}
-        editing={editing}
-        ingredients={ingredients}
-        onClose={closeModal}
-        onSave={handleSaved}
       />
     </div>
   );

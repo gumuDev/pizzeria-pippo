@@ -1,15 +1,18 @@
 import withPWA from "next-pwa";
 import createNextIntlPlugin from "next-intl/plugin";
+import withBundleAnalyzer from "@next/bundle-analyzer";
 
 const withNextIntl = createNextIntlPlugin();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // Wildcard cubre cualquier proyecto Supabase (el ID varía por entorno)
+    // No usar hostname fijo — el project ID de .env no es accesible en build time
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "pftyqugovuximactyrro.supabase.co",
+        hostname: "*.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
     ],
@@ -54,4 +57,6 @@ const withPWAConfig = withPWA({
   ],
 });
 
-export default withNextIntl(withPWAConfig(nextConfig));
+const withAnalyzer = withBundleAnalyzer({ enabled: process.env.ANALYZE === "true" });
+
+export default withAnalyzer(withNextIntl(withPWAConfig(nextConfig)));

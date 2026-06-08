@@ -1,10 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import { getToken } from "@/lib/auth";
 import type { Ingredient } from "../types/ingredient.types";
-
-async function getToken(): Promise<string> {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? "";
-}
 
 export const IngredientsService = {
   async getIngredients(showInactive = false): Promise<Ingredient[]> {

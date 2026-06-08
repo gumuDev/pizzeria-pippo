@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { PosService } from "../services/pos.service";
 import type { Identity, Branch } from "../types/pos.types";
 
@@ -21,15 +20,15 @@ export function usePosIdentity() {
 
       // Admin sin sucursal asignada → cargar lista de sucursales para elegir
       if (result.role === "admin" && !result.branch_id) {
-        const { data } = await supabase.from("branches").select("id, name").order("name");
-        setBranches(data ?? []);
+        const data = await PosService.getBranches();
+        setBranches(data);
       }
     };
     load();
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await PosService.logout();
     window.location.href = "/login";
   };
 

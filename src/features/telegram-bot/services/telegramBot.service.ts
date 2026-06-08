@@ -1,9 +1,8 @@
+import { getToken } from "@/lib/auth";
 import { AuthorizedChat, ChatFormValues } from "@/features/telegram-bot/types";
-import { supabase } from "@/lib/supabase";
 
 async function getAuthHeader(): Promise<HeadersInit> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return { Authorization: `Bearer ${session?.access_token ?? ""}` };
+  return { Authorization: `Bearer ${await getToken()}` };
 }
 
 export async function getAuthorizedChats(): Promise<AuthorizedChat[]> {

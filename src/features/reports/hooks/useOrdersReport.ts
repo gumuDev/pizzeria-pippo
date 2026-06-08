@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import * as XLSX from "xlsx";
 import dayjs from "dayjs";
 import { UTC_OFFSET_HOURS } from "@/lib/timezone";
 import { ReportsService } from "../services/reports.service";
@@ -46,6 +45,7 @@ export function useOrdersReport() {
       }))
     );
 
+    const XLSX = await import("xlsx");
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Historial de ventas");

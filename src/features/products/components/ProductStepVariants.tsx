@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Select, InputNumber, Typography, Switch, Tag } from "antd";
+import { Button, Select, InputNumber, Typography, Switch } from "antd";
 import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
 import type { Variant, VariantTypeOption } from "../types/product.types";
 

@@ -26,8 +26,6 @@ interface Props {
   pageSize: number;
   total: number;
   onPageChange: (p: number) => void;
-  onCreate: () => void;
-  onEdit: (record: Product) => void;
   onToggleActive: (record: Product) => void;
 }
 
@@ -35,7 +33,7 @@ export function ProductsTable({
   products, loading, showInactive, onToggleInactive,
   filterCategory, onFilterCategory,
   search, onSearch, page, pageSize, total, onPageChange,
-  onCreate, onEdit, onToggleActive,
+  onToggleActive,
 }: Props) {
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -71,6 +69,16 @@ export function ProductsTable({
       ),
     },
     {
+      title: "Tipo",
+      dataIndex: "product_type",
+      key: "product_type",
+      render: (type: string) => (
+        <Tag color={type === "resale" ? "purple" : "orange"}>
+          {type === "resale" ? "Reventa" : "Elaboración"}
+        </Tag>
+      ),
+    },
+    {
       title: "Variantes",
       key: "variants",
       render: (_: unknown, record: Product) => (
@@ -94,7 +102,7 @@ export function ProductsTable({
             <Button icon={<DollarOutlined />} size="small" onClick={() => router.push(`/products/${record.id}/prices`)} />
           </Tooltip>
           <Tooltip title="Editar">
-            <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} />
+            <Button icon={<EditOutlined />} size="small" onClick={() => router.push(`/products/${record.id}/edit`)} />
           </Tooltip>
           <Tooltip title={record.is_active ? "Desactivar" : "Reactivar"}>
             <Button
@@ -126,7 +134,7 @@ export function ProductsTable({
           {!isMobile && <Text type="secondary">Ver inactivos</Text>}
           <Switch size="small" checked={showInactive} onChange={onToggleInactive} />
         </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => router.push("/products/new")}>
           {isMobile ? "Nuevo" : "Nuevo producto"}
         </Button>
       </Space>
@@ -185,6 +193,9 @@ export function ProductsTable({
                       <Tag color={CATEGORY_COLORS[product.category]} style={{ margin: 0 }}>
                         {CATEGORY_OPTIONS.find((c) => c.value === product.category)?.label ?? product.category}
                       </Tag>
+                      <Tag color={product.product_type === "resale" ? "purple" : "orange"} style={{ margin: 0 }}>
+                        {product.product_type === "resale" ? "Reventa" : "Elaboración"}
+                      </Tag>
                       {product.product_variants?.map((v) => (
                         <Tag key={v.id} style={{ margin: 0 }}>{v.name}</Tag>
                       ))}
@@ -201,7 +212,7 @@ export function ProductsTable({
                     </Button>
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(product)} style={{ flex: 1 }}>
+                    <Button size="small" icon={<EditOutlined />} onClick={() => router.push(`/products/${product.id}/edit`)} style={{ flex: 1 }}>
                       Editar
                     </Button>
                     <Button

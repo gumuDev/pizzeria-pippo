@@ -1,29 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { apiHandler } from "@/lib/api-handler";
-
-function getSupabaseWithAuth(request: NextRequest) {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
+import { createAuthClient, createServiceClient } from "@/lib/supabase-server";
 
 const PAGE_SIZE = 10;
 
 export const GET = apiHandler(async (request: NextRequest) => {
-  const supabase = getSupabaseWithAuth(request);
+  const { client: authClient } = await createAuthClient(request);
   const params = new URL(request.url).searchParams;
   const showInactive = params.get("showInactive") === "true";
   const branchId = params.get("branchId");
   const search = params.get("search") ?? "";
+  const category = params.get("category") ?? "";
   const page = parseInt(params.get("page") ?? "1", 10);
   const pageSize = parseInt(params.get("pageSize") ?? String(PAGE_SIZE), 10);
 
   // POS fetches all (no pagination needed — cached client-side)
   const isPOS = !!branchId;
+
+  // Use service client when showInactive=true so RLS doesn't filter out
+  // inactive product_variants in the nested select
+  const supabase = showInactive ? createServiceClient() : authClient;
 
   let query = supabase
     .from("products")
@@ -42,6 +38,7 @@ export const GET = apiHandler(async (request: NextRequest) => {
 
   if (!showInactive) query = query.eq("is_active", true);
   if (search) query = query.ilike("name", `%${search}%`);
+  if (category) query = query.eq("category", category);
   if (!isPOS) {
     const from = (page - 1) * pageSize;
     query = query.range(from, from + pageSize - 1);
@@ -60,10 +57,7 @@ export const GET = apiHandler(async (request: NextRequest) => {
     );
 
     if (resaleVariantIds.length > 0) {
-      const serviceSupabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      );
+      const serviceSupabase = createServiceClient();
       const { data: stockRows } = await serviceSupabase
         .from("branch_product_stock")
         .select("variant_id, quantity")
@@ -90,7 +84,7 @@ export const GET = apiHandler(async (request: NextRequest) => {
 });
 
 export const POST = apiHandler(async (request: NextRequest) => {
-  const supabase = getSupabaseWithAuth(request);
+  const { client: supabase } = await createAuthClient(request);
   const body = await request.json();
   const { name, category, description, image_url, product_type, variants } = body;
 

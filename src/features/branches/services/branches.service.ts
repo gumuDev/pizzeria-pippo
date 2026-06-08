@@ -1,10 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { getToken } from "@/lib/auth";
 import type { Branch } from "../types/branch.types";
-
-async function getToken(): Promise<string> {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? "";
-}
 
 export const BranchesService = {
   async getBranches(showInactive = false): Promise<Branch[]> {

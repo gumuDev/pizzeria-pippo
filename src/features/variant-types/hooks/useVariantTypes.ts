@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { notification } from "antd";
+import { getToken } from "@/lib/auth";
 import { VariantTypesService } from "../services/variant-types.service";
 import type { VariantType } from "../types/variant-type.types";
 
@@ -27,7 +28,7 @@ export function useVariantTypes() {
 
   const handleSave = async (name: string, sort_order: number) => {
     setSaving(true);
-    const token = await VariantTypesService.getToken();
+    const token = await getToken();
     const result = editing
       ? await VariantTypesService.update(editing.id, name, sort_order, token)
       : await VariantTypesService.create(name, sort_order, token);
@@ -43,7 +44,7 @@ export function useVariantTypes() {
   };
 
   const handleToggle = async (record: VariantType) => {
-    const token = await VariantTypesService.getToken();
+    const token = await getToken();
     const result = await VariantTypesService.toggle(record.id, !record.is_active, token);
     if (result.ok) {
       load();

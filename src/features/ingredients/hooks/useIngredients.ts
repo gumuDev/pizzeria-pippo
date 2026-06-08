@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { Form, notification } from "antd";
-import { supabase } from "@/lib/supabase";
+import { getToken } from "@/lib/auth";
 import { IngredientsService } from "../services/ingredients.service";
 import type { Ingredient } from "../types/ingredient.types";
 
@@ -11,8 +11,7 @@ export const PAGE_SIZE = 10;
 const REVALIDATE_INTERVAL = 60 * 1000;
 
 async function fetcher(url: string): Promise<{ data: Ingredient[]; total: number }> {
-  const { data: session } = await supabase.auth.getSession();
-  const token = session.session?.access_token ?? "";
+  const token = await getToken();
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   const json = await res.json();
   if (json.data && Array.isArray(json.data)) return { data: json.data, total: json.total ?? 0 };

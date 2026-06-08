@@ -29,7 +29,7 @@ import type { CartItem } from "@/lib/promotions";
 export default function PosPage() {
   const { identity, branches, effectiveBranchId, isAdminChoosingBranch, selectBranch, handleLogout } = usePosIdentity();
   const { broadcast } = usePosBroadcast();
-  const { products, promotions, loading, getVariantPrice, getPromoLabel, getStockQty } = usePosProducts(effectiveBranchId ?? undefined);
+  const { products, promotions, loading, getVariantPrice, getPromoLabel, getStockQty, refresh: refreshProducts } = usePosProducts(effectiveBranchId ?? undefined);
   const cart = usePosCart(promotions, effectiveBranchId ?? undefined, broadcast, getStockQty);
   const [activeTab, setActiveTab] = useState<PosTab>("sale");
   const [mobileView, setMobileView] = useState<"catalog" | "cart">("catalog");
@@ -127,6 +127,7 @@ export default function PosPage() {
         setTicket({ orderId: result.order_id!, dailyNumber: result.daily_number!, items: cart.discountedCart, total: cart.total, paymentMethod, orderType: cart.orderType });
         cart.clearCart();
         fetchDayOrders(branchId);
+        refreshProducts();
       } else {
         message.error(`Error al confirmar venta: ${result.error}`, 5);
       }

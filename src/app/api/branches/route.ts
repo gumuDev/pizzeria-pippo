@@ -1,17 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-function getSupabaseWithAuth(request: NextRequest) {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
+import { createAuthClient } from "@/lib/supabase-server";
 
 export async function GET(request: NextRequest) {
-  const supabase = getSupabaseWithAuth(request);
+  const { client: supabase } = await createAuthClient(request);
   const showInactive = new URL(request.url).searchParams.get("showInactive") === "true";
 
   let query = supabase.from("branches").select("*").order("created_at", { ascending: true });
@@ -23,7 +14,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = getSupabaseWithAuth(request);
+  const { client: supabase } = await createAuthClient(request);
   const body = await request.json();
   const { name, address } = body;
 

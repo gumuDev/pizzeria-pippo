@@ -1,28 +1,24 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { notification } from "antd";
-import { supabase } from "@/lib/supabase";
+import { getToken } from "@/lib/auth";
 import { ProductsService } from "../services/products.service";
-import type { Product, Ingredient, Branch } from "../types/product.types";
+import type { Product, Branch } from "../types/product.types";
 
 const PAGE_SIZE = 10;
 const DEDUP_INTERVAL = 60 * 1000;
 
 async function fetchProducts(url: string): Promise<{ data: Product[]; total: number }> {
-  const { data: session } = await supabase.auth.getSession();
-  const token = session.session?.access_token ?? "";
+  const token = await getToken();
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   const json = await res.json();
   return { data: json.data ?? [], total: json.total ?? 0 };
 }
 
 export function useProducts() {
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Product | null>(null);
   const [showInactive, setShowInactive] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -35,10 +31,7 @@ export function useProducts() {
   }, [search]);
 
   useEffect(() => {
-    Promise.all([ProductsService.getIngredients(), ProductsService.getBranches()]).then(([i, b]) => {
-      setIngredients(i);
-      setBranches(b);
-    });
+    ProductsService.getBranches().then(setBranches);
   }, []);
 
   const swrKey = `/api/products?showInactive=${showInactive}&page=${page}&pageSize=${PAGE_SIZE}${debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : ""}${filterCategory ? `&category=${filterCategory}` : ""}`;
@@ -51,23 +44,6 @@ export function useProducts() {
 
   const products = data?.data ?? [];
   const total = data?.total ?? 0;
-
-  const getToken = async () => {
-    const { data: session } = await supabase.auth.getSession();
-    return session.session?.access_token ?? "";
-  };
-
-  const openModal = (record?: Product) => {
-    setEditing(record ?? null);
-    setModalOpen(true);
-  };
-
-  const closeModal = () => setModalOpen(false);
-
-  const handleSaved = useCallback(() => {
-    mutate();
-    setModalOpen(false);
-  }, [mutate]);
 
   const handleToggleActive = async (product: Product) => {
     const token = await getToken();
@@ -89,21 +65,15 @@ export function useProducts() {
     page,
     PAGE_SIZE,
     setPage,
-    ingredients,
     branches,
     loading,
-    modalOpen,
-    editing,
     showInactive,
     setShowInactive: handleShowInactive,
     filterCategory,
     setFilterCategory: handleCategoryFilter,
     search,
     setSearch,
-    openModal,
-    closeModal,
     handleToggleActive,
-    handleSaved,
-    getToken,
+    mutate,
   };
 }

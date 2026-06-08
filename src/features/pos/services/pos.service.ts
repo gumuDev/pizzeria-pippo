@@ -1,12 +1,21 @@
 import { supabase } from "@/lib/supabase";
+import { getToken as _getToken } from "@/lib/auth";
 import { todayInBolivia } from "@/lib/timezone";
 import type { Identity, Product, DayOrder, OrderType } from "../types/pos.types";
 import type { Promotion, DiscountedItem, FlavorItem } from "@/lib/promotions";
 
 export const PosService = {
   async getToken(): Promise<string> {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? "";
+    return _getToken();
+  },
+
+  async getBranches(): Promise<{ id: string; name: string }[]> {
+    const { data } = await supabase.from("branches").select("id, name").order("name");
+    return data ?? [];
+  },
+
+  async logout(): Promise<void> {
+    await supabase.auth.signOut();
   },
 
   async getIdentity(): Promise<Identity | null> {
@@ -110,6 +119,22 @@ export const PosService = {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
+  },
+
+  subscribeToKitchenStatus(branchId: string, onUpdate: (payload: { new: { id: string; kitchen_status: string } }) => void) {
+    return supabase
+      .channel("pos-kitchen-status")
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "orders",
+        filter: `branch_id=eq.${branchId}`,
+      }, onUpdate)
+      .subscribe();
+  },
+
+  unsubscribe(channel: ReturnType<typeof supabase.channel>) {
+    supabase.removeChannel(channel);
   },
 
   async cancelOrder(orderId: string, reason: string, token: string): Promise<{ ok: boolean; error?: string }> {

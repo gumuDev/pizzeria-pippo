@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Table, Tabs, Button, InputNumber, Space, Typography, Tag, Skeleton } from "antd";
 import { EditOutlined, PlusOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
+import { useIsMobile } from "@/lib/useIsMobile";
 import type { VariantWithPrices, Branch } from "../hooks/useProductBranchPrices";
 
 const { Text } = Typography;
@@ -37,7 +38,7 @@ function PriceCell({ variantId, branchId, price, saving, onSave }: PriceCellProp
           value={value}
           onChange={(v) => setValue(v ?? 0)}
           min={0}
-          style={{ width: 120 }}
+          style={{ width: 110 }}
           autoFocus
           onPressEnter={handleSave}
         />
@@ -51,21 +52,13 @@ function PriceCell({ variantId, branchId, price, saving, onSave }: PriceCellProp
     return (
       <Space>
         <Text strong>Bs {Number(price).toFixed(2)}</Text>
-        <Button
-          size="small"
-          icon={<EditOutlined />}
-          onClick={() => { setValue(price); setEditing(true); }}
-        />
+        <Button size="small" icon={<EditOutlined />} onClick={() => { setValue(price); setEditing(true); }} />
       </Space>
     );
   }
 
   return (
-    <Button
-      size="small"
-      icon={<PlusOutlined />}
-      onClick={() => { setValue(0); setEditing(true); }}
-    >
+    <Button size="small" icon={<PlusOutlined />} onClick={() => { setValue(0); setEditing(true); }}>
       Asignar
     </Button>
   );
@@ -79,10 +72,53 @@ interface BranchPricesTableProps {
 }
 
 function BranchPricesTable({ variant, branches, saving, onSave }: BranchPricesTableProps) {
+  const isMobile = useIsMobile();
+
   const rows = branches.map((branch) => {
     const bp = variant.branch_prices.find((p) => p.branch_id === branch.id);
     return { branchId: branch.id, branchName: branch.name, price: bp?.price };
   });
+
+  if (isMobile) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {rows.map((row) => (
+          <div
+            key={row.branchId}
+            style={{
+              background: "#fff",
+              border: "1px solid #e5e7eb",
+              borderRadius: 10,
+              padding: "12px 14px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <Text strong style={{ fontSize: 14 }}>{row.branchName}</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Base: Bs {Number(variant.base_price).toFixed(2)}
+              </Text>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                {row.price !== undefined ? (
+                  <Tag color="orange" style={{ fontSize: 13 }}>Bs {Number(row.price).toFixed(2)}</Tag>
+                ) : (
+                  <Text type="secondary" style={{ fontSize: 12 }}>Sin precio asignado</Text>
+                )}
+              </div>
+              <PriceCell
+                variantId={variant.id}
+                branchId={row.branchId}
+                price={row.price}
+                saving={saving}
+                onSave={onSave}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   const columns = [
     {

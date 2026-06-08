@@ -1,12 +1,17 @@
 "use client";
 
 import dayjs from "dayjs";
+import dynamic from "next/dynamic";
 import { Button } from "antd";
 import { ShoppingCartOutlined } from "@ant-design/icons";
 import { DashboardSummaryCards } from "@/features/dashboard/components/DashboardSummaryCards";
-import { DashboardCharts } from "@/features/dashboard/components/DashboardCharts";
 import { DashboardStockAlerts } from "@/features/dashboard/components/DashboardStockAlerts";
 import { useDashboard } from "@/features/dashboard/hooks/useDashboard";
+
+const DashboardCharts = dynamic(
+  () => import("@/features/dashboard/components/DashboardCharts").then((m) => m.DashboardCharts),
+  { ssr: false }
+);
 
 export default function DashboardPage() {
   const { summary, topProducts, dailyData, stockAlerts, warehouseAlerts, loading } = useDashboard();

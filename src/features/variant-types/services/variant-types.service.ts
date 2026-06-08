@@ -1,14 +1,9 @@
-import { supabase } from "@/lib/supabase";
+import { getToken } from "@/lib/auth";
 import type { VariantType } from "../types/variant-type.types";
 
 export const VariantTypesService = {
-  async getToken(): Promise<string> {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? "";
-  },
-
   async getVariantTypes(onlyActive = false): Promise<VariantType[]> {
-    const token = await VariantTypesService.getToken();
+    const token = await getToken();
     const params = onlyActive ? "" : "?onlyActive=false";
     const res = await fetch(`/api/variant-types${params}`, {
       headers: { Authorization: `Bearer ${token}` },

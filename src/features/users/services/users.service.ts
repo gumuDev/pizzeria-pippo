@@ -1,10 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { getToken } from "@/lib/auth";
 import type { User, Branch, CreateUserPayload, UpdateUserPayload } from "../types/user.types";
-
-async function getToken(): Promise<string> {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? "";
-}
 
 export const UsersService = {
   async getUsers(): Promise<User[]> {

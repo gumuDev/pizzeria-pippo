@@ -2,6 +2,11 @@ import { supabase } from "./supabase";
 
 export type UserRole = "admin" | "cajero" | "cocinero";
 
+export async function getToken(): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? "";
+}
+
 export interface UserProfile {
   id: string;
   role: UserRole;

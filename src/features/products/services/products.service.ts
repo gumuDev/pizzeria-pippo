@@ -27,10 +27,19 @@ export const ProductsService = {
     return data ?? [];
   },
 
+  async getProductDetail(id: string) {
+    const { data } = await supabase
+      .from("products")
+      .select("*, product_variants(*, branch_prices(*, branches(name)), recipes(*, ingredients(name, unit)))")
+      .eq("id", id)
+      .single();
+    return data ?? null;
+  },
+
   async getVariantsWithDetails(productId: string) {
     const { data } = await supabase
       .from("product_variants")
-      .select("*, branch_prices(*), recipes(*)")
+      .select("*, branch_prices(*), recipes(ingredient_id, quantity, apply_condition)")
       .eq("product_id", productId);
     return data ?? [];
   },

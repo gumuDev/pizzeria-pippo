@@ -48,8 +48,8 @@ export function usePosProducts(branchId: string | undefined) {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchData = useCallback(async (id: string) => {
-    const cached = getCached(id);
+  const fetchData = useCallback(async (id: string, skipCache = false) => {
+    const cached = skipCache ? null : getCached(id);
     if (cached) {
       setProducts(cached.products);
       setPromotions(cached.promotions);
@@ -63,6 +63,10 @@ export function usePosProducts(branchId: string | undefined) {
     setCache(id, result.products, result.promotions);
     setLoading(false);
   }, []);
+
+  const refresh = useCallback(() => {
+    if (branchId) fetchData(branchId, true);
+  }, [branchId, fetchData]);
 
   useEffect(() => {
     if (branchId) fetchData(branchId);
@@ -118,5 +122,5 @@ export function usePosProducts(branchId: string | undefined) {
     return null;
   }, [products]);
 
-  return { products, promotions, loading, getVariantPrice, getPromoLabel, getStockQty };
+  return { products, promotions, loading, getVariantPrice, getPromoLabel, getStockQty, refresh };
 }

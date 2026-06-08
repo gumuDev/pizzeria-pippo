@@ -1,11 +1,7 @@
 import { supabase } from "@/lib/supabase";
+import { getToken } from "@/lib/auth";
 import { ok, fail, type ServiceResult } from "@/lib/errors";
 import type { StockRow, Movement, Ingredient, Branch, ProductStockRow } from "../types/stock.types";
-
-async function getToken(): Promise<string> {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? "";
-}
 
 export const StockService = {
   async getBranches(): Promise<Branch[]> {

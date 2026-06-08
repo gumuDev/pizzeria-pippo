@@ -1,10 +1,10 @@
 import { supabase } from "@/lib/supabase";
+import { getToken } from "@/lib/auth";
 import type { Branch, SalesSummary, TopProduct, DailyData, StockAlert, CashierReport, Order } from "../types/reports.types";
 
 export const ReportsService = {
   async getToken(): Promise<string> {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? "";
+    return getToken();
   },
 
   async getBranches(): Promise<Branch[]> {

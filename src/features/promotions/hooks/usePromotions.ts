@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Form, notification } from "antd";
-import { supabase } from "@/lib/supabase";
 import { PromotionsService } from "../services/promotions.service";
 import type { Promotion, Branch, Variant, Rule } from "../types/promotion.types";
 import dayjs from "dayjs";
@@ -21,13 +20,13 @@ export function usePromotions() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [promos, { data: b }, v] = await Promise.all([
+    const [promos, b, v] = await Promise.all([
       PromotionsService.getPromotions(showInactive),
-      supabase.from("branches").select("*").order("name"),
+      PromotionsService.getBranches(),
       PromotionsService.getVariants(),
     ]);
     setPromotions(promos);
-    if (b) setBranches(b);
+    setBranches(b);
     setVariants(v);
     setLoading(false);
   }, [showInactive]);

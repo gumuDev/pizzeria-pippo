@@ -1,9 +1,8 @@
+import { getToken } from "@/lib/auth";
 import { AppSettings } from "@/features/settings/types";
 
 async function getAuthHeader(): Promise<HeadersInit> {
-  const { supabase } = await import("@/lib/supabase");
-  const { data: { session } } = await supabase.auth.getSession();
-  return { Authorization: `Bearer ${session?.access_token ?? ""}` };
+  return { Authorization: `Bearer ${await getToken()}` };
 }
 
 export async function getSettings(): Promise<AppSettings> {

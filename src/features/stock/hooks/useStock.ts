@@ -13,9 +13,8 @@ const PAGE_SIZE = 10;
 const REVALIDATE_INTERVAL = 60 * 1000;
 
 async function fetcher<T>(url: string): Promise<{ data: T[]; total: number }> {
-  const { supabase } = await import("@/lib/supabase");
-  const { data: session } = await supabase.auth.getSession();
-  const token = session.session?.access_token ?? "";
+  const { getToken } = await import("@/lib/auth");
+  const token = await getToken();
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   const json = await res.json();
   if (json.data && Array.isArray(json.data)) return { data: json.data, total: json.total ?? 0 };

@@ -1,13 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  themeColor: "#c0392b",
+};
 
 export const metadata: Metadata = {
   title: "Pizzería Pippo",
   description: "Sistema de gestión para Pizzería Pippo",
   manifest: "/manifest.json",
-  themeColor: "#c0392b",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

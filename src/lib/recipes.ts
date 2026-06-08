@@ -32,7 +32,7 @@ export async function deductStock(
     .from("order_items")
     .select(`
       qty, qty_physical, variant_id,
-      product_variants(recipes(ingredient_id, quantity, apply_condition)),
+      product_variants(recipes(ingredient_id, quantity, apply_condition), products(product_type)),
       order_item_flavors(variant_id, proportion)
     `)
     .eq("order_id", orderId);
@@ -42,6 +42,53 @@ export async function deductStock(
 
   type Recipe = { ingredient_id: string; quantity: number; apply_condition: string };
   type FlavorRow = { variant_id: string; proportion: number };
+
+  // 1b. Deduct resale product stock (branch_product_stock) for resale variants
+  const resaleDeductions: Record<string, number> = {};
+  for (const item of orderItems) {
+    const pv = item.product_variants as unknown as { products: { product_type: string } | null } | null;
+    const productType = pv?.products?.product_type;
+    if (productType !== "resale") continue;
+    const physicalQty = (item as { qty_physical?: number }).qty_physical ?? item.qty;
+    resaleDeductions[item.variant_id] = (resaleDeductions[item.variant_id] ?? 0) + physicalQty;
+  }
+
+  if (Object.keys(resaleDeductions).length > 0) {
+    const { data: resaleStockRows, error: resaleStockError } = await supabase
+      .from("branch_product_stock")
+      .select("id, variant_id, quantity")
+      .eq("branch_id", branchId)
+      .in("variant_id", Object.keys(resaleDeductions));
+
+    if (resaleStockError) return { success: false, error: resaleStockError.message };
+
+    const resaleUpdatePromises = (resaleStockRows ?? []).map((stock) => {
+      const amount = resaleDeductions[stock.variant_id] ?? 0;
+      return supabase
+        .from("branch_product_stock")
+        .update({ quantity: stock.quantity - amount, updated_at: new Date().toISOString() })
+        .eq("id", stock.id);
+    });
+
+    const resaleMovements = Object.entries(resaleDeductions).map(([variantId, amount]) => ({
+      branch_id: branchId,
+      variant_id: variantId,
+      quantity: -amount,
+      type: "venta" as const,
+      notes: `Orden ${orderId}`,
+      created_by: userId,
+    }));
+
+    const [resaleUpdateResults, resaleMovError] = await Promise.all([
+      Promise.all(resaleUpdatePromises),
+      supabase.from("product_stock_movements").insert(resaleMovements).then((r) => r.error),
+    ]);
+
+    for (const result of resaleUpdateResults) {
+      if (result.error) return { success: false, error: result.error.message };
+    }
+    if (resaleMovError) return { success: false, error: resaleMovError.message };
+  }
 
   // 2. Aggregate total deduction per ingredient using qty_physical
   // Mixed pizzas: deduct each flavor's recipe proportionally
