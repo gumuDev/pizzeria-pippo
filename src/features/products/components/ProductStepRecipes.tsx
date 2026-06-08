@@ -1,8 +1,7 @@
 "use client";
 
-import { Button, Card, Select, InputNumber, Tooltip, Switch, Typography, Alert } from "antd";
+import { Button, Select, InputNumber, Tooltip, Switch, Typography, Alert } from "antd";
 import { PlusOutlined, MinusCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
-import { useIsMobile } from "@/lib/useIsMobile";
 import type { Ingredient, Variant, RecipeItem } from "../types/product.types";
 
 const { Text } = Typography;
@@ -33,8 +32,6 @@ export function ProductStepRecipes({
   onAddRecipeItem, onUpdateRecipeItem, onRemoveRecipeItem,
   onPrev, onSave,
 }: Props) {
-  const isMobile = useIsMobile();
-
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, padding: "12px 16px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb" }}>
@@ -59,90 +56,59 @@ export function ProductStepRecipes({
         />
       )}
 
-      {hasRecipe && variants.map((variant, vi) => (
-        <Card key={vi} style={{ marginBottom: 16 }} size="small" title={`Receta — ${variant.name}`}>
-          {variant.recipes.map((recipe, ri) => (
-            <div key={ri} style={{ marginBottom: 10 }}>
-              {isMobile ? (
-                /* Mobile: stacked layout */
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <Select
-                    value={recipe.ingredient_id || undefined}
-                    placeholder="Insumo"
-                    options={ingredients.map((i) => ({ value: i.id, label: `${i.name} (${i.unit})` }))}
-                    onChange={(val) => onUpdateRecipeItem(vi, ri, "ingredient_id", val)}
-                    style={{ width: "100%" }}
-                    showSearch
-                    filterOption={(input, option) =>
-                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                    }
-                  />
-                  <div style={{ display: "flex", gap: 6 }}>
+      {hasRecipe && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 16 }}>
+          {variants.map((variant, vi) => (
+            <div key={vi} style={{ background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb", overflow: "hidden" }}>
+              {/* Variant header */}
+              <div style={{ padding: "10px 14px", background: "#fff7ed", borderBottom: "1px solid #fed7aa" }}>
+                <Text strong style={{ color: "#c2410c", fontSize: 13 }}>Receta — {variant.name}</Text>
+              </div>
+
+              {/* Ingredients list */}
+              <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+                {variant.recipes.map((recipe, ri) => (
+                  <div key={ri} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <Select
+                      value={recipe.ingredient_id || undefined}
+                      placeholder="Insumo"
+                      options={ingredients.map((i) => ({ value: i.id, label: `${i.name} (${i.unit})` }))}
+                      onChange={(val) => onUpdateRecipeItem(vi, ri, "ingredient_id", val)}
+                      style={{ flex: "0 0 38%" }}
+                      showSearch
+                      filterOption={(input, option) =>
+                        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                      }
+                    />
                     <InputNumber
                       value={recipe.quantity}
-                      placeholder="Cantidad"
+                      placeholder="Cant."
                       onChange={(val) => onUpdateRecipeItem(vi, ri, "quantity", val ?? 0)}
-                      style={{ flex: 1 }}
+                      style={{ flex: "0 0 80px" }}
                       min={0}
                     />
-                    <Button
-                      type="text"
-                      danger
-                      icon={<MinusCircleOutlined />}
-                      onClick={() => onRemoveRecipeItem(vi, ri)}
-                    />
+                    <Tooltip title="Cuándo se descuenta este insumo del inventario">
+                      <Select
+                        value={recipe.apply_condition ?? "always"}
+                        options={CONDITION_OPTIONS}
+                        onChange={(val) => onUpdateRecipeItem(vi, ri, "apply_condition", val)}
+                        style={{ flex: 1 }}
+                        suffixIcon={<InfoCircleOutlined style={{ color: "#8c8c8c" }} />}
+                      />
+                    </Tooltip>
+                    <Button type="text" danger icon={<MinusCircleOutlined />} onClick={() => onRemoveRecipeItem(vi, ri)} />
                   </div>
-                  <Select
-                    value={recipe.apply_condition ?? "always"}
-                    options={CONDITION_OPTIONS}
-                    onChange={(val) => onUpdateRecipeItem(vi, ri, "apply_condition", val)}
-                    style={{ width: "100%" }}
-                    suffixIcon={<InfoCircleOutlined style={{ color: "#8c8c8c" }} />}
-                  />
-                </div>
-              ) : (
-                /* Desktop: inline row */
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <Select
-                    value={recipe.ingredient_id || undefined}
-                    placeholder="Insumo"
-                    options={ingredients.map((i) => ({ value: i.id, label: `${i.name} (${i.unit})` }))}
-                    onChange={(val) => onUpdateRecipeItem(vi, ri, "ingredient_id", val)}
-                    style={{ flex: "0 0 38%" }}
-                    showSearch
-                    filterOption={(input, option) =>
-                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                    }
-                  />
-                  <InputNumber
-                    value={recipe.quantity}
-                    placeholder="Cantidad"
-                    onChange={(val) => onUpdateRecipeItem(vi, ri, "quantity", val ?? 0)}
-                    style={{ flex: "0 0 18%" }}
-                    min={0}
-                  />
-                  <Tooltip title="Define cuándo se descuenta este insumo del inventario">
-                    <Select
-                      value={recipe.apply_condition ?? "always"}
-                      options={CONDITION_OPTIONS}
-                      onChange={(val) => onUpdateRecipeItem(vi, ri, "apply_condition", val)}
-                      style={{ flex: 1 }}
-                      suffixIcon={<InfoCircleOutlined style={{ color: "#8c8c8c" }} />}
-                    />
-                  </Tooltip>
-                  <Button type="text" danger icon={<MinusCircleOutlined />} onClick={() => onRemoveRecipeItem(vi, ri)} />
-                </div>
-              )}
+                ))}
+                <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={() => onAddRecipeItem(vi)}>
+                  Agregar insumo
+                </Button>
+              </div>
             </div>
           ))}
-          <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={() => onAddRecipeItem(vi)}>
-            Agregar insumo
-          </Button>
-        </Card>
-      ))}
+        </div>
+      )}
 
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
-
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 20 }}>
         <Button onClick={onPrev}>Anterior</Button>
         <Button type="primary" onClick={onSave} loading={saving} disabled={saving}>
           {editing ? "Guardar cambios" : "Crear producto"}

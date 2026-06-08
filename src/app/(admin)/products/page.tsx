@@ -6,11 +6,14 @@ import { useProducts } from "@/features/products/hooks/useProducts";
 
 export default function ProductsPage() {
   const {
-    products, ingredients, loading,
-    modalOpen, editing, showInactive, setShowInactive,
+    products, total, page, PAGE_SIZE, setPage,
+    ingredients, loading,
+    modalOpen, editing,
+    showInactive, setShowInactive,
     filterCategory, setFilterCategory,
+    search, setSearch,
     openModal, closeModal,
-    handleToggleActive, fetchAll,
+    handleToggleActive, handleSaved,
   } = useProducts();
 
   return (
@@ -22,6 +25,12 @@ export default function ProductsPage() {
         onToggleInactive={setShowInactive}
         filterCategory={filterCategory}
         onFilterCategory={setFilterCategory}
+        search={search}
+        onSearch={setSearch}
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        onPageChange={setPage}
         onCreate={() => openModal()}
         onEdit={openModal}
         onToggleActive={handleToggleActive}
@@ -31,7 +40,7 @@ export default function ProductsPage() {
         editing={editing}
         ingredients={ingredients}
         onClose={closeModal}
-        onSave={() => { closeModal(); fetchAll(); }}
+        onSave={handleSaved}
       />
     </div>
   );

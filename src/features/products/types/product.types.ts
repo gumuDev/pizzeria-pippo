@@ -34,6 +34,7 @@ export interface Variant {
   base_price: number;
   branch_prices: BranchPrice[];
   recipes: RecipeItem[];
+  is_active?: boolean;
 }
 
 export interface Product {

@@ -175,6 +175,8 @@ function applyCombo(items: DiscountedItem[], promo: Promotion): DiscountedItem[]
     let found = false;
     for (let i = 0; i < items.length; i++) {
       if (!ruleMatchesItem(rule, items[i])) continue;
+      // Skip items already fully consumed by a previous combo
+      if (items[i].promo_label) continue;
       const claimed = claimedPerIndex.get(i) ?? 0;
       if (items[i].qty - claimed < 1) continue;
       claimedPerIndex.set(i, claimed + 1);

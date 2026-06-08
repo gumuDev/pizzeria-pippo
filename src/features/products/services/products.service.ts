@@ -31,8 +31,7 @@ export const ProductsService = {
     const { data } = await supabase
       .from("product_variants")
       .select("*, branch_prices(*), recipes(*)")
-      .eq("product_id", productId)
-      .eq("is_active", true);
+      .eq("product_id", productId);
     return data ?? [];
   },
 
@@ -86,10 +85,12 @@ export const ProductsService = {
   },
 
   buildPayload(step1Data: Step1Data, imageUrl: string, variants: Variant[]) {
-    const cleanVariants = variants.map((v) => ({
-      ...v,
-      recipes: v.recipes.filter((r) => r.ingredient_id && r.quantity > 0),
-    }));
+    const cleanVariants = variants
+      .filter((v) => v.is_active !== false)
+      .map((v) => ({
+        ...v,
+        recipes: v.recipes.filter((r) => r.ingredient_id && r.quantity > 0),
+      }));
     return {
       name: step1Data.name,
       category: step1Data.category,

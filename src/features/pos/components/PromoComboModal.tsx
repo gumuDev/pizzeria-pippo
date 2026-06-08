@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Modal, Button, Typography, Tag, Select } from "antd";
+import { useIsMobile } from "@/lib/useIsMobile";
 import { PlusOutlined, MinusOutlined, DeleteOutlined, CheckOutlined } from "@ant-design/icons";
 import type { Promotion, PromotionRule } from "@/lib/promotions";
 import type { Product, Variant } from "../types/pos.types";
@@ -159,6 +160,7 @@ function FlavorBuilder({
 }
 
 export function PromoComboModal({ promo, products, branchId, getVariantPrice, onConfirm, onClose }: Props) {
+  const isMobile = useIsMobile();
   const [selections, setSelections] = useState<(SlotSelection | null)[]>([]);
   const [flavorOverrides, setFlavorOverrides] = useState<Map<number, FlavorEntry[]>>(new Map());
   const [showFlavors, setShowFlavors] = useState<Set<number>>(new Set());
@@ -231,111 +233,136 @@ export function PromoComboModal({ promo, products, branchId, getVariantPrice, on
       open={!!promo}
       onCancel={onClose}
       footer={null}
-      width={460}
-      style={{ maxWidth: "calc(100vw - 32px)" }}
+      width={isMobile ? "100%" : 820}
+      style={{ maxWidth: "calc(100vw - 32px)", top: isMobile ? 16 : undefined }}
       destroyOnHidden
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "8px 12px", background: "#fff7ed", borderRadius: 8, border: "1px solid #fed7aa" }}>
-        <Text style={{ color: "#c2410c", fontSize: 13 }}>Precio del combo</Text>
-        <Text strong style={{ color: "#ea580c", fontSize: 18, marginLeft: "auto" }}>Bs {comboPrice.toFixed(2)}</Text>
-      </div>
+      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 20, alignItems: "flex-start" }}>
+        {/* Slots grid */}
+        <div style={{ flex: 1, display: "grid", gridTemplateColumns: isMobile ? "1fr" : (rules.length > 1 ? "1fr 1fr" : "1fr"), gap: 12, minWidth: 0 }}>
+          {rules.map((rule, idx) => {
+            const options = getSlotOptions(rule, products, branchId, getVariantPrice);
+            const isFixed = !!rule.variant_id;
+            const selected = selections[idx];
+            const label = buildSlotLabel(rule, products);
+            const isPizzaSlot = rule.category === "pizza" || (!rule.category && selected?.category === "pizza");
+            const selectedProduct = selected ? products.find((p) => p.product_variants.some((v) => v.id === selected.variantId)) : null;
+            const selectedVariant = selectedProduct?.product_variants.find((v) => v.id === selected?.variantId);
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {rules.map((rule, idx) => {
-          const options = getSlotOptions(rule, products, branchId, getVariantPrice);
-          const isFixed = !!rule.variant_id;
-          const selected = selections[idx];
-          const label = buildSlotLabel(rule, products);
-          const isPizzaSlot = rule.category === "pizza" || (!rule.category && selected?.category === "pizza");
-          const selectedProduct = selected ? products.find((p) => p.product_variants.some((v) => v.id === selected.variantId)) : null;
-          const selectedVariant = selectedProduct?.product_variants.find((v) => v.id === selected?.variantId);
-
-          return (
-            <div key={idx} style={{ border: `2px solid ${selected ? "#fed7aa" : "#e5e7eb"}`, borderRadius: 10, overflow: "hidden", transition: "border-color 0.2s" }}>
-              {/* Slot header */}
-              <div style={{ padding: "8px 12px", background: selected ? "#fff7ed" : "#f9fafb", display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 22, height: 22, borderRadius: "50%", background: selected ? "#ea580c" : "#e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  {selected
-                    ? <CheckOutlined style={{ fontSize: 11, color: "#fff" }} />
-                    : <Text style={{ fontSize: 11, color: "#6b7280", fontWeight: 700 }}>{idx + 1}</Text>
-                  }
+            return (
+              <div key={idx} style={{ border: `2px solid ${selected ? "#fed7aa" : "#e5e7eb"}`, borderRadius: 10, overflow: "hidden", transition: "border-color 0.2s" }}>
+                {/* Slot header */}
+                <div style={{ padding: "8px 12px", background: selected ? "#fff7ed" : "#f9fafb", display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: selected ? "#ea580c" : "#e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {selected
+                      ? <CheckOutlined style={{ fontSize: 11, color: "#fff" }} />
+                      : <Text style={{ fontSize: 11, color: "#6b7280", fontWeight: 700 }}>{idx + 1}</Text>
+                    }
+                  </div>
+                  <Text strong style={{ fontSize: 13, color: selected ? "#c2410c" : "#374151" }}>{label}</Text>
+                  {isFixed && <Tag color="blue" style={{ margin: 0, fontSize: 10 }}>Fijo</Tag>}
                 </div>
-                <Text strong style={{ fontSize: 13, color: selected ? "#c2410c" : "#374151" }}>{label}</Text>
-                {isFixed && <Tag color="blue" style={{ margin: 0, fontSize: 10 }}>Fijo</Tag>}
-                {selected && (
-                  <Text style={{ marginLeft: "auto", fontSize: 12, color: "#ea580c", fontWeight: 600 }}>
-                    {selected.productName}{selected.variantName !== selected.productName ? ` — ${selected.variantName}` : ""}
-                  </Text>
+
+                {/* Selected summary (fixed slots) */}
+                {isFixed && selected && (
+                  <div style={{ padding: "8px 12px" }}>
+                    <Text style={{ fontSize: 12, color: "#ea580c", fontWeight: 600 }}>
+                      {selected.productName}{selected.variantName !== selected.productName ? ` — ${selected.variantName}` : ""}
+                    </Text>
+                  </div>
+                )}
+
+                {/* Slot options (flexible slots) */}
+                {!isFixed && (
+                  <div style={{ padding: "10px 12px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 6 }}>
+                      {options.map(({ product, variant, price }) => {
+                        const isSel = selected?.variantId === variant.id;
+                        return (
+                          <button
+                            key={variant.id}
+                            onClick={() => selectOption(idx, product, variant)}
+                            style={{
+                              border: `2px solid ${isSel ? "#ea580c" : "#e5e7eb"}`,
+                              borderRadius: 8,
+                              padding: "8px 6px",
+                              background: isSel ? "#fff7ed" : "#fff",
+                              cursor: "pointer",
+                              textAlign: "center",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            <div style={{ fontSize: 12, fontWeight: 700, color: isSel ? "#ea580c" : "#374151", lineHeight: 1.3 }}>{product.name}</div>
+                            {variant.name !== product.name && (
+                              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>{variant.name}</div>
+                            )}
+                            <div style={{ fontSize: 12, color: isSel ? "#ea580c" : "#9ca3af", fontWeight: 600, marginTop: 2 }}>Bs {price}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {isPizzaSlot && selected && selectedProduct && selectedVariant && (
+                      <div style={{ marginTop: 8 }}>
+                        {!showFlavors.has(idx) ? (
+                          <button
+                            onClick={() => setShowFlavors((prev) => new Set(Array.from(prev).concat(idx)))}
+                            style={{ fontSize: 12, color: "#ea580c", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+                          >
+                            + Pizza mixta (combinar sabores)
+                          </button>
+                        ) : (
+                          <FlavorBuilder
+                            selectedVariant={selectedVariant}
+                            product={selectedProduct}
+                            products={products}
+                            onChange={(entries) => setFlavorOverrides((prev) => { const m = new Map(prev); m.set(idx, entries); return m; })}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
+            );
+          })}
+        </div>
 
-              {/* Slot options */}
-              {!isFixed && (
-                <div style={{ padding: "10px 12px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 6 }}>
-                    {options.map(({ product, variant, price }) => {
-                      const isSel = selected?.variantId === variant.id;
-                      return (
-                        <button
-                          key={variant.id}
-                          onClick={() => selectOption(idx, product, variant)}
-                          style={{
-                            border: `2px solid ${isSel ? "#ea580c" : "#e5e7eb"}`,
-                            borderRadius: 8,
-                            padding: "8px 6px",
-                            background: isSel ? "#fff7ed" : "#fff",
-                            cursor: "pointer",
-                            textAlign: "center",
-                            transition: "all 0.15s",
-                          }}
-                        >
-                          <div style={{ fontSize: 12, fontWeight: 700, color: isSel ? "#ea580c" : "#374151", lineHeight: 1.3 }}>{product.name}</div>
-                          {variant.name !== product.name && (
-                            <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>{variant.name}</div>
-                          )}
-                          <div style={{ fontSize: 12, color: isSel ? "#ea580c" : "#9ca3af", fontWeight: 600, marginTop: 2 }}>Bs {price}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Flavor builder for pizza slots */}
-                  {isPizzaSlot && selected && selectedProduct && selectedVariant && (
-                    <div style={{ marginTop: 8 }}>
-                      {!showFlavors.has(idx) ? (
-                        <button
-                          onClick={() => setShowFlavors((prev) => new Set(Array.from(prev).concat(idx)))}
-                          style={{ fontSize: 12, color: "#ea580c", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
-                        >
-                          + Pizza mixta (combinar sabores)
-                        </button>
-                      ) : (
-                        <FlavorBuilder
-                          selectedVariant={selectedVariant}
-                          product={selectedProduct}
-                          products={products}
-                          onChange={(entries) => setFlavorOverrides((prev) => { const m = new Map(prev); m.set(idx, entries); return m; })}
-                        />
-                      )}
+        {/* Price + confirm panel */}
+        <div style={{ flex: isMobile ? "none" : "0 0 180px", width: isMobile ? "100%" : undefined, display: "flex", flexDirection: isMobile ? "row" : "column", gap: 12, alignItems: isMobile ? "center" : undefined }}>
+          <div style={{ padding: "16px 14px", background: "#fff7ed", borderRadius: 10, border: "1px solid #fed7aa", textAlign: "center" }}>
+            <Text style={{ color: "#c2410c", fontSize: 12, display: "block", marginBottom: 4 }}>Precio del combo</Text>
+            <Text strong style={{ color: "#ea580c", fontSize: 24 }}>Bs {comboPrice.toFixed(2)}</Text>
+          </div>
+          {!isMobile && (
+            <div style={{ padding: "10px 14px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb" }}>
+              {rules.map((_, idx) => {
+                const sel = selections[idx];
+                return (
+                  <div key={idx} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: idx < rules.length - 1 ? 6 : 0 }}>
+                    <div style={{ width: 16, height: 16, borderRadius: "50%", background: sel ? "#ea580c" : "#e5e7eb", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {sel && <CheckOutlined style={{ fontSize: 9, color: "#fff" }} />}
                     </div>
-                  )}
-                </div>
-              )}
+                    <Text style={{ fontSize: 11, color: sel ? "#374151" : "#9ca3af" }}>
+                      {sel ? `${sel.productName}${sel.variantName !== "Unidad" && sel.variantName !== sel.productName ? ` ${sel.variantName}` : ""}` : `Slot ${idx + 1} pendiente`}
+                    </Text>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          )}
+          <Button
+            type="primary"
+            size="large"
+            block={!isMobile}
+            disabled={!allFilled}
+            onClick={handleConfirm}
+            style={{ background: allFilled ? "#ea580c" : undefined, borderColor: allFilled ? "#ea580c" : undefined, whiteSpace: "nowrap" }}
+          >
+            {isMobile ? `Agregar — Bs ${comboPrice.toFixed(2)}` : "Agregar combo"}
+          </Button>
+        </div>
       </div>
-
-      <Button
-        type="primary"
-        size="large"
-        block
-        disabled={!allFilled}
-        onClick={handleConfirm}
-        style={{ marginTop: 20, background: allFilled ? "#ea580c" : undefined, borderColor: allFilled ? "#ea580c" : undefined }}
-      >
-        Agregar combo — Bs {comboPrice.toFixed(2)}
-      </Button>
     </Modal>
   );
 }

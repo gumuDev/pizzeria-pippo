@@ -48,7 +48,7 @@ export function ProductModal({ open, editing, ingredients, onClose, onSave }: Pr
       open={open}
       onCancel={onClose}
       footer={null}
-      width={700}
+      width={900}
       destroyOnHidden
     >
       <Steps current={form.currentStep} items={steps} className="my-6" />
@@ -76,6 +76,7 @@ export function ProductModal({ open, editing, ingredients, onClose, onSave }: Pr
           onUpdateVariant={form.updateVariant}
           onAddVariant={form.addVariant}
           onRemoveVariant={form.removeVariant}
+          onReactivateVariant={form.reactivateVariant}
           onPrev={() => form.setCurrentStep(0)}
           onNext={() => isMade ? form.setCurrentStep(2) : form.handleSave(editing)}
           nextLabel={isMade ? undefined : (editing ? "Guardar" : "Crear")}

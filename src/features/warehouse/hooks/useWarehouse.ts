@@ -13,7 +13,6 @@ import {
 import type { WarehouseRow } from "../types/warehouse.types";
 
 const PAGE_SIZE = 10;
-const REFRESH_INTERVAL = 60 * 1000;
 
 export function useWarehouse() {
   const isMobile = useIsMobile();
@@ -35,8 +34,7 @@ export function useWarehouse() {
 
   const { data, isLoading, mutate } = useSWR(swrKey, fetchWarehouseStock, {
     revalidateOnFocus: false,
-    dedupingInterval: 5000,
-    refreshInterval: REFRESH_INTERVAL,
+    dedupingInterval: 30 * 1000,
     keepPreviousData: true,
   });
 

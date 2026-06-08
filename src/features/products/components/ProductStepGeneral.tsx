@@ -1,6 +1,6 @@
 "use client";
 
-import { Form, Input, Select, Button, Space, Upload, Typography } from "antd";
+import { Form, Input, Select, Button, Upload, Typography, Row, Col } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd";
 import { CATEGORY_OPTIONS } from "../constants/product.constants";
@@ -30,58 +30,74 @@ export function ProductStepGeneral({ form, uploading, imageUrl, step1Data, onIma
 
   return (
     <Form form={form} layout="vertical">
-      <Form.Item label="Nombre" name="name" rules={[{ required: true, message: "Requerido" }]}>
-        <Input placeholder="Nombre del producto" />
-      </Form.Item>
-      <Form.Item label="Categoría" name="category" rules={[{ required: true, message: "Requerido" }]}>
-        <Select options={CATEGORY_OPTIONS} placeholder="Seleccionar categoría" />
-      </Form.Item>
-      <Form.Item label="Descripción para el cliente" name="description">
-        <TextArea rows={3} placeholder="Ej: Pepperoni, mozzarella, salsa de tomate" />
-      </Form.Item>
+      <Row gutter={24}>
+        {/* Left column */}
+        <Col span={14}>
+          <Row gutter={12}>
+            <Col span={14}>
+              <Form.Item label="Nombre" name="name" rules={[{ required: true, message: "Requerido" }]}>
+                <Input placeholder="Nombre del producto" />
+              </Form.Item>
+            </Col>
+            <Col span={10}>
+              <Form.Item label="Categoría" name="category" rules={[{ required: true, message: "Requerido" }]}>
+                <Select options={CATEGORY_OPTIONS} placeholder="Categoría" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-      <Form.Item
-        label="¿Cómo se elabora este producto?"
-        name="product_type"
-        rules={[{ required: true, message: "Seleccioná un tipo" }]}
-      >
-        <div style={{ display: "flex", gap: 12 }}>
-          {PRODUCT_TYPE_OPTIONS.map((opt) => {
-            const selected = selectedProductType === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => form.setFieldValue("product_type", opt.value)}
-                style={{
-                  flex: 1, padding: "14px 12px", borderRadius: 10, cursor: "pointer",
-                  border: `2px solid ${selected ? "#ea580c" : "#e5e7eb"}`,
-                  background: selected ? "#fff7ed" : "#fff",
-                  textAlign: "center", transition: "all 0.15s",
-                }}
-              >
-                <div style={{ fontSize: 28, marginBottom: 4 }}>{opt.icon}</div>
-                <Text strong style={{ fontSize: 13, color: selected ? "#ea580c" : "#374151", display: "block" }}>
-                  {opt.label}
-                </Text>
-                <Text type="secondary" style={{ fontSize: 11 }}>{opt.description}</Text>
-              </button>
-            );
-          })}
-        </div>
-      </Form.Item>
+          <Form.Item
+            label="¿Cómo se elabora este producto?"
+            name="product_type"
+            rules={[{ required: true, message: "Seleccioná un tipo" }]}
+          >
+            <div style={{ display: "flex", gap: 12 }}>
+              {PRODUCT_TYPE_OPTIONS.map((opt) => {
+                const selected = selectedProductType === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => form.setFieldValue("product_type", opt.value)}
+                    style={{
+                      flex: 1, padding: "12px 10px", borderRadius: 10, cursor: "pointer",
+                      border: `2px solid ${selected ? "#ea580c" : "#e5e7eb"}`,
+                      background: selected ? "#fff7ed" : "#fff",
+                      textAlign: "center", transition: "all 0.15s",
+                    }}
+                  >
+                    <div style={{ fontSize: 24, marginBottom: 2 }}>{opt.icon}</div>
+                    <Text strong style={{ fontSize: 12, color: selected ? "#ea580c" : "#374151", display: "block" }}>
+                      {opt.label}
+                    </Text>
+                    <Text type="secondary" style={{ fontSize: 11 }}>{opt.description}</Text>
+                  </button>
+                );
+              })}
+            </div>
+          </Form.Item>
 
-      <Form.Item label="Imagen">
-        <Space direction="vertical">
-          <Upload beforeUpload={onImageUpload} showUploadList={false} accept="image/*">
-            <Button icon={<UploadOutlined />} loading={uploading}>
-              {uploading ? "Subiendo..." : "Subir imagen"}
-            </Button>
-          </Upload>
-          <ProductImage url={imageUrl} category={step1Data.category} width={120} height={120} />
-        </Space>
-      </Form.Item>
-      <div className="flex justify-end mt-4">
+          <Form.Item label="Descripción para el cliente" name="description">
+            <TextArea rows={3} placeholder="Ej: Pepperoni, mozzarella, salsa de tomate" />
+          </Form.Item>
+        </Col>
+
+        {/* Right column — image */}
+        <Col span={10}>
+          <Form.Item label="Imagen">
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "16px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb", minHeight: 200 }}>
+              <ProductImage url={imageUrl} category={step1Data.category} width={140} height={140} />
+              <Upload beforeUpload={onImageUpload} showUploadList={false} accept="image/*">
+                <Button icon={<UploadOutlined />} loading={uploading}>
+                  {uploading ? "Subiendo..." : "Subir imagen"}
+                </Button>
+              </Upload>
+            </div>
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <div className="flex justify-end mt-2">
         <Button type="primary" onClick={onNext}>
           Siguiente
         </Button>

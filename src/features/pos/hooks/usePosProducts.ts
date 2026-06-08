@@ -11,9 +11,12 @@ interface VariantMeta {
   variantName: string;
 }
 
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 interface PosCache {
   date: string;
   branchId: string;
+  cachedAt: number;
   products: Product[];
   promotions: Promotion[];
 }
@@ -24,6 +27,7 @@ function getCached(branchId: string): PosCache | null {
     if (!raw) return null;
     const cached: PosCache = JSON.parse(raw);
     if (cached.date !== todayInBolivia() || cached.branchId !== branchId) return null;
+    if (Date.now() - cached.cachedAt > CACHE_TTL_MS) return null;
     return cached;
   } catch {
     return null;
@@ -32,7 +36,7 @@ function getCached(branchId: string): PosCache | null {
 
 function setCache(branchId: string, products: Product[], promotions: Promotion[]) {
   try {
-    const payload: PosCache = { date: todayInBolivia(), branchId, products, promotions };
+    const payload: PosCache = { date: todayInBolivia(), branchId, cachedAt: Date.now(), products, promotions };
     sessionStorage.setItem("pos_cache", JSON.stringify(payload));
   } catch {
     // sessionStorage full or unavailable — continue without cache
@@ -49,9 +53,9 @@ export function usePosProducts(branchId: string | undefined) {
     if (cached) {
       setProducts(cached.products);
       setPromotions(cached.promotions);
-      return;
+    } else {
+      setLoading(true);
     }
-    setLoading(true);
     const token = await PosService.getToken();
     const result = await PosService.getProductsAndPromotions(id, token);
     setProducts(result.products);

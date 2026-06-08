@@ -50,8 +50,8 @@ export function useStock() {
     });
   }, []);
 
-  const swrOpts = { revalidateOnFocus: true, dedupingInterval: REVALIDATE_INTERVAL, keepPreviousData: true };
-  const swrFresh = { ...swrOpts, keepPreviousData: false, dedupingInterval: 0 };
+  const swrOpts = { revalidateOnFocus: false, dedupingInterval: REVALIDATE_INTERVAL, keepPreviousData: true };
+  const swrFresh = { ...swrOpts, keepPreviousData: false, dedupingInterval: REVALIDATE_INTERVAL };
 
   const stockKey = selectedBranch
     ? `/api/stock?branchId=${selectedBranch}&page=${pageStock}&pageSize=${PAGE_SIZE}`
@@ -125,13 +125,10 @@ export function useStock() {
     variantName: r.name,
   }));
 
-  const refreshAll = () => {
-    mutateStock();
-    mutateAlerts();
-    mutateIngredientMovements();
-    mutateProductMovements();
-    mutateProductStock();
-  };
+  const refreshIngredientStock = () => { mutateStock(); mutateAlerts(); };
+  const refreshIngredientHistory = () => { mutateIngredientMovements(); };
+  const refreshProductStock = () => { mutateProductStock(); };
+  const refreshProductHistory = () => { mutateProductMovements(); };
 
   const handleBranchChange = (branchId: string) => {
     setSelectedBranch(branchId);
@@ -157,25 +154,25 @@ export function useStock() {
 
   const handlePurchase = async (values: { ingredient_id: string; quantity: number; min_quantity?: number }) => {
     const result = await StockService.purchase({ branch_id: selectedBranch, ...values });
-    if (result.ok) { purchaseForm.resetFields(); setPurchaseIngredientIsNew(false); resetStockPage(); refreshAll(); }
+    if (result.ok) { purchaseForm.resetFields(); setPurchaseIngredientIsNew(false); resetStockPage(); refreshIngredientStock(); refreshIngredientHistory(); }
     else message.error(result.error);
   };
 
   const handleAdjust = async (values: { ingredient_id: string; real_quantity: number; notes?: string }) => {
     const result = await StockService.adjust({ branch_id: selectedBranch, ...values });
-    if (result.ok) { adjustForm.resetFields(); resetStockPage(); refreshAll(); }
+    if (result.ok) { adjustForm.resetFields(); resetStockPage(); refreshIngredientStock(); refreshIngredientHistory(); }
     else message.error(result.error);
   };
 
   const handleProductPurchase = async (values: { variant_id: string; quantity: number; min_quantity?: number }) => {
     const result = await StockService.productPurchase({ branch_id: selectedBranch, ...values });
-    if (result.ok) { productPurchaseForm.resetFields(); setPurchaseVariantIsNew(false); refreshAll(); }
+    if (result.ok) { productPurchaseForm.resetFields(); setPurchaseVariantIsNew(false); refreshProductStock(); refreshProductHistory(); }
     else message.error(result.error);
   };
 
   const handleProductAdjust = async (values: { variant_id: string; real_quantity: number; notes?: string }) => {
     const result = await StockService.productAdjust({ branch_id: selectedBranch, ...values });
-    if (result.ok) { productAdjustForm.resetFields(); refreshAll(); }
+    if (result.ok) { productAdjustForm.resetFields(); refreshProductStock(); refreshProductHistory(); }
     else message.error(result.error);
   };
 
@@ -188,7 +185,7 @@ export function useStock() {
   const handleMinQty = async (values: { min_quantity: number }) => {
     if (!editingStock) return;
     const ok = await StockService.updateMinQuantity(editingStock.id, values.min_quantity);
-    if (ok) { setMinQtyOpen(false); resetStockPage(); refreshAll(); }
+    if (ok) { setMinQtyOpen(false); resetStockPage(); refreshIngredientStock(); }
   };
 
   const openProductMinQty = (record: ProductStockRow) => {
@@ -200,7 +197,7 @@ export function useStock() {
   const handleProductMinQty = async (values: { min_quantity: number }) => {
     if (!editingProductStock) return;
     const ok = await StockService.updateProductMinQuantity(editingProductStock.id, values.min_quantity);
-    if (ok) { setProductMinQtyOpen(false); refreshAll(); }
+    if (ok) { setProductMinQtyOpen(false); refreshProductStock(); }
   };
 
   return {

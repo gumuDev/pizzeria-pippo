@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Table, Button, Space, Tag, Typography, Switch, Tooltip } from "antd";
+import { Table, Button, Space, Tag, Typography, Switch, Tooltip, Input } from "antd";
 import {
   PlusOutlined, EditOutlined, StopOutlined,
-  CheckCircleOutlined, EyeOutlined, DollarOutlined,
+  CheckCircleOutlined, EyeOutlined, DollarOutlined, SearchOutlined,
 } from "@ant-design/icons";
 import { CATEGORY_OPTIONS, CATEGORY_COLORS } from "../constants/product.constants";
 import { ProductImage } from "./ProductImage";
@@ -20,6 +20,12 @@ interface Props {
   onToggleInactive: (val: boolean) => void;
   filterCategory: string | null;
   onFilterCategory: (cat: string | null) => void;
+  search: string;
+  onSearch: (val: string) => void;
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (p: number) => void;
   onCreate: () => void;
   onEdit: (record: Product) => void;
   onToggleActive: (record: Product) => void;
@@ -27,7 +33,9 @@ interface Props {
 
 export function ProductsTable({
   products, loading, showInactive, onToggleInactive,
-  filterCategory, onFilterCategory, onCreate, onEdit, onToggleActive,
+  filterCategory, onFilterCategory,
+  search, onSearch, page, pageSize, total, onPageChange,
+  onCreate, onEdit, onToggleActive,
 }: Props) {
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -105,6 +113,14 @@ export function ProductsTable({
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
       <Title level={4} style={{ margin: 0 }}>Productos</Title>
       <Space wrap>
+        <Input
+          placeholder="Buscar producto..."
+          prefix={<SearchOutlined style={{ color: "#9ca3af" }} />}
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          allowClear
+          style={{ width: isMobile ? 160 : 220 }}
+        />
         <Space size={4}>
           <EyeOutlined style={{ color: "#6b7280" }} />
           {!isMobile && <Text type="secondary">Ver inactivos</Text>}
@@ -142,6 +158,8 @@ export function ProductsTable({
         {loading ? (
           <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>Cargando...</div>
         ) : (
+          <>
+          <div style={{ marginBottom: 8, color: "#6b7280", fontSize: 13 }}>{total} productos</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {products.map((product) => (
               <div
@@ -200,6 +218,14 @@ export function ProductsTable({
               </div>
             ))}
           </div>
+          </>
+        )}
+        {total > pageSize && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16 }}>
+            <Button size="small" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Anterior</Button>
+            <span style={{ lineHeight: "24px", color: "#6b7280", fontSize: 13 }}>Pág. {page} / {Math.ceil(total / pageSize)}</span>
+            <Button size="small" disabled={page >= Math.ceil(total / pageSize)} onClick={() => onPageChange(page + 1)}>Siguiente</Button>
+          </div>
         )}
       </>
     );
@@ -209,7 +235,20 @@ export function ProductsTable({
     <>
       {header}
       {filters}
-      <Table dataSource={products} columns={columns} rowKey="id" loading={loading} pagination={{ pageSize: 20 }} />
+      <Table
+        dataSource={products}
+        columns={columns}
+        rowKey="id"
+        loading={loading}
+        pagination={{
+          current: page,
+          pageSize,
+          total,
+          showSizeChanger: false,
+          showTotal: (t) => `${t} productos`,
+          onChange: onPageChange,
+        }}
+      />
     </>
   );
 }

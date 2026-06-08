@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Form, notification } from "antd";
 import { supabase } from "@/lib/supabase";
 import { ProductsService } from "../services/products.service";
@@ -16,6 +16,7 @@ export function useProductForm(onSuccess: () => void) {
   const [variants, setVariants] = useState<Variant[]>([]);
   const [hasRecipe, setHasRecipe] = useState(true);
   const [hasVariants, setHasVariants] = useState(false);
+  const savedVariantsRef = useRef<Variant[]>([]);
   const [formStep1] = Form.useForm();
 
   const getToken = async () => {
@@ -50,16 +51,22 @@ export function useProductForm(onSuccess: () => void) {
     setHasVariants(val);
     if (!val) {
       setVariants((prev) => {
+        savedVariantsRef.current = prev;
         const first = prev[0] ?? { name: "Unidad", base_price: 0, branch_prices: [], recipes: [] };
         return [{ ...first, name: "Unidad" }];
       });
     } else {
-      setVariants((prev) =>
-        prev.map((v, i) => i === 0 && v.name === "Unidad" && variantTypeOptions.length > 0
-          ? { ...v, name: variantTypeOptions[0].value }
-          : v
-        )
-      );
+      const saved = savedVariantsRef.current;
+      if (saved.length > 0 && !(saved.length === 1 && saved[0].name === "Unidad")) {
+        setVariants(saved);
+      } else {
+        setVariants((prev) =>
+          prev.map((v, i) => i === 0 && v.name === "Unidad" && variantTypeOptions.length > 0
+            ? { ...v, name: variantTypeOptions[0].value }
+            : v
+          )
+        );
+      }
     }
   };
 
@@ -83,11 +90,14 @@ export function useProductForm(onSuccess: () => void) {
       base_price: v.base_price,
       branch_prices: v.branch_prices ?? [],
       recipes: v.recipes ?? [],
+      is_active: v.is_active ?? true,
     }));
 
-    const anyHasRecipe = loadedVariants.some((v) => v.recipes.length > 0);
+    const activeVariants = loadedVariants.filter((v) => v.is_active !== false);
+    const anyHasRecipe = activeVariants.some((v) => v.recipes.length > 0);
     const productType: "made" | "resale" = record.product_type ?? (anyHasRecipe ? "made" : "resale");
-    const isSimple = loadedVariants.length === 1 && loadedVariants[0].name === "Unidad";
+    const isSimple = activeVariants.length === 1 && activeVariants[0].name === "Unidad";
+    savedVariantsRef.current = [];
 
     formStep1.setFieldsValue({
       name: record.name,
@@ -146,8 +156,12 @@ export function useProductForm(onSuccess: () => void) {
     const used = variants.map((v) => v.name);
     const next = variantTypeOptions.find((o) => !used.includes(o.value));
     if (next) {
-      setVariants((prev) => [...prev, { name: next.value, base_price: 0, branch_prices: [], recipes: [] }]);
+      setVariants((prev) => [...prev, { name: next.value, base_price: 0, branch_prices: [], recipes: [], is_active: true }]);
     }
+  };
+
+  const reactivateVariant = (index: number) => {
+    setVariants((prev) => prev.map((v, i) => i === index ? { ...v, is_active: true } : v));
   };
 
   const removeVariant = (index: number) => {
@@ -183,7 +197,7 @@ export function useProductForm(onSuccess: () => void) {
     formStep1,
     resetForm, loadForEdit,
     handleImageUpload, handleSave,
-    updateVariant, addVariant, removeVariant,
+    updateVariant, addVariant, removeVariant, reactivateVariant,
     addRecipeItem, updateRecipeItem, removeRecipeItem,
   };
 }

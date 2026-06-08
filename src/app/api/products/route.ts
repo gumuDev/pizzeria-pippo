@@ -11,11 +11,19 @@ function getSupabaseWithAuth(request: NextRequest) {
   );
 }
 
+const PAGE_SIZE = 10;
+
 export const GET = apiHandler(async (request: NextRequest) => {
   const supabase = getSupabaseWithAuth(request);
   const params = new URL(request.url).searchParams;
   const showInactive = params.get("showInactive") === "true";
   const branchId = params.get("branchId");
+  const search = params.get("search") ?? "";
+  const page = parseInt(params.get("page") ?? "1", 10);
+  const pageSize = parseInt(params.get("pageSize") ?? String(PAGE_SIZE), 10);
+
+  // POS fetches all (no pagination needed — cached client-side)
+  const isPOS = !!branchId;
 
   let query = supabase
     .from("products")
@@ -29,18 +37,23 @@ export const GET = apiHandler(async (request: NextRequest) => {
           ingredients (id, name, unit)
         )
       )
-    `)
+    `, { count: isPOS ? undefined : "exact" })
     .order("name", { ascending: true });
 
   if (!showInactive) query = query.eq("is_active", true);
+  if (search) query = query.ilike("name", `%${search}%`);
+  if (!isPOS) {
+    const from = (page - 1) * pageSize;
+    query = query.range(from, from + pageSize - 1);
+  }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // When called from POS with a branchId, attach stock_quantity for resale variants.
-  // Resale products are identified by product_type = 'resale'.
-  if (branchId && data) {
-    const resaleVariantIds = data.flatMap((p) =>
+  if (isPOS) {
+
+    // POS: attach stock_quantity for resale variants
+    const resaleVariantIds = (data ?? []).flatMap((p) =>
       p.product_type === "resale"
         ? (p.product_variants ?? []).map((v: { id: string }) => v.id)
         : []
@@ -60,18 +73,20 @@ export const GET = apiHandler(async (request: NextRequest) => {
       const stockMap: Record<string, number> = {};
       for (const row of stockRows ?? []) stockMap[row.variant_id] = row.quantity;
 
-      for (const product of data) {
+      for (const product of data ?? []) {
         for (const variant of product.product_variants ?? []) {
           if (product.product_type === "resale") {
-            // null = no stock row in this branch (never transferred here)
             variant.stock_quantity = stockMap[variant.id] ?? null;
           }
         }
       }
     }
+
+    return NextResponse.json(data);
   }
 
-  return NextResponse.json(data);
+  // Admin: return paginated
+  return NextResponse.json({ data: data ?? [], total: count ?? 0 });
 });
 
 export const POST = apiHandler(async (request: NextRequest) => {

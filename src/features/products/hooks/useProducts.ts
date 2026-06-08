@@ -1,39 +1,60 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import useSWR from "swr";
 import { notification } from "antd";
 import { supabase } from "@/lib/supabase";
 import { ProductsService } from "../services/products.service";
 import type { Product, Ingredient, Branch } from "../types/product.types";
 
+const PAGE_SIZE = 10;
+const DEDUP_INTERVAL = 60 * 1000;
+
+async function fetchProducts(url: string): Promise<{ data: Product[]; total: number }> {
+  const { data: session } = await supabase.auth.getSession();
+  const token = session.session?.access_token ?? "";
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const json = await res.json();
+  return { data: json.data ?? [], total: json.total ?? 0 };
+}
+
 export function useProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [showInactive, setShowInactive] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
 
-  const fetchAll = useCallback(async () => {
-    setLoading(true);
-    const [p, i, b] = await Promise.all([
-      ProductsService.getProducts(showInactive),
-      ProductsService.getIngredients(),
-      ProductsService.getBranches(),
-    ]);
-    setProducts(p);
-    setIngredients(i);
-    setBranches(b);
-    setLoading(false);
-  }, [showInactive]);
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => {
+    Promise.all([ProductsService.getIngredients(), ProductsService.getBranches()]).then(([i, b]) => {
+      setIngredients(i);
+      setBranches(b);
+    });
+  }, []);
+
+  const swrKey = `/api/products?showInactive=${showInactive}&page=${page}&pageSize=${PAGE_SIZE}${debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : ""}${filterCategory ? `&category=${filterCategory}` : ""}`;
+
+  const { data, isLoading: loading, mutate } = useSWR(swrKey, fetchProducts, {
+    revalidateOnFocus: false,
+    dedupingInterval: DEDUP_INTERVAL,
+    keepPreviousData: true,
+  });
+
+  const products = data?.data ?? [];
+  const total = data?.total ?? 0;
 
   const getToken = async () => {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? "";
+    const { data: session } = await supabase.auth.getSession();
+    return session.session?.access_token ?? "";
   };
 
   const openModal = (record?: Product) => {
@@ -43,37 +64,46 @@ export function useProducts() {
 
   const closeModal = () => setModalOpen(false);
 
+  const handleSaved = useCallback(() => {
+    mutate();
+    setModalOpen(false);
+  }, [mutate]);
+
   const handleToggleActive = async (product: Product) => {
     const token = await getToken();
     const { ok, error } = await ProductsService.patchProduct(product.id, { is_active: !product.is_active }, token);
     if (ok) {
-      fetchAll();
+      mutate();
       notification.success({ message: product.is_active ? "Producto desactivado" : "Producto reactivado" });
     } else {
       notification.error({ message: error ?? "Error al actualizar" });
     }
   };
 
-  const filteredProducts = filterCategory
-    ? products.filter((p) => p.category === filterCategory)
-    : products;
+  const handleShowInactive = (val: boolean) => { setShowInactive(val); setPage(1); };
+  const handleCategoryFilter = (val: string | null) => { setFilterCategory(val); setPage(1); };
 
   return {
-    products: filteredProducts,
-    allProducts: products,
+    products,
+    total,
+    page,
+    PAGE_SIZE,
+    setPage,
     ingredients,
     branches,
     loading,
     modalOpen,
     editing,
     showInactive,
-    setShowInactive,
+    setShowInactive: handleShowInactive,
     filterCategory,
-    setFilterCategory,
+    setFilterCategory: handleCategoryFilter,
+    search,
+    setSearch,
     openModal,
     closeModal,
     handleToggleActive,
-    fetchAll,
+    handleSaved,
     getToken,
   };
 }

@@ -37,7 +37,7 @@ export function useIngredients() {
   const swrKey = `/api/ingredients?showInactive=${showInactive}&page=${page}&pageSize=${PAGE_SIZE}${debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : ""}`;
 
   const { data, isLoading, mutate } = useSWR(swrKey, fetcher, {
-    revalidateOnFocus: true,
+    revalidateOnFocus: false,
     dedupingInterval: REVALIDATE_INTERVAL,
     keepPreviousData: true,
   });
