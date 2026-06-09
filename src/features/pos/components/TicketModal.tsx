@@ -1,6 +1,7 @@
 "use client";
 
 import { Modal, Button, Tag, Typography, Divider } from "antd";
+import { PrinterOutlined } from "@ant-design/icons";
 import type { TicketData } from "../types/pos.types";
 
 const { Text } = Typography;
@@ -8,18 +9,34 @@ const { Text } = Typography;
 interface Props {
   ticket: TicketData | null;
   onClose: () => void;
+  onPrint?: () => void;
+  printing?: boolean;
+  canPrint?: boolean;
 }
 
-export function TicketModal({ ticket, onClose }: Props) {
+export function TicketModal({ ticket, onClose, onPrint, printing, canPrint }: Props) {
   return (
     <Modal
       title="✅ Venta confirmada"
       open={!!ticket}
       onCancel={onClose}
       footer={
-        <Button type="primary" size="large" block onClick={onClose}>
-          Nueva venta
-        </Button>
+        <div style={{ display: "flex", gap: 8 }}>
+          {canPrint && onPrint && (
+            <Button
+              size="large"
+              icon={<PrinterOutlined />}
+              loading={printing}
+              onClick={onPrint}
+              style={{ flex: 1 }}
+            >
+              Imprimir
+            </Button>
+          )}
+          <Button type="primary" size="large" onClick={onClose} style={{ flex: 2 }}>
+            Nueva venta
+          </Button>
+        </div>
       }
       width={400}
     >

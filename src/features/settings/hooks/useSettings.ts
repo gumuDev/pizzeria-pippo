@@ -11,6 +11,7 @@ export function useSettings() {
     telegram_chat_id: "",
     telegram_enabled: false,
     kitchen_late_threshold_minutes: 10,
+    printer_paper_width: 58,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
