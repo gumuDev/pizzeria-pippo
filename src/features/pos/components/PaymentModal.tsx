@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Modal, Button, Divider, Typography } from "antd";
+import { Modal, Button, Typography } from "antd";
+import { CheckCircleFilled, ArrowRightOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
 
@@ -10,25 +11,51 @@ type PaymentMethod = "efectivo" | "qr" | null;
 
 interface Props {
   open: boolean;
+  total: number;
   onClose: () => void;
   onConfirm: (orderType: OrderType, paymentMethod: PaymentMethod) => void;
 }
 
-const selectedOrderStyle: React.CSSProperties = {
-  background: "#fff7ed",
-  borderColor: "#f97316",
-  color: "#ea580c",
-  fontWeight: 600,
-};
+interface OptionCardProps {
+  selected: boolean;
+  emoji: string;
+  label: string;
+  accent: "orange" | "blue";
+  onClick: () => void;
+}
 
-const selectedPaymentStyle: React.CSSProperties = {
-  background: "#eff6ff",
-  borderColor: "#3b82f6",
-  color: "#2563eb",
-  fontWeight: 600,
-};
+function OptionCard({ selected, emoji, label, accent, onClick }: OptionCardProps) {
+  const colors =
+    accent === "orange"
+      ? { border: "#f97316", bg: "#fff7ed", text: "#ea580c" }
+      : { border: "#3b82f6", bg: "#eff6ff", text: "#2563eb" };
+  return (
+    <button
+      onClick={onClick}
+      className="flex-1 rounded-lg py-3 px-2 text-center cursor-pointer relative"
+      style={{
+        border: selected ? `2px solid ${colors.border}` : "1px solid #d1d5db",
+        background: selected ? colors.bg : "#fff",
+        transition: "background 0.15s, border-color 0.15s",
+      }}
+    >
+      {selected && (
+        <CheckCircleFilled
+          style={{ position: "absolute", top: 6, right: 8, color: colors.text, fontSize: 16 }}
+        />
+      )}
+      <div className="text-2xl">{emoji}</div>
+      <div
+        className="text-sm mt-1"
+        style={{ color: selected ? colors.text : "#374151", fontWeight: selected ? 600 : 400 }}
+      >
+        {label}
+      </div>
+    </button>
+  );
+}
 
-export function PaymentModal({ open, onClose, onConfirm }: Props) {
+export function PaymentModal({ open, total, onClose, onConfirm }: Props) {
   const [orderType, setOrderType] = useState<OrderType | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
 
@@ -47,66 +74,68 @@ export function PaymentModal({ open, onClose, onConfirm }: Props) {
 
   return (
     <Modal
-      title="Confirmar venta"
+      title={
+        <div>
+          <div>Tipo de pedido y pago</div>
+          <Text type="secondary" className="text-xs font-normal">Paso 1 de 2</Text>
+        </div>
+      }
       open={open}
       onCancel={handleClose}
       footer={null}
       width={400}
     >
-      <div className="flex flex-col gap-5 mt-4">
+      <div className="flex flex-col gap-4 mt-3">
+        {/* Total — the cashier reads it out loud when asking for payment */}
+        <div className="flex justify-between items-center bg-orange-50 rounded-lg px-4 py-2.5">
+          <Text className="!text-orange-700">Total del pedido</Text>
+          <Text strong className="!text-orange-700 text-2xl">Bs {total.toFixed(2)}</Text>
+        </div>
 
         {/* Tipo de pedido — obligatorio */}
         <div>
           <Text strong className="block mb-2">¿Cómo va el pedido? <Text type="danger">*</Text></Text>
           <div className="flex gap-3">
-            <Button
-              size="large"
-              block
-              style={orderType === "dine_in" ? selectedOrderStyle : {}}
+            <OptionCard
+              selected={orderType === "dine_in"}
+              emoji="🍽️"
+              label="Comer aquí"
+              accent="orange"
               onClick={() => setOrderType("dine_in")}
-            >
-              🍽️ Comer aquí
-            </Button>
-            <Button
-              size="large"
-              block
-              style={orderType === "takeaway" ? selectedOrderStyle : {}}
+            />
+            <OptionCard
+              selected={orderType === "takeaway"}
+              emoji="🥡"
+              label="Para llevar"
+              accent="orange"
               onClick={() => setOrderType("takeaway")}
-            >
-              🥡 Para llevar
-            </Button>
+            />
           </div>
           {!orderType && (
             <Text type="secondary" className="text-xs mt-1 block">Seleccioná una opción para continuar</Text>
           )}
         </div>
 
-        <Divider className="!my-0" />
-
         {/* Método de pago — opcional */}
         <div>
           <Text strong className="block mb-2">¿Cómo pagó el cliente? <Text type="secondary" className="font-normal">(opcional)</Text></Text>
           <div className="flex gap-3">
-            <Button
-              size="large"
-              block
-              style={paymentMethod === "efectivo" ? selectedPaymentStyle : {}}
+            <OptionCard
+              selected={paymentMethod === "efectivo"}
+              emoji="💵"
+              label="Efectivo"
+              accent="blue"
               onClick={() => setPaymentMethod(paymentMethod === "efectivo" ? null : "efectivo")}
-            >
-              💵 Efectivo
-            </Button>
-            <Button
-              size="large"
-              block
-              style={paymentMethod === "qr" ? selectedPaymentStyle : {}}
+            />
+            <OptionCard
+              selected={paymentMethod === "qr"}
+              emoji="📱"
+              label="QR"
+              accent="blue"
               onClick={() => setPaymentMethod(paymentMethod === "qr" ? null : "qr")}
-            >
-              📱 QR
-            </Button>
+            />
           </div>
-          {!paymentMethod && (
-            <Text type="secondary" className="text-xs mt-1 block">Sin especificar si no se selecciona</Text>
-          )}
+          <Text type="secondary" className="text-xs mt-1 block">Toca de nuevo para quitar la selección</Text>
         </div>
 
         <Button
@@ -115,9 +144,13 @@ export function PaymentModal({ open, onClose, onConfirm }: Props) {
           block
           disabled={!orderType}
           onClick={handleConfirm}
-          style={{ height: 48, fontSize: 16 }}
+          style={
+            orderType
+              ? { height: 48, fontSize: 16, background: "#ea580c", borderColor: "#ea580c" }
+              : { height: 48, fontSize: 16 }
+          }
         >
-          Confirmar venta
+          Continuar <ArrowRightOutlined />
         </Button>
       </div>
     </Modal>

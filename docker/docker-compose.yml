@@ -111,8 +111,8 @@ services:
       - db
       - rest
     environment:
-      ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTYxMzUzMTk4NSwiZXhwIjo0NzY5MjA1OTg1fQ.J6VzKLqzOxBLyeWLpU5YgE0fcSCt68P8dEkLUNazmK4
-      SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNjEzNTMxOTg1LCJleHAiOjQ3NjkyMDU5ODV9.ens-OuCT0QfpDp_CuPGJGJPgpSHNkEKZ4OtScVEYxLE
+      ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxOTgzODEyOTk2fQ.unquNM5o_WxoIGw61reUF0WVZtgEen3no-LVufmWFFg
+      SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjE5ODM4MTI5OTZ9.3HHQPaSCoqUx_1d_ugBHH0NcFkS2R5-JNq6-CodmKx8
       POSTGREST_URL: http://rest:3000
       PGRST_JWT_SECRET: super-secret-jwt-token-with-at-least-32-chars!!
       DATABASE_URL: postgres://postgres:superpassword@db:5432/postgres

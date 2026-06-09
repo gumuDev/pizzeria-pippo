@@ -4,6 +4,7 @@ export interface Variant {
   id: string;
   name: string;
   base_price: number;
+  is_active?: boolean;
   branch_prices: { branch_id: string; price: number }[];
   recipes?: unknown[];
   stock_quantity?: number | null;

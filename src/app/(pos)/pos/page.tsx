@@ -166,38 +166,11 @@ export default function PosPage() {
         <DaySummaryPanel dayOrders={dayOrders} />
       )}
 
-      <VariantSelectorModal
-        product={variantModal}
-        branchId={branchId}
-        allProducts={products}
-        getVariantPrice={getVariantPrice}
-        getPromoLabel={getPromoLabel}
-        onSelect={handleVariantSelect}
-        onClose={() => setVariantModal(null)}
-      />
-      <PaymentModal
-        open={paymentModal}
-        onClose={() => { setPaymentModal(false); setPaymentMethod(null); }}
-        onConfirm={handlePaymentConfirm}
-      />
-      <ConfirmSaleModal
-        open={confirmModal}
-        discountedCart={cart.discountedCart}
-        total={cart.total}
-        totalDiscount={cart.totalDiscount}
-        paymentMethod={paymentMethod}
-        orderType={cart.orderType}
-        loading={confirmLoading}
-        onConfirm={handleConfirmSale}
-        onCancel={() => { setConfirmModal(false); setPaymentMethod(null); }}
-      />
+      <VariantSelectorModal product={variantModal} branchId={branchId} allProducts={products} getVariantPrice={getVariantPrice} getPromoLabel={getPromoLabel} onSelect={handleVariantSelect} onClose={() => setVariantModal(null)} />
+      <PaymentModal open={paymentModal} total={cart.total} onClose={() => { setPaymentModal(false); setPaymentMethod(null); }} onConfirm={handlePaymentConfirm} />
+      <ConfirmSaleModal open={confirmModal} discountedCart={cart.discountedCart} total={cart.total} totalDiscount={cart.totalDiscount} paymentMethod={paymentMethod} orderType={cart.orderType} loading={confirmLoading} onConfirm={handleConfirmSale} onCancel={() => { setConfirmModal(false); setPaymentMethod(null); }} />
       <TicketModal ticket={ticket} onClose={() => setTicket(null)} />
-      <CancelOrderModal
-        order={cancelModal}
-        loading={cancelling}
-        onConfirm={handleCancelOrder}
-        onClose={closeCancelModal}
-      />
+      <CancelOrderModal order={cancelModal} loading={cancelling} onConfirm={handleCancelOrder} onClose={closeCancelModal} />
     </div>
   );
 }

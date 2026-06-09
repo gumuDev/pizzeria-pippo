@@ -1,0 +1,205 @@
+version: "3.8"
+
+# Supabase local — Pizzería Pippo
+# Servicios incluidos: PostgreSQL, Auth, Storage, Studio, Kong (API gateway)
+# NO incluye: Realtime, Edge Functions (no se usan en el proyecto)
+#
+# Uso:
+#   docker compose up -d
+#   Acceder al Studio: http://localhost:54323
+#   API URL:          http://localhost:54321
+#
+# Variables a copiar en .env.local de Next.js para modo local:
+#   NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRFA0NiK7kyqHDbeecWhRjOch_sqamq8eEeNsYSk0M
+#   SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hj04zWl196z2-SBc
+
+x-supabase-common: &supabase-common
+  POSTGRES_PASSWORD: &pg_pass postgres
+  JWT_SECRET: &jwt_secret super-secret-jwt-token-for-local-dev-only
+  ANON_KEY: &anon_key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxOTgzODEyOTk2fQ.unquNM5o_WxoIGw61reUF0WVZtgEen3no-LVufmWFFg
+  SERVICE_ROLE_KEY: &service_key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjE5ODM4MTI5OTZ9.3HHQPaSCoqUx_1d_ugBHH0NcFkS2R5-JNq6-CodmKx8
+
+services:
+
+  # ─── Base de datos ────────────────────────────────────────────────────────
+  db:
+    image: supabase/postgres:15.8.1.060
+    container_name: pippo_db
+    restart: unless-stopped
+    ports:
+      - "54322:5432"
+    environment:
+      POSTGRES_PASSWORD: *pg_pass
+      POSTGRES_DB: postgres
+      JWT_SECRET: *jwt_secret
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── Auth ─────────────────────────────────────────────────────────────────
+  auth:
+    image: supabase/gotrue:v2.170.0
+    container_name: pippo_auth
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: http://localhost:54321
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:postgres@db:5432/postgres
+      GOTRUE_SITE_URL: http://localhost:3000
+      GOTRUE_URI_ALLOW_LIST: ""
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_SECRET: *jwt_secret
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_SMTP_ADMIN_EMAIL: admin@pippo.local
+      GOTRUE_SMTP_HOST: inbucket
+      GOTRUE_SMTP_PORT: "2500"
+      GOTRUE_SMTP_SENDER_NAME: Pizzería Pippo
+
+  # ─── Storage ──────────────────────────────────────────────────────────────
+  storage:
+    image: supabase/storage-api:v1.11.13
+    container_name: pippo_storage
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_started
+    environment:
+      ANON_KEY: *anon_key
+      SERVICE_KEY: *service_key
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: *jwt_secret
+      DATABASE_URL: postgres://supabase_storage_admin:postgres@db:5432/postgres
+      FILE_SIZE_LIMIT: "52428800"
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: local
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: "true"
+      IMGPROXY_URL: http://imgproxy:8080
+    volumes:
+      - storage_data:/var/lib/storage
+
+  # ─── Optimización de imágenes ─────────────────────────────────────────────
+  imgproxy:
+    image: darthsim/imgproxy:v3.8.0
+    container_name: pippo_imgproxy
+    restart: unless-stopped
+    environment:
+      IMGPROXY_BIND: ":8080"
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
+      IMGPROXY_USE_ETAG: "true"
+      IMGPROXY_ENABLE_WEBP_DETECTION: "true"
+    volumes:
+      - storage_data:/var/lib/storage:ro
+
+  # ─── PostgREST (API REST sobre PostgreSQL) ────────────────────────────────
+  rest:
+    image: postgrest/postgrest:v12.2.3
+    container_name: pippo_rest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:postgres@db:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage,graphql_public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: *jwt_secret
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: *jwt_secret
+      PGRST_APP_SETTINGS_JWT_EXP: 3600
+
+  # ─── Kong (API Gateway — enruta /auth, /rest, /storage) ──────────────────
+  kong:
+    image: kong:2.8.1
+    container_name: pippo_kong
+    restart: unless-stopped
+    ports:
+      - "54321:8000"
+      - "54320:8443"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+    volumes:
+      - ./kong.yml:/var/lib/kong/kong.yml:ro
+
+  # ─── Supabase Studio ──────────────────────────────────────────────────────
+  studio:
+    image: supabase/studio:2026.06.03-sha-0bca601
+    container_name: pippo_studio
+    restart: unless-stopped
+    ports:
+      - "54323:3000"
+    depends_on:
+      - kong
+      - meta
+    environment:
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PASSWORD: *pg_pass
+      DEFAULT_ORGANIZATION_NAME: Pizzería Pippo
+      DEFAULT_PROJECT_NAME: pippo-local
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_PUBLIC_URL: http://localhost:54321
+      SUPABASE_ANON_KEY: *anon_key
+      SUPABASE_SERVICE_KEY: *service_key
+      SNIPPETS_MANAGEMENT_FOLDER: /tmp/snippets
+      AUTH_JWT_SECRET: *jwt_secret
+      LOGFLARE_API_KEY: ""
+      LOGFLARE_URL: ""
+      NEXT_PUBLIC_ENABLE_LOGS: "false"
+    volumes:
+      - studio_snippets:/tmp/snippets
+
+  # ─── pg-meta (metadata para Studio) ──────────────────────────────────────
+  meta:
+    image: supabase/postgres-meta:v0.83.2
+    container_name: pippo_meta
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: supabase_admin
+      PG_META_DB_PASSWORD: *pg_pass
+
+  # ─── Inbucket (servidor SMTP local para emails de auth) ───────────────────
+  inbucket:
+    image: inbucket/inbucket:latest
+    container_name: pippo_inbucket
+    restart: unless-stopped
+    ports:
+      - "54325:9000"   # UI web de emails en http://localhost:54325
+
+volumes:
+  db_data:
+  storage_data:
+  studio_snippets:
