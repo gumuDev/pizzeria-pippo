@@ -1,6 +1,30 @@
 import { supabase } from "./supabase";
+import type { Session } from "@supabase/supabase-js";
 
 export type UserRole = "admin" | "cajero" | "cocinero";
+
+// Supabase free plan cannot time-box sessions server-side, so the app enforces it:
+// a session older than this (since last sign-in) is signed out locally.
+export const SESSION_MAX_HOURS = 6;
+
+export async function getValidSession(): Promise<Session | null> {
+  const { data } = await supabase.auth.getSession();
+  const session = data.session;
+  if (!session) return null;
+
+  const signedInAt = new Date(session.user.last_sign_in_at ?? 0).getTime();
+  const maxAgeMs = SESSION_MAX_HOURS * 60 * 60 * 1000;
+  if (Date.now() - signedInAt > maxAgeMs) {
+    await supabase.auth.signOut();
+    return null;
+  }
+  return session;
+}
+
+export async function getToken(): Promise<string> {
+  const session = await getValidSession();
+  return session?.access_token ?? "";
+}
 
 export interface UserProfile {
   id: string;
