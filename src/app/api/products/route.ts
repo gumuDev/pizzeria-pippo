@@ -48,9 +48,23 @@ export const GET = apiHandler(async (request: NextRequest) => {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   if (isPOS) {
+    // Made products are only sold where they have a registered branch price:
+    // keep variants priced for this branch, drop products left without variants
+    const posProducts = (data ?? [])
+      .map((p) => {
+        if (p.product_type === "resale") return p;
+        return {
+          ...p,
+          product_variants: (p.product_variants ?? []).filter(
+            (v: { branch_prices?: { branch_id: string }[] }) =>
+              (v.branch_prices ?? []).some((bp) => bp.branch_id === branchId)
+          ),
+        };
+      })
+      .filter((p) => p.product_type === "resale" || (p.product_variants ?? []).length > 0);
 
     // POS: attach stock_quantity for resale variants
-    const resaleVariantIds = (data ?? []).flatMap((p) =>
+    const resaleVariantIds = posProducts.flatMap((p) =>
       p.product_type === "resale"
         ? (p.product_variants ?? []).map((v: { id: string }) => v.id)
         : []
@@ -67,7 +81,7 @@ export const GET = apiHandler(async (request: NextRequest) => {
       const stockMap: Record<string, number> = {};
       for (const row of stockRows ?? []) stockMap[row.variant_id] = row.quantity;
 
-      for (const product of data ?? []) {
+      for (const product of posProducts) {
         for (const variant of product.product_variants ?? []) {
           if (product.product_type === "resale") {
             variant.stock_quantity = stockMap[variant.id] ?? null;
@@ -76,7 +90,7 @@ export const GET = apiHandler(async (request: NextRequest) => {
       }
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(posProducts);
   }
 
   // Admin: return paginated
