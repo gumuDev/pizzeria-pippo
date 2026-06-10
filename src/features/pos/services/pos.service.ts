@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { getToken as _getToken } from "@/lib/auth";
+import { getToken as _getToken, getValidSession } from "@/lib/auth";
 import { todayInBolivia } from "@/lib/timezone";
 import type { Identity, Product, DayOrder, OrderType } from "../types/pos.types";
 import type { Promotion, DiscountedItem, FlavorItem } from "@/lib/promotions";
@@ -19,8 +19,9 @@ export const PosService = {
   },
 
   async getIdentity(): Promise<Identity | null> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
+    const session = await getValidSession();
+    if (!session) return null;
+    const user = session.user;
     const { data: profile } = await supabase
       .from("profiles")
       .select("role, branch_id, full_name")

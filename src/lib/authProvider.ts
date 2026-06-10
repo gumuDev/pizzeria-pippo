@@ -1,6 +1,6 @@
 import { AuthProvider } from "@refinedev/core";
 import { supabase } from "./supabase";
-import { getUserProfile } from "./auth";
+import { getUserProfile, getValidSession } from "./auth";
 
 export const authProvider: AuthProvider = {
   login: async ({ email, password }) => {
@@ -17,7 +17,7 @@ export const authProvider: AuthProvider = {
   },
 
   check: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = await getValidSession();
     if (!session) {
       return { authenticated: false, redirectTo: "/login" };
     }
