@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { apiHandler } from "@/lib/api-handler";
 
 async function getAdminServiceClient(req: NextRequest) {
   const authHeader = req.headers.get("Authorization");
@@ -20,7 +21,8 @@ async function getAdminServiceClient(req: NextRequest) {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export const PUT = apiHandler(async (req: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   const supabase = await getAdminServiceClient(req);
   if (!supabase) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -39,9 +41,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
-}
+});
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export const DELETE = apiHandler(async (req: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   const supabase = await getAdminServiceClient(req);
   if (!supabase) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -52,4 +55,4 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});

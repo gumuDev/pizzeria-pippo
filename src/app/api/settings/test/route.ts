@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
-import { getBusinessName } from "@/lib/business-name";
+import { apiHandler } from "@/lib/api-handler";
 
 async function isAdmin(req: NextRequest): Promise<boolean> {
   const authHeader = req.headers.get("Authorization");
@@ -24,7 +24,7 @@ async function isAdmin(req: NextRequest): Promise<boolean> {
   return profile?.role === "admin";
 }
 
-export async function POST(req: NextRequest) {
+export const POST = apiHandler(async (req: NextRequest) => {
   if (!(await isAdmin(req))) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
@@ -39,13 +39,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const businessName = await getBusinessName();
     const res = await fetch(`https://api.telegram.org/bot${telegram_bot_token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: telegram_chat_id,
-        text: `✅ *${businessName}* — Conexión de notificaciones configurada correctamente.`,
+        text: "✅ *Pizzería Pippo* — Conexión de notificaciones configurada correctamente.",
         parse_mode: "Markdown",
       }),
     });
@@ -60,4 +59,4 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ ok: false, error: "No se pudo conectar con Telegram" });
   }
-}
+});

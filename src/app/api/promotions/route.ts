@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { getActivePromotions } from "@/lib/promotions";
+import { createAuthClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
-function getSupabaseWithAuth(request: NextRequest) {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
-
-export async function GET(request: NextRequest) {
-  const supabase = getSupabaseWithAuth(request);
+export const GET = apiHandler(async (request: NextRequest) => {
+  const { client: supabase } = await createAuthClient(request);
   const { searchParams } = new URL(request.url);
   const branchId = searchParams.get("branchId");
   const dateParam = searchParams.get("date");
@@ -40,10 +32,10 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json(data);
-}
+});
 
-export async function POST(request: NextRequest) {
-  const supabase = getSupabaseWithAuth(request);
+export const POST = apiHandler(async (request: NextRequest) => {
+  const { client: supabase } = await createAuthClient(request);
   const body = await request.json();
   const { name, type, days_of_week, start_date, end_date, branch_id, rules } = body;
 
@@ -63,4 +55,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json(promo, { status: 201 });
-}
+});

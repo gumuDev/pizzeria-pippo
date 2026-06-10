@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createAuthClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
-function getSupabaseWithAuth(request: NextRequest) {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
-
-export async function GET(request: NextRequest) {
-  const supabase = getSupabaseWithAuth(request);
+export const GET = apiHandler(async (request: NextRequest) => {
+  const { client: supabase } = await createAuthClient(request);
   const { searchParams } = new URL(request.url);
   const showInactive = searchParams.get("showInactive") === "true";
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
@@ -32,4 +24,4 @@ export async function GET(request: NextRequest) {
   const { data, error, count } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data, total: count ?? 0, page, pageSize });
-}
+});

@@ -1,19 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-function getSupabaseWithAuth(request: NextRequest) {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
+import { createAuthClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
 // GET /api/products/[id]/branch-prices
-// Returns product variants with their branch_prices, plus all active branches
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getSupabaseWithAuth(request);
+export const GET = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
+  const { client: supabase } = await createAuthClient(request);
   const { id } = params;
 
   const [variantsRes, branchesRes] = await Promise.all([
@@ -34,12 +26,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   if (branchesRes.error) return NextResponse.json({ error: branchesRes.error.message }, { status: 500 });
 
   return NextResponse.json({ variants: variantsRes.data ?? [], branches: branchesRes.data ?? [] });
-}
+});
 
 // POST /api/products/[id]/branch-prices
-// Creates or updates a branch_price for a variant
-export async function POST(request: NextRequest) {
-  const supabase = getSupabaseWithAuth(request);
+export const POST = apiHandler(async (request: NextRequest) => {
+  const { client: supabase } = await createAuthClient(request);
   const { variant_id, branch_id, price } = await request.json();
 
   if (!variant_id || !branch_id || price === undefined) {
@@ -67,4 +58,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ success: true });
-}
+});

@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createAuthClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
-function getSupabaseWithAuth(request: NextRequest) {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
-
-export async function POST(request: NextRequest) {
-  const supabase = getSupabaseWithAuth(request);
+export const POST = apiHandler(async (request: NextRequest) => {
+  const { client: supabase, userId } = await createAuthClient(request);
   const { branch_id, variant_id, quantity, min_quantity } = await request.json();
 
   if (!branch_id || !variant_id || !quantity) {
@@ -38,15 +30,11 @@ export async function POST(request: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const { data: session } = await supabase.auth.getUser();
   const { error: movErr } = await supabase.from("product_stock_movements").insert({
-    branch_id,
-    variant_id,
-    quantity,
-    type: "compra",
-    created_by: session?.user?.id ?? null,
+    branch_id, variant_id, quantity, type: "compra",
+    created_by: userId,
   });
   if (movErr) return NextResponse.json({ error: movErr.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
-}
+});

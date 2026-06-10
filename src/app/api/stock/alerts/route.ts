@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createAuthClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
-function getSupabaseWithAuth(request: NextRequest) {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
-
-export async function GET(request: NextRequest) {
-  const supabase = getSupabaseWithAuth(request);
+export const GET = apiHandler(async (request: NextRequest) => {
+  const { client: supabase } = await createAuthClient(request);
   const branchId = new URL(request.url).searchParams.get("branchId");
 
   let query = supabase
@@ -26,4 +18,4 @@ export async function GET(request: NextRequest) {
   // Filter rows where quantity is below minimum threshold
   const alerts = (data ?? []).filter((s) => s.quantity < s.min_quantity);
   return NextResponse.json(alerts);
-}
+});

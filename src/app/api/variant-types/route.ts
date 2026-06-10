@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createAuthClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
-function getSupabaseWithAuth(request: NextRequest) {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
-
-export async function GET(request: NextRequest) {
-  const supabase = getSupabaseWithAuth(request);
+export const GET = apiHandler(async (request: NextRequest) => {
+  const { client: supabase } = await createAuthClient(request);
   const onlyActive = new URL(request.url).searchParams.get("onlyActive") !== "false";
 
   let query = supabase
@@ -24,10 +16,10 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
-}
+});
 
-export async function POST(request: NextRequest) {
-  const supabase = getSupabaseWithAuth(request);
+export const POST = apiHandler(async (request: NextRequest) => {
+  const { client: supabase } = await createAuthClient(request);
   const { name, sort_order } = await request.json();
 
   if (!name?.trim()) return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 });
@@ -40,4 +32,4 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, { status: 201 });
-}
+});

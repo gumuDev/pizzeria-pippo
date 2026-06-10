@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { apiHandler } from "@/lib/api-handler";
 
 function getServiceClient() {
   return createClient(
@@ -17,7 +18,7 @@ function getAuthClient(request: NextRequest) {
   );
 }
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const authClient = getAuthClient(request);
   const { data: { user }, error: authError } = await authClient.auth.getUser();
   if (authError || !user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -55,9 +56,9 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json(users);
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const authClient = getAuthClient(request);
   const { data: { user }, error: authError } = await authClient.auth.getUser();
   if (authError || !user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -83,4 +84,4 @@ export async function POST(request: NextRequest) {
   if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
 
   return NextResponse.json({ id: newUser.user.id }, { status: 201 });
-}
+});

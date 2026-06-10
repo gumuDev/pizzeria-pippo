@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { todayInBolivia } from "@/lib/timezone";
+import { apiHandler } from "@/lib/api-handler";
 
 async function getAdminServiceClient(req: NextRequest) {
   const authHeader = req.headers.get("Authorization");
@@ -21,7 +22,7 @@ async function getAdminServiceClient(req: NextRequest) {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-export async function GET(req: NextRequest) {
+export const GET = apiHandler(async (req: NextRequest) => {
   const supabase = await getAdminServiceClient(req);
   if (!supabase) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -51,9 +52,9 @@ export async function GET(req: NextRequest) {
   }));
 
   return NextResponse.json(result);
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = apiHandler(async (req: NextRequest) => {
   const supabase = await getAdminServiceClient(req);
   if (!supabase) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -77,4 +78,4 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, { status: 201 });
-}
+});

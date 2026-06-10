@@ -1,24 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createAuthClient, createServiceClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
-function getSupabaseWithAuth(request: NextRequest) {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
-
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getSupabaseWithAuth(request);
+export const PUT = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
+  const { client: supabase } = await createAuthClient(request);
   const { name, sort_order } = await request.json();
 
   if (!name?.trim()) return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 });
@@ -32,15 +18,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
-}
+});
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getSupabaseWithAuth(request);
+export const PATCH = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
+  const { client: supabase } = await createAuthClient(request);
   const { is_active } = await request.json();
 
   // If deactivating, check that no active product_variants use this type
   if (is_active === false) {
-    const serviceClient = getServiceClient();
+    const serviceClient = createServiceClient();
     const { data: variantType } = await serviceClient
       .from("variant_types")
       .select("name")
@@ -72,4 +59,4 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
-}
+});

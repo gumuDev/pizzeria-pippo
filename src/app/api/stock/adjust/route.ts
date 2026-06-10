@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createAuthClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
-function getSupabaseWithAuth(request: NextRequest) {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
-
-export async function POST(request: NextRequest) {
-  const supabase = getSupabaseWithAuth(request);
+export const POST = apiHandler(async (request: NextRequest) => {
+  const { client: supabase, userId } = await createAuthClient(request);
   const { branch_id, ingredient_id, real_quantity, notes } = await request.json();
 
   // Get current quantity to calculate difference
@@ -41,16 +33,15 @@ export async function POST(request: NextRequest) {
   }
 
   // Record movement with the difference (can be negative)
-  const { data: session } = await supabase.auth.getUser();
   const { error: movErr } = await supabase.from("stock_movements").insert({
     branch_id,
     ingredient_id,
     quantity: difference,
     type: "ajuste",
     notes: notes ?? null,
-    created_by: session?.user?.id ?? null,
+    created_by: userId,
   });
   if (movErr) return NextResponse.json({ error: movErr.message }, { status: 500 });
 
   return NextResponse.json({ success: true, difference });
-}
+});

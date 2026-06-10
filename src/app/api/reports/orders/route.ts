@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { dateRangeFrom, dateRangeTo } from "@/lib/timezone";
+import { apiHandler } from "@/lib/api-handler";
 
 function getServiceClient() {
   return createClient(
@@ -9,7 +10,7 @@ function getServiceClient() {
   );
 }
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const supabase = getServiceClient();
   const { searchParams } = new URL(request.url);
   const branchId = searchParams.get("branchId");
@@ -63,4 +64,4 @@ export async function GET(request: NextRequest) {
   }));
 
   return NextResponse.json({ data: result, total: count ?? 0 });
-}
+});

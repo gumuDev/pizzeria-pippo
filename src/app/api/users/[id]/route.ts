@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { apiHandler } from "@/lib/api-handler";
 
 function getServiceClient() {
   return createClient(
@@ -24,10 +25,8 @@ async function requireAdmin(request: NextRequest) {
   return user;
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const PUT = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   const user = await requireAdmin(request);
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
@@ -48,13 +47,11 @@ export async function PUT(
   if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
-}
+});
 
 // Toggle ban (desactivar / reactivar cuenta)
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const PATCH = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   const user = await requireAdmin(request);
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
@@ -67,12 +64,10 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const DELETE = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   const user = await requireAdmin(request);
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
@@ -95,4 +90,4 @@ export async function DELETE(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
-}
+});
