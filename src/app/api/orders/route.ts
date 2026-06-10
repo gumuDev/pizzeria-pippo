@@ -1,133 +1,173 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { deductStock } from "@/lib/recipes";
-import { dateRangeFrom, dateRangeTo, todayInBolivia } from "@/lib/timezone";
+import { z } from "zod";
 import { apiHandler } from "@/lib/api-handler";
-import { AuthError, ValidationError } from "@/lib/errors";
+import { ConflictError, ValidationError } from "@/lib/errors";
+import { createAuthClient, createServiceClient } from "@/lib/supabase-server";
+import { dateRangeFrom, dateRangeTo, todayInBolivia } from "@/lib/timezone";
+import {
+  applyPromotions,
+  getActivePromotions,
+  getCartTotal,
+  type CartItem,
+  type Promotion,
+} from "@/lib/promotions";
+import { computeStockDeductions, type RecipeRow } from "@/lib/order-stock";
+import { notifyLowStock } from "@/lib/recipes";
 
-function getAuthClient(token: string) {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
+const orderPayloadSchema = z.object({
+  branch_id: z.uuid(),
+  total: z.number().nonnegative(),
+  payment_method: z.enum(["efectivo", "qr"]).nullish(),
+  order_type: z.enum(["dine_in", "takeaway"]),
+  idempotency_key: z.string().min(8).max(64).nullish(),
+  items: z
+    .array(
+      z.object({
+        variant_id: z.uuid(),
+        qty: z.number().int().positive(),
+        flavors: z
+          .array(
+            z.object({
+              variant_id: z.uuid(),
+              proportion: z.number().positive().max(1),
+              product_name: z.string().optional(),
+            })
+          )
+          .nullish(),
+      })
+    )
+    .min(1)
+    .max(100),
+});
+
+interface VariantRow {
+  id: string;
+  name: string;
+  base_price: number;
+  is_active: boolean;
+  branch_prices: { branch_id: string; price: number }[] | null;
+  recipes: RecipeRow[] | null;
+  products: { name: string; category: string; product_type: string | null; is_active: boolean } | null;
 }
 
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function getNextDailyNumber(supabase: any, branchId: string): Promise<number> {
-  const today = todayInBolivia();
-  const { data } = await supabase
-    .from("orders")
-    .select("daily_number")
-    .eq("branch_id", branchId)
-    .gte("created_at", dateRangeFrom(today))
-    .lte("created_at", dateRangeTo(today))
-    .order("daily_number", { ascending: false })
-    .limit(1)
-    .single() as { data: { daily_number: number } | null };
-
-  return (data?.daily_number ?? 0) + 1;
-}
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export const POST = apiHandler(async (request: NextRequest) => {
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
+  const { userId } = await createAuthClient(request);
 
-  // Verify auth with anon client
-  const authClient = getAuthClient(token);
-  const { data: { user }, error: authError } = await authClient.auth.getUser();
-  if (authError || !user) throw new AuthError();
-
-  const body = await request.json();
-  const { branch_id, items, total, payment_method, order_type, idempotency_key } = body;
-
-  if (!branch_id) throw new ValidationError("branch_id requerido");
-  if (!items?.length) throw new ValidationError("items requeridos");
-  if (!order_type || !["dine_in", "takeaway"].includes(order_type)) {
-    throw new ValidationError("order_type requerido: 'dine_in' o 'takeaway'");
+  const parsed = orderPayloadSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    throw new ValidationError(parsed.error.issues[0]?.message ?? "Payload inválido");
   }
+  const { branch_id, total: clientTotal, payment_method, order_type, idempotency_key, items } = parsed.data;
 
-  // Use service role for writes — avoids RLS issues with cashier role
-  const supabase = getServiceClient();
-  const cashier_id = user.id;
+  const supabase = createServiceClient();
 
-  // 0. Idempotency check — if this key was already used, return the existing order
-  if (idempotency_key) {
-    const { data: existing } = await supabase
-      .from("orders")
-      .select("id, daily_number")
-      .eq("idempotency_key", idempotency_key)
-      .single();
-    if (existing) {
-      return NextResponse.json({ order_id: existing.id, daily_number: existing.daily_number }, { status: 200 });
-    }
-  }
+  // 1. Fetch variants (including mixed-pizza flavors) with prices, recipes and product info
+  const flavorVariantIds = items.flatMap((i) => (i.flavors ?? []).map((f) => f.variant_id));
+  const variantIds = Array.from(new Set(items.map((i) => i.variant_id).concat(flavorVariantIds)));
 
-  // 1. Calculate daily order number for this branch
-  const daily_number = await getNextDailyNumber(supabase, branch_id);
-
-  // 2. Create order
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert({ branch_id, cashier_id, total, daily_number, payment_method: payment_method ?? null, order_type, idempotency_key: idempotency_key ?? null })
-    .select()
-    .single();
-
-  if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 });
-
-  // 3. Create order items
-  type IncomingItem = {
-    variant_id: string;
-    qty: number;
-    qty_physical: number;
-    unit_price: number;
-    discount_applied: number;
-    promo_label?: string | null;
-    flavors?: { variant_id: string; product_name: string; proportion: number }[] | null;
-  };
-
-  const { data: insertedItems, error: itemsError } = await supabase
-    .from("order_items")
-    .insert(
-      items.map((i: IncomingItem) => ({
-        order_id: order.id,
-        variant_id: i.variant_id,
-        qty: i.qty,
-        qty_physical: i.qty_physical ?? i.qty,
-        unit_price: i.unit_price,
-        discount_applied: i.discount_applied,
-        promo_label: i.promo_label ?? null,
-      }))
+  const { data: variantRows, error: variantsError } = await supabase
+    .from("product_variants")
+    .select(
+      "id, name, base_price, is_active, branch_prices(branch_id, price), recipes(ingredient_id, quantity, apply_condition), products(name, category, product_type, is_active)"
     )
-    .select("id, variant_id");
+    .in("id", variantIds);
+  if (variantsError) return NextResponse.json({ error: variantsError.message }, { status: 500 });
 
-  if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 });
+  const variants = (variantRows ?? []) as unknown as VariantRow[];
+  const variantById = new Map(variants.map((v) => [v.id, v]));
 
-  // 3b. Insert order_item_flavors for mixed pizzas
-  const flavorRows = (insertedItems ?? []).flatMap((dbItem: { id: string; variant_id: string }) => {
-    const source = (items as IncomingItem[]).find((i) => i.variant_id === dbItem.variant_id);
-    if (!source?.flavors?.length) return [];
-    return source.flavors.map((f) => ({
-      order_item_id: dbItem.id,
-      variant_id: f.variant_id,
-      proportion: f.proportion,
-    }));
+  // 2. Server-side price resolution — never trust client prices
+  const cart: CartItem[] = items.map((i) => {
+    const variant = variantById.get(i.variant_id);
+    if (!variant || !variant.is_active || !variant.products?.is_active) {
+      throw new ValidationError("Hay productos no disponibles en el pedido");
+    }
+    const override = variant.branch_prices?.find((bp) => bp.branch_id === branch_id);
+    const productType = variant.products?.product_type ?? "made";
+    if (!override && productType !== "resale") {
+      throw new ValidationError(`"${variant.products?.name ?? variant.name}" no tiene precio en esta sucursal`);
+    }
+    return {
+      variant_id: i.variant_id,
+      qty: i.qty,
+      unit_price: override ? override.price : variant.base_price,
+      product_name: variant.products?.name ?? "",
+      variant_name: variant.name,
+      category: variant.products?.category ?? "",
+      flavors: i.flavors?.length
+        ? i.flavors.map((f) => ({
+            variant_id: f.variant_id,
+            product_name: f.product_name ?? "",
+            proportion: f.proportion,
+          }))
+        : undefined,
+    };
   });
 
-  if (flavorRows.length > 0) {
-    const { error: flavorsError } = await supabase.from("order_item_flavors").insert(flavorRows);
-    if (flavorsError) return NextResponse.json({ error: flavorsError.message }, { status: 500 });
+  // 3. Recompute promotions and totals server-side
+  const { data: promoRows, error: promoError } = await supabase
+    .from("promotions")
+    .select("*, promotion_rules(*)")
+    .eq("is_active", true);
+  if (promoError) return NextResponse.json({ error: promoError.message }, { status: 500 });
+
+  const activePromotions = getActivePromotions((promoRows ?? []) as Promotion[], branch_id);
+  const discounted = applyPromotions(cart, activePromotions);
+  const serverTotal = round2(getCartTotal(discounted));
+
+  // 4. The client total must match — a mismatch means prices/promos changed (or were tampered)
+  if (Math.abs(serverTotal - clientTotal) > 0.01) {
+    throw new ConflictError("Los precios o promociones cambiaron. Actualizá el catálogo e intentá de nuevo.");
   }
 
-  // 4. Deduct stock based on recipes
-  const { success, error: stockError } = await deductStock(order.id, branch_id, token, cashier_id, order_type);
-  if (!success) return NextResponse.json({ error: stockError }, { status: 500 });
+  // 5. Compute stock deductions (pure, tested in lib/order-stock.test.ts)
+  const recipesByVariant: Record<string, RecipeRow[]> = {};
+  for (const v of variants) recipesByVariant[v.id] = v.recipes ?? [];
 
-  return NextResponse.json({ order_id: order.id, daily_number: order.daily_number }, { status: 201 });
+  const deductions = computeStockDeductions(
+    discounted.map((d) => ({
+      variant_id: d.variant_id,
+      qty_physical: d.qty_physical,
+      product_type: variantById.get(d.variant_id)?.products?.product_type ?? "made",
+      flavors: d.flavors?.map((f) => ({ variant_id: f.variant_id, proportion: f.proportion })),
+    })),
+    recipesByVariant,
+    order_type
+  );
+
+  // 6. Apply order + items + flavors + stock in ONE transaction
+  const today = todayInBolivia();
+  const { data: result, error: rpcError } = await supabase.rpc("create_order_atomic", {
+    payload: {
+      branch_id,
+      cashier_id: userId,
+      total: serverTotal,
+      payment_method: payment_method ?? null,
+      order_type,
+      idempotency_key: idempotency_key ?? null,
+      day_start: dateRangeFrom(today),
+      day_end: dateRangeTo(today),
+      items: discounted.map((d) => ({
+        variant_id: d.variant_id,
+        qty: d.qty,
+        qty_physical: d.qty_physical,
+        unit_price: d.unit_price,
+        discount_applied: round2(d.discount_applied),
+        promo_label: d.promo_label,
+        flavors: (d.flavors ?? []).map((f) => ({ variant_id: f.variant_id, proportion: f.proportion })),
+      })),
+      ...deductions,
+    },
+  });
+  if (rpcError) return NextResponse.json({ error: rpcError.message }, { status: 500 });
+
+  // 7. Low-stock Telegram alert — fire-and-forget, outside the transaction
+  notifyLowStock(branch_id, deductions.ingredient_deductions.map((d) => d.ingredient_id));
+
+  return NextResponse.json(
+    { order_id: result.order_id, daily_number: result.daily_number },
+    { status: result.duplicate ? 200 : 201 }
+  );
 });
