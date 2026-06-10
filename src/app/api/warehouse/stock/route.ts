@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthClient, getWarehouseStock } from "@/lib/warehouse";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
   const supabase = createAuthClient(token);
 
@@ -30,4 +31,4 @@ export async function GET(request: NextRequest) {
   const enriched = (data ?? []).map((r) => ({ ...r, has_movements: withMovements.has(r.ingredient_id) }));
 
   return NextResponse.json({ data: enriched, total, page, pageSize });
-}
+});

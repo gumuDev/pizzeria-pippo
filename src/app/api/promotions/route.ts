@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getActivePromotions } from "@/lib/promotions";
 import { createAuthClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const { client: supabase } = await createAuthClient(request);
   const { searchParams } = new URL(request.url);
   const branchId = searchParams.get("branchId");
@@ -31,9 +32,9 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json(data);
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const { client: supabase } = await createAuthClient(request);
   const body = await request.json();
   const { name, type, days_of_week, start_date, end_date, branch_id, rules } = body;
@@ -54,4 +55,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json(promo, { status: 201 });
-}
+});

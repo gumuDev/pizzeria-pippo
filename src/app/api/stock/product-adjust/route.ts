@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const { client: supabase, userId } = await createAuthClient(request);
   const { branch_id, variant_id, real_quantity, notes } = await request.json();
 
@@ -34,4 +35,4 @@ export async function POST(request: NextRequest) {
   if (movErr) return NextResponse.json({ error: movErr.message }, { status: 500 });
 
   return NextResponse.json({ success: true, difference });
-}
+});

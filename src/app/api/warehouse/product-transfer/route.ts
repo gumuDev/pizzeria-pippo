@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthClient } from "@/lib/warehouse";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
   const supabase = createAuthClient(token);
 
@@ -72,4 +73,4 @@ export async function POST(request: NextRequest) {
   if (smErr) return NextResponse.json({ error: smErr.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
-}
+});

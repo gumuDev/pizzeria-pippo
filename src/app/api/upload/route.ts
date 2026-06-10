@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { apiHandler } from "@/lib/api-handler";
 
 function getServiceClient() {
   return createClient(
@@ -17,7 +18,7 @@ function getAuthClient(request: NextRequest) {
   );
 }
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   // Verify the caller is authenticated
   const authClient = getAuthClient(request);
   const { data: { user }, error: authError } = await authClient.auth.getUser();
@@ -49,4 +50,4 @@ export async function POST(request: NextRequest) {
     .getPublicUrl(fileName);
 
   return NextResponse.json({ url: urlData.publicUrl }, { status: 201 });
-}
+});

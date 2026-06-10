@@ -48,3 +48,5 @@ node_modules/
 
 #claude local
 CLAUDE.local.md
+# production dumps / data for local analysis only
+docs/database/local-dumps/

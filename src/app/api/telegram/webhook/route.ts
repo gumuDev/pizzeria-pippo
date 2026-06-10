@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { processAIMessage, checkAndIncrementQuota } from "@/lib/telegram-ai";
+import { apiHandler } from "@/lib/api-handler";
 
 function getServiceClient() {
   return createClient(
@@ -29,7 +30,7 @@ async function sendTelegramDocument(token: string, chatId: string, buffer: Buffe
 
 // Public endpoint — Telegram calls this for every message received by the bot.
 // Auth is verified via X-Telegram-Bot-Api-Secret-Token header.
-export async function POST(req: NextRequest) {
+export const POST = apiHandler(async (req: NextRequest) => {
   const supabase = getServiceClient();
 
   // 1. Verify secret token
@@ -126,4 +127,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true });
-}
+});

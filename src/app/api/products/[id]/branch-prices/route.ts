@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
 // GET /api/products/[id]/branch-prices
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export const GET = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   const { client: supabase } = await createAuthClient(request);
   const { id } = params;
 
@@ -24,10 +26,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   if (branchesRes.error) return NextResponse.json({ error: branchesRes.error.message }, { status: 500 });
 
   return NextResponse.json({ variants: variantsRes.data ?? [], branches: branchesRes.data ?? [] });
-}
+});
 
 // POST /api/products/[id]/branch-prices
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const { client: supabase } = await createAuthClient(request);
   const { variant_id, branch_id, price } = await request.json();
 
@@ -56,4 +58,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ success: true });
-}
+});

@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { apiHandler } from "@/lib/api-handler";
 
 function maskToken(token: string): string {
   if (!token || token.length < 10) return token;
@@ -33,7 +34,7 @@ async function getAdminSupabase(req: NextRequest) {
   );
 }
 
-export async function GET(req: NextRequest) {
+export const GET = apiHandler(async (req: NextRequest) => {
   const supabase = await getAdminSupabase(req);
   if (!supabase) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -52,9 +53,9 @@ export async function GET(req: NextRequest) {
     telegram_enabled: config["telegram_enabled"] === "true",
     kitchen_late_threshold_minutes: parseInt(config["kitchen_late_threshold_minutes"] ?? "10", 10),
   });
-}
+});
 
-export async function PUT(req: NextRequest) {
+export const PUT = apiHandler(async (req: NextRequest) => {
   const supabase = await getAdminSupabase(req);
   if (!supabase) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -84,4 +85,4 @@ export async function PUT(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });
-}
+});

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { dateRangeFrom, dateRangeTo } from "@/lib/timezone";
+import { apiHandler } from "@/lib/api-handler";
 
 function getServiceClient() {
   return createClient(
@@ -9,7 +10,7 @@ function getServiceClient() {
   );
 }
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     console.error("[reports/sales] SUPABASE_SERVICE_ROLE_KEY is not set");
     return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
@@ -57,4 +58,4 @@ export async function GET(request: NextRequest) {
       },
     },
   });
-}
+});

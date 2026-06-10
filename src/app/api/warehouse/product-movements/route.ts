@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthClient } from "@/lib/warehouse";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
   const supabase = createAuthClient(token);
 
@@ -29,4 +30,4 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json(data ?? []);
-}
+});

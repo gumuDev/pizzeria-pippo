@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { apiHandler } from "@/lib/api-handler";
 
 function getServiceClient() {
   return createClient(
@@ -8,10 +9,8 @@ function getServiceClient() {
   );
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const POST = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   const authHeader = request.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -67,4 +66,4 @@ export async function POST(
   }
 
   return NextResponse.json({ success: true });
-}
+});

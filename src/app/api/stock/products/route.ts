@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const { client: supabase } = await createAuthClient(request);
   const { searchParams } = new URL(request.url);
   const branchId = searchParams.get("branchId");
@@ -25,4 +26,4 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json({ data: filtered, total: filtered.length });
-}
+});

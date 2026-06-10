@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export const GET = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   const { client: supabase } = await createAuthClient(request);
   const { data, error } = await supabase
     .from("promotions")
@@ -10,9 +12,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 404 });
   return NextResponse.json(data);
-}
+});
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export const PUT = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   const { client: supabase } = await createAuthClient(request);
   const body = await request.json();
   const { name, type, days_of_week, start_date, end_date, branch_id, active, rules } = body;
@@ -35,9 +38,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 
   return NextResponse.json({ success: true });
-}
+});
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export const PATCH = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   const { client: supabase } = await createAuthClient(request);
   const body = await request.json();
   // Accepts is_active (soft delete toggle) or active (POS active toggle) — never a full update
@@ -47,12 +51,13 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const { error } = await supabase.from("promotions").update(update).eq("id", params.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export const DELETE = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   // Soft delete
   const { client: supabase } = await createAuthClient(request);
   const { error } = await supabase.from("promotions").update({ is_active: false }).eq("id", params.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});

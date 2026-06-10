@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthClient } from "@/lib/supabase-server";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export const PUT = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   const { client: supabase } = await createAuthClient(request);
   const body = await request.json();
   const { name, address } = body;
@@ -13,9 +15,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export const PATCH = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   const { client: supabase } = await createAuthClient(request);
   const { is_active } = await request.json();
 
@@ -47,9 +50,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export const DELETE = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
+  const params = { id: ctx?.params?.id ?? "" };
   // Soft delete — same as PATCH is_active=false
   const { client: supabase } = await createAuthClient(request);
 
@@ -76,4 +80,4 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});
