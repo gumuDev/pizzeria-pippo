@@ -89,13 +89,11 @@ export const PosService = {
           payment_method: paymentMethod,
           order_type: orderType,
           idempotency_key: idempotencyKey ?? null,
+          // The server recalculates prices, promos and physical units from
+          // qty (paid units) — client-side amounts are only used to verify
           items: discountedCart.map((i) => ({
             variant_id: i.variant_id,
-            qty: i.qty_physical,
-            qty_physical: i.qty_physical,
-            unit_price: i.unit_price,
-            discount_applied: i.discount_applied,
-            promo_label: i.promo_label ?? null,
+            qty: i.qty,
             flavors: (i.flavors as FlavorItem[] | undefined) ?? null,
           })),
         }),
