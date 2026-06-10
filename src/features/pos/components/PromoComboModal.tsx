@@ -234,7 +234,7 @@ export function PromoComboModal({ promo, products, branchId, getVariantPrice, on
       onCancel={onClose}
       footer={null}
       width={isMobile ? "100%" : 820}
-      style={{ maxWidth: "calc(100vw - 32px)", top: isMobile ? 16 : undefined }}
+      style={{ maxWidth: "calc(100vw - 32px)", top: isMobile ? 16 : 24 }}
       destroyOnHidden
     >
       <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 20, alignItems: "flex-start" }}>

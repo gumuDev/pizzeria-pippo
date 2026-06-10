@@ -21,6 +21,8 @@ import { ConfirmSaleModal } from "@/features/pos/components/ConfirmSaleModal";
 import { TicketModal } from "@/features/pos/components/TicketModal";
 import { BranchSelector } from "@/features/pos/components/BranchSelector";
 import { CancelOrderModal } from "@/features/pos/components/CancelOrderModal";
+import { PrinterStatusButton } from "@/features/printing/components/PrinterStatusButton";
+import { usePrinter } from "@/features/printing/hooks/usePrinter";
 import { PosService } from "@/features/pos/services/pos.service";
 import { getActivePromotions } from "@/lib/promotions";
 import type { Product, TicketData, OrderType, Variant } from "@/features/pos/types/pos.types";
@@ -41,6 +43,7 @@ export default function PosPage() {
   const [confirmModal, setConfirmModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "qr" | null>(null);
   const [ticket, setTicket] = useState<TicketData | null>(null);
+  const printer = usePrinter();
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
 
@@ -159,6 +162,14 @@ export default function PosPage() {
         promoCount={activePromotions.length}
         onTabChange={setActiveTab}
         onLogout={handleLogout}
+        printerSlot={
+          <PrinterStatusButton
+            status={printer.status}
+            deviceName={printer.deviceName}
+            onConnect={printer.connect}
+            onDisconnect={printer.disconnect}
+          />
+        }
       />
 
       {/* Desktop: sale tab */}
@@ -232,9 +243,15 @@ export default function PosPage() {
       )}
 
       <VariantSelectorModal product={variantModal} branchId={branchId} allProducts={products} getVariantPrice={getVariantPrice} getPromoLabel={getPromoLabel} onSelect={handleVariantSelect} onClose={() => setVariantModal(null)} />
-      <PaymentModal open={paymentModal} onClose={() => { setPaymentModal(false); setPaymentMethod(null); }} onConfirm={handlePaymentConfirm} />
+      <PaymentModal open={paymentModal} total={cart.total} onClose={() => { setPaymentModal(false); setPaymentMethod(null); }} onConfirm={handlePaymentConfirm} />
       <ConfirmSaleModal open={confirmModal} discountedCart={cart.discountedCart} total={cart.total} totalDiscount={cart.totalDiscount} paymentMethod={paymentMethod} orderType={cart.orderType} loading={confirmLoading} onConfirm={handleConfirmSale} onCancel={() => { setConfirmModal(false); setPaymentMethod(null); }} />
-      <TicketModal ticket={ticket} onClose={() => setTicket(null)} />
+      <TicketModal
+        ticket={ticket}
+        onClose={() => setTicket(null)}
+        onPrint={() => ticket && printer.print(ticket, branches.find((b) => b.id === branchId)?.name)}
+        printing={printer.printing}
+        canPrint={printer.status !== "unsupported"}
+      />
       <CancelOrderModal order={cancelModal} loading={cancelling} onConfirm={handleCancelOrder} onClose={closeCancelModal} />
     </div>
   );

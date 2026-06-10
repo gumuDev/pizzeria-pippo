@@ -19,9 +19,10 @@ interface Props {
   promoCount: number;
   onTabChange: (tab: PosTab) => void;
   onLogout: () => void;
+  printerSlot?: React.ReactNode;
 }
 
-export function PosHeader({ identity, activeTab, pendingCount, promoCount, onTabChange, onLogout }: Props) {
+export function PosHeader({ identity, activeTab, pendingCount, promoCount, onTabChange, onLogout, printerSlot }: Props) {
   const [currentTime, setCurrentTime] = useState("");
   const isMobile = useIsMobile();
 
@@ -75,6 +76,7 @@ export function PosHeader({ identity, activeTab, pendingCount, promoCount, onTab
           <Tag color="blue" style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>{identity.name.split(" ")[0]}</Tag>
           <div style={{ flex: 1 }} />
           <Text style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 600, color: "#374151", flexShrink: 0 }}>{currentTime}</Text>
+          {printerSlot}
           <Button
             size="small"
             icon={<LogoutOutlined />}
@@ -107,6 +109,7 @@ export function PosHeader({ identity, activeTab, pendingCount, promoCount, onTab
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Text style={{ fontFamily: "monospace", fontSize: 16, fontWeight: 600, color: "#374151" }}>{currentTime}</Text>
+          {printerSlot}
           <Button icon={<LogoutOutlined />} onClick={onLogout}>Salir</Button>
         </div>
       </div>

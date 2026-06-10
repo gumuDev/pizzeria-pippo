@@ -1,9 +1,10 @@
 "use client";
 
 import { Tabs } from "antd";
-import { BellOutlined, RobotOutlined, FireOutlined } from "@ant-design/icons";
+import { BellOutlined, RobotOutlined, FireOutlined, PrinterOutlined } from "@ant-design/icons";
 import { TelegramSettingsForm } from "@/features/settings/components/TelegramSettingsForm";
 import { KitchenSettingsForm } from "@/features/settings/components/KitchenSettingsForm";
+import { PrinterSettingsForm } from "@/features/settings/components/PrinterSettingsForm";
 import { BotSettingsForm } from "@/features/telegram-bot/components/BotSettingsForm";
 import { AuthorizedChatsTable } from "@/features/telegram-bot/components/AuthorizedChatsTable";
 import { ChatModal } from "@/features/telegram-bot/components/ChatModal";
@@ -46,6 +47,11 @@ export default function SettingsPage() {
             key: "bot",
             label: <span><RobotOutlined /> Bot de IA</span>,
             children: <BotTab />,
+          },
+          {
+            key: "printer",
+            label: <span><PrinterOutlined /> Impresora</span>,
+            children: <PrinterSettingsForm />,
           },
         ]}
       />
