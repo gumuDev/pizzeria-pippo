@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Tag, Space, Button, Input, Select } from "antd";
+import { Tag, Space, Button, Input, Select, Tabs } from "antd";
 import { useWarehouse } from "@/features/warehouse/hooks/useWarehouse";
 import { WarehouseTable } from "@/features/warehouse/components/WarehouseTable";
+import { WarehouseProductTable } from "@/features/warehouse/components/WarehouseProductTable";
 import { WarehouseAdjustModal, WarehouseMinQtyModal } from "@/features/warehouse/components/WarehouseModals";
 
 const IconWarning = () => (
@@ -34,6 +36,7 @@ const IconSearch = () => (
 
 export default function WarehousePage() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState("ingredients");
   const {
     filteredRows, displayMobileRows, total, isLoading,
     isMobile, mobileRows, loadingMore, hasMore,
@@ -65,42 +68,61 @@ export default function WarehousePage() {
         </Space>
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-        <Input
-          placeholder="Buscar insumo..."
-          prefix={<IconSearch />}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          allowClear
-          style={{ width: isMobile ? "100%" : 220 }}
-        />
-        <Select
-          placeholder="Estado"
-          allowClear
-          value={filterStatus}
-          onChange={handleStatusFilter}
-          style={{ width: isMobile ? "100%" : 140 }}
-          options={[{ value: "low", label: "Stock bajo" }, { value: "ok", label: "OK" }]}
-        />
-      </div>
-
-      <WarehouseTable
-        rows={filteredRows}
-        filteredRows={filteredRows}
-        displayMobileRows={displayMobileRows}
-        total={total}
-        isLoading={isLoading}
-        isMobile={isMobile}
-        loadingMore={loadingMore}
-        hasMore={hasMore}
-        page={page}
-        PAGE_SIZE={PAGE_SIZE}
-        mobileRows={mobileRows}
-        sentinelRef={handleSentinel}
-        onPageChange={setPage}
-        onAdjust={openAdjust}
-        onEditMinQty={openMinQty}
-        onDelete={handleDelete}
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        style={{ marginBottom: 0 }}
+        items={[
+          {
+            key: "ingredients",
+            label: "🧂 Insumos",
+            children: (
+              <>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                  <Input
+                    placeholder="Buscar insumo..."
+                    prefix={<IconSearch />}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    allowClear
+                    style={{ width: isMobile ? "100%" : 220 }}
+                  />
+                  <Select
+                    placeholder="Estado"
+                    allowClear
+                    value={filterStatus}
+                    onChange={handleStatusFilter}
+                    style={{ width: isMobile ? "100%" : 140 }}
+                    options={[{ value: "low", label: "Stock bajo" }, { value: "ok", label: "OK" }]}
+                  />
+                </div>
+                <WarehouseTable
+                  rows={filteredRows}
+                  filteredRows={filteredRows}
+                  displayMobileRows={displayMobileRows}
+                  total={total}
+                  isLoading={isLoading}
+                  isMobile={isMobile}
+                  loadingMore={loadingMore}
+                  hasMore={hasMore}
+                  page={page}
+                  PAGE_SIZE={PAGE_SIZE}
+                  mobileRows={mobileRows}
+                  sentinelRef={handleSentinel}
+                  onPageChange={setPage}
+                  onAdjust={openAdjust}
+                  onEditMinQty={openMinQty}
+                  onDelete={handleDelete}
+                />
+              </>
+            ),
+          },
+          {
+            key: "products",
+            label: "📦 Reventa",
+            children: <WarehouseProductTable isMobile={isMobile} />,
+          },
+        ]}
       />
 
       <WarehouseAdjustModal

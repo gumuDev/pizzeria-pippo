@@ -1,10 +1,8 @@
 "use client";
 
-import { Form, Select, InputNumber, Input, Button, Typography } from "antd";
+import { Form, Select, InputNumber, Input, Button } from "antd";
 import type { FormInstance } from "antd";
 import type { ProductVariantOption } from "../types/stock.types";
-
-const { Text } = Typography;
 
 interface Props {
   form: FormInstance;
@@ -15,9 +13,6 @@ interface Props {
 export function ProductStockAdjustForm({ form, variants, onSubmit }: Props) {
   return (
     <div className="max-w-md">
-      <Text type="secondary" className="block mb-4">
-        Ingresá la cantidad real contada físicamente. El sistema calculará la diferencia.
-      </Text>
       <Form form={form} layout="vertical" onFinish={onSubmit}>
         <Form.Item label="Producto" name="variant_id" rules={[{ required: true, message: "Requerido" }]}>
           <Select
@@ -33,8 +28,8 @@ export function ProductStockAdjustForm({ form, variants, onSubmit }: Props) {
         <Form.Item label="Cantidad real (conteo físico)" name="real_quantity" rules={[{ required: true, message: "Requerido" }]}>
           <InputNumber min={0} style={{ width: "100%" }} placeholder="Ej: 8" />
         </Form.Item>
-        <Form.Item label="Motivo del ajuste" name="notes">
-          <Input.TextArea rows={2} placeholder="Ej: Merma, vencimiento, error de conteo..." />
+        <Form.Item label="Notas" name="notes">
+          <Input.TextArea rows={2} placeholder="Motivo del ajuste (opcional)" />
         </Form.Item>
         <Button type="primary" htmlType="submit">
           Aplicar ajuste

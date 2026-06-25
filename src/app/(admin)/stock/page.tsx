@@ -12,21 +12,12 @@ import { StockTypeSelector } from "@/features/stock/components/StockTypeSelector
 import { StockHistoryTable } from "@/features/stock/components/StockHistoryTable";
 import type { StockType } from "@/features/stock/components/StockTypeSelector";
 
-const ProductStockAdjustForm = dynamic(
-  () => import("@/features/stock/components/ProductStockAdjustForm").then((m) => m.ProductStockAdjustForm),
-  { ssr: false, loading: () => <div className="p-8 text-gray-400 text-sm">Cargando...</div> }
-);
-
-const StockPurchaseForm = dynamic(
-  () => import("@/features/stock/components/StockPurchaseForm").then((m) => m.StockPurchaseForm),
-  { ssr: false, loading: () => <div className="p-8 text-gray-400 text-sm">Cargando...</div> }
-);
 const StockAdjustForm = dynamic(
   () => import("@/features/stock/components/StockAdjustForm").then((m) => m.StockAdjustForm),
   { ssr: false, loading: () => <div className="p-8 text-gray-400 text-sm">Cargando...</div> }
 );
-const ProductStockPurchaseForm = dynamic(
-  () => import("@/features/stock/components/ProductStockPurchaseForm").then((m) => m.ProductStockPurchaseForm),
+const ProductStockAdjustForm = dynamic(
+  () => import("@/features/stock/components/ProductStockAdjustForm").then((m) => m.ProductStockAdjustForm),
   { ssr: false, loading: () => <div className="p-8 text-gray-400 text-sm">Cargando...</div> }
 );
 
@@ -38,7 +29,6 @@ const IconWarning = () => (
 
 export default function StockPage() {
   const isMobile = useIsMobile();
-  const [purchaseType, setPurchaseType] = useState<StockType>("ingredient");
   const [adjustType, setAdjustType] = useState<StockType>("ingredient");
 
   const {
@@ -46,18 +36,16 @@ export default function StockPage() {
     selectedBranch, setSelectedBranch, loadingStock,
     pageStock, setPageStock, PAGE_SIZE,
     minQtyOpen, setMinQtyOpen, editingStock,
-    purchaseIngredientIsNew,
-    purchaseForm, adjustForm, minQtyForm,
+    adjustForm, minQtyForm,
     productAdjustForm, handleProductAdjust,
-    handlePurchaseIngredientChange,
-    handlePurchase, handleAdjust,
+    handleAdjust,
     openMinQty, handleMinQty,
     productStock, loadingProductStock,
     productVariants,
-    purchaseVariantIsNew,
-    productPurchaseForm,
-    handlePurchaseVariantChange,
-    handleProductPurchase,
+    productMinQtyOpen, setProductMinQtyOpen,
+    editingProductStock,
+    productMinQtyForm,
+    openProductMinQty, handleProductMinQty,
     unifiedMovements, totalHistory, loadingHistory,
     pageHistory, setPageHistory,
   } = useStock();
@@ -81,7 +69,7 @@ export default function StockPage() {
     {
       key: "products",
       label: "📦 Reventa",
-      children: <ProductStockTable stock={productStock} loading={loadingProductStock} />,
+      children: <ProductStockTable stock={productStock} loading={loadingProductStock} onEditMinQty={openProductMinQty} />,
     },
   ];
 
@@ -94,37 +82,11 @@ export default function StockPage() {
       children: <Tabs items={stockActualSubTabs} size="small" />,
     },
     {
-      key: "purchase",
-      label: isMobile ? "🛒" : "Registrar compra",
-      children: (
-        <div>
-          <StockTypeSelector value={purchaseType} onChange={(t) => { setPurchaseType(t); }} />
-          {purchaseType === "ingredient" ? (
-            <StockPurchaseForm
-              form={purchaseForm}
-              ingredients={ingredients}
-              isNewIngredient={purchaseIngredientIsNew}
-              onIngredientChange={handlePurchaseIngredientChange}
-              onSubmit={handlePurchase}
-            />
-          ) : (
-            <ProductStockPurchaseForm
-              form={productPurchaseForm}
-              variants={productVariants}
-              isNewVariant={purchaseVariantIsNew}
-              onVariantChange={handlePurchaseVariantChange}
-              onSubmit={handleProductPurchase}
-            />
-          )}
-        </div>
-      ),
-    },
-    {
       key: "adjust",
       label: isMobile ? "🔧" : "Ajuste manual",
       children: (
         <div>
-          <StockTypeSelector value={adjustType} onChange={(t) => { setAdjustType(t); }} />
+          <StockTypeSelector value={adjustType} onChange={setAdjustType} />
           {adjustType === "ingredient" ? (
             <StockAdjustForm form={adjustForm} ingredients={ingredients} onSubmit={handleAdjust} />
           ) : (
@@ -179,6 +141,14 @@ export default function StockPage() {
         form={minQtyForm}
         onClose={() => setMinQtyOpen(false)}
         onSubmit={handleMinQty}
+      />
+      <StockMinQtyModal
+        open={productMinQtyOpen}
+        editingStock={null}
+        productStock={editingProductStock}
+        form={productMinQtyForm}
+        onClose={() => setProductMinQtyOpen(false)}
+        onSubmit={handleProductMinQty}
       />
     </div>
   );

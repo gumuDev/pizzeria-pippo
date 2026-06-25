@@ -1,9 +1,15 @@
+import { getToken } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import type { WarehouseRow } from "../types/warehouse.types";
 
-async function getToken(): Promise<string> {
-  const { data: session } = await supabase.auth.getSession();
-  return session.session?.access_token ?? "";
+export async function getIngredients(): Promise<{ id: string; name: string; unit: string }[]> {
+  const { data } = await supabase.from("ingredients").select("id, name, unit").eq("is_active", true).order("name");
+  return data ?? [];
+}
+
+export async function getBranches(): Promise<{ id: string; name: string }[]> {
+  const { data } = await supabase.from("branches").select("id, name").eq("is_active", true).order("name");
+  return data ?? [];
 }
 
 export async function fetchWarehouseStock(url: string): Promise<{ rows: WarehouseRow[]; total: number }> {

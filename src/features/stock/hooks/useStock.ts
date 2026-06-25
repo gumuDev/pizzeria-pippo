@@ -13,9 +13,8 @@ const PAGE_SIZE = 10;
 const REVALIDATE_INTERVAL = 60 * 1000;
 
 async function fetcher<T>(url: string): Promise<{ data: T[]; total: number }> {
-  const { supabase } = await import("@/lib/supabase");
-  const { data: session } = await supabase.auth.getSession();
-  const token = session.session?.access_token ?? "";
+  const { getToken } = await import("@/lib/auth");
+  const token = await getToken();
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   const json = await res.json();
   if (json.data && Array.isArray(json.data)) return { data: json.data, total: json.total ?? 0 };
@@ -30,12 +29,15 @@ export function useStock() {
   const [pageHistory, setPageHistory] = useState(1);
   const [minQtyOpen, setMinQtyOpen] = useState(false);
   const [editingStock, setEditingStock] = useState<StockRow | null>(null);
+  const [productMinQtyOpen, setProductMinQtyOpen] = useState(false);
+  const [editingProductStock, setEditingProductStock] = useState<ProductStockRow | null>(null);
   const [purchaseIngredientIsNew, setPurchaseIngredientIsNew] = useState(false);
   const [purchaseVariantIsNew, setPurchaseVariantIsNew] = useState(false);
 
   const [purchaseForm] = Form.useForm();
   const [adjustForm] = Form.useForm();
   const [minQtyForm] = Form.useForm();
+  const [productMinQtyForm] = Form.useForm();
   const [productPurchaseForm] = Form.useForm();
   const [productAdjustForm] = Form.useForm();
 
@@ -47,8 +49,8 @@ export function useStock() {
     });
   }, []);
 
-  const swrOpts = { revalidateOnFocus: true, dedupingInterval: REVALIDATE_INTERVAL, keepPreviousData: true };
-  const swrFresh = { ...swrOpts, keepPreviousData: false, dedupingInterval: 0 };
+  const swrOpts = { revalidateOnFocus: false, dedupingInterval: REVALIDATE_INTERVAL, keepPreviousData: true };
+  const swrFresh = { ...swrOpts, keepPreviousData: false, dedupingInterval: REVALIDATE_INTERVAL };
 
   const stockKey = selectedBranch
     ? `/api/stock?branchId=${selectedBranch}&page=${pageStock}&pageSize=${PAGE_SIZE}`
@@ -87,7 +89,6 @@ export function useStock() {
   const alerts = alertsData?.data ?? [];
   const productStock = loadingProductStock ? [] : (productStockData?.data ?? []);
 
-  // Merge ingredient + product movements sorted by date
   const ingredientMovements = ingredientMovementsData?.data ?? [];
   const productMovements = productMovementsData?.data ?? [];
 
@@ -123,13 +124,10 @@ export function useStock() {
     variantName: r.name,
   }));
 
-  const refreshAll = () => {
-    mutateStock();
-    mutateAlerts();
-    mutateIngredientMovements();
-    mutateProductMovements();
-    mutateProductStock();
-  };
+  const refreshIngredientStock = () => { mutateStock(); mutateAlerts(); };
+  const refreshIngredientHistory = () => { mutateIngredientMovements(); };
+  const refreshProductStock = () => { mutateProductStock(); };
+  const refreshProductHistory = () => { mutateProductMovements(); };
 
   const handleBranchChange = (branchId: string) => {
     setSelectedBranch(branchId);
@@ -141,44 +139,39 @@ export function useStock() {
 
   const resetStockPage = () => setPageStock(1);
 
-  const handlePurchaseVariantChange = (variantId: string) => {
-    const isNew = !productStock.some((s) => s.variant_id === variantId);
-    setPurchaseVariantIsNew(isNew);
-    if (!isNew) productPurchaseForm.setFieldValue("min_quantity", undefined);
-  };
-
-  const handleProductPurchase = async (values: { variant_id: string; quantity: number; min_quantity?: number }) => {
-    const result = await StockService.productPurchase({ branch_id: selectedBranch, ...values });
-    if (result.ok) {
-      productPurchaseForm.resetFields();
-      setPurchaseVariantIsNew(false);
-      refreshAll();
-    } else {
-      message.error(result.error);
-    }
-  };
-
   const handlePurchaseIngredientChange = (ingredientId: string) => {
     const isNew = !stock.some((s) => s.ingredient_id === ingredientId);
     setPurchaseIngredientIsNew(isNew);
     if (!isNew) purchaseForm.setFieldValue("min_quantity", undefined);
   };
 
+  const handlePurchaseVariantChange = (variantId: string) => {
+    const isNew = !productStock.some((s) => s.variant_id === variantId);
+    setPurchaseVariantIsNew(isNew);
+    if (!isNew) productPurchaseForm.setFieldValue("min_quantity", undefined);
+  };
+
   const handlePurchase = async (values: { ingredient_id: string; quantity: number; min_quantity?: number }) => {
     const result = await StockService.purchase({ branch_id: selectedBranch, ...values });
-    if (result.ok) { purchaseForm.resetFields(); setPurchaseIngredientIsNew(false); resetStockPage(); refreshAll(); }
+    if (result.ok) { purchaseForm.resetFields(); setPurchaseIngredientIsNew(false); resetStockPage(); refreshIngredientStock(); refreshIngredientHistory(); }
     else message.error(result.error);
   };
 
   const handleAdjust = async (values: { ingredient_id: string; real_quantity: number; notes?: string }) => {
     const result = await StockService.adjust({ branch_id: selectedBranch, ...values });
-    if (result.ok) { adjustForm.resetFields(); resetStockPage(); refreshAll(); }
+    if (result.ok) { adjustForm.resetFields(); resetStockPage(); refreshIngredientStock(); refreshIngredientHistory(); }
+    else message.error(result.error);
+  };
+
+  const handleProductPurchase = async (values: { variant_id: string; quantity: number; min_quantity?: number }) => {
+    const result = await StockService.productPurchase({ branch_id: selectedBranch, ...values });
+    if (result.ok) { productPurchaseForm.resetFields(); setPurchaseVariantIsNew(false); refreshProductStock(); refreshProductHistory(); }
     else message.error(result.error);
   };
 
   const handleProductAdjust = async (values: { variant_id: string; real_quantity: number; notes?: string }) => {
     const result = await StockService.productAdjust({ branch_id: selectedBranch, ...values });
-    if (result.ok) { productAdjustForm.resetFields(); refreshAll(); }
+    if (result.ok) { productAdjustForm.resetFields(); refreshProductStock(); refreshProductHistory(); }
     else message.error(result.error);
   };
 
@@ -191,7 +184,19 @@ export function useStock() {
   const handleMinQty = async (values: { min_quantity: number }) => {
     if (!editingStock) return;
     const ok = await StockService.updateMinQuantity(editingStock.id, values.min_quantity);
-    if (ok) { setMinQtyOpen(false); resetStockPage(); refreshAll(); }
+    if (ok) { setMinQtyOpen(false); resetStockPage(); refreshIngredientStock(); }
+  };
+
+  const openProductMinQty = (record: ProductStockRow) => {
+    setEditingProductStock(record);
+    productMinQtyForm.setFieldsValue({ min_quantity: record.min_quantity });
+    setProductMinQtyOpen(true);
+  };
+
+  const handleProductMinQty = async (values: { min_quantity: number }) => {
+    if (!editingProductStock) return;
+    const ok = await StockService.updateProductMinQuantity(editingProductStock.id, values.min_quantity);
+    if (ok) { setProductMinQtyOpen(false); refreshProductStock(); }
   };
 
   return {
@@ -212,10 +217,14 @@ export function useStock() {
     productVariants,
     purchaseVariantIsNew,
     productPurchaseForm,
+    productAdjustForm,
     handlePurchaseVariantChange,
     handleProductPurchase,
-    productAdjustForm,
     handleProductAdjust,
+    productMinQtyOpen, setProductMinQtyOpen,
+    editingProductStock,
+    productMinQtyForm,
+    openProductMinQty, handleProductMinQty,
     unifiedMovements, totalHistory, loadingHistory,
   };
 }

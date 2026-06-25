@@ -1,84 +1,27 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Table, Typography, Tag, Space, Button, Select, DatePicker, Row, Col,
-} from "antd";
+import { Table, Typography, Tag, Space, Button, Select, DatePicker, Row, Col } from "antd";
 import { ArrowLeftOutlined, HistoryOutlined } from "@ant-design/icons";
-import { supabase } from "@/lib/supabase";
 import { useIsMobile } from "@/lib/useIsMobile";
-import dayjs from "dayjs";
+import { useWarehouseMovements } from "@/features/warehouse/hooks/useWarehouseMovements";
+import { MOVEMENT_TYPE_COLORS, MOVEMENT_TYPE_LABELS } from "@/features/warehouse/types/warehouse-movements.types";
+import type { UnifiedMovement } from "@/features/warehouse/types/warehouse-movements.types";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
-interface Ingredient { id: string; name: string; unit: string; }
-interface Branch { id: string; name: string; }
-interface Movement {
-  id: string;
-  ingredient_id: string;
-  quantity: number;
-  type: "compra" | "transferencia" | "ajuste";
-  branch_id: string | null;
-  notes: string | null;
-  created_at: string;
-  ingredients: Ingredient;
-  branches: Branch | null;
-}
-
-const TYPE_COLORS: Record<string, string> = {
-  compra: "green", transferencia: "blue", ajuste: "orange",
-};
-const TYPE_LABELS: Record<string, string> = {
-  compra: "Compra", transferencia: "Transferencia", ajuste: "Ajuste",
-};
-
 export default function WarehouseMovementsPage() {
   const router = useRouter();
   const isMobile = useIsMobile();
-  const [movements, setMovements] = useState<Movement[]>([]);
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const [filterType, setFilterType] = useState<string | undefined>();
-  const [filterIngredient, setFilterIngredient] = useState<string | undefined>();
-  const [filterBranch, setFilterBranch] = useState<string | undefined>();
-  const [filterDates, setFilterDates] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
-
-  const getToken = useCallback(async () => {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? "";
-  }, []);
-
-  const fetchMovements = useCallback(async () => {
-    setLoading(true);
-    const token = await getToken();
-
-    const params = new URLSearchParams();
-    if (filterType) params.set("type", filterType);
-    if (filterIngredient) params.set("ingredientId", filterIngredient);
-    if (filterBranch) params.set("branchId", filterBranch);
-    if (filterDates?.[0]) params.set("from", filterDates[0].startOf("day").toISOString());
-    if (filterDates?.[1]) params.set("to", filterDates[1].endOf("day").toISOString());
-
-    const res = await fetch(`/api/warehouse/movements?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    if (Array.isArray(data)) setMovements(data);
-    setLoading(false);
-  }, [getToken, filterType, filterIngredient, filterBranch, filterDates]);
-
-  useEffect(() => {
-    supabase.from("ingredients").select("id, name, unit").eq("is_active", true).order("name")
-      .then(({ data }) => { if (data) setIngredients(data); });
-    supabase.from("branches").select("id, name").eq("is_active", true).order("name")
-      .then(({ data }) => { if (data) setBranches(data); });
-  }, []);
-
-  useEffect(() => { fetchMovements(); }, [fetchMovements]);
+  const {
+    movements, ingredients, branches, loading,
+    filterType, setFilterType,
+    filterIngredient, setFilterIngredient,
+    filterBranch, setFilterBranch,
+    filterDates, setFilterDates,
+    filterOrigin, setFilterOrigin,
+  } = useWarehouseMovements();
 
   const columns = [
     {
@@ -91,15 +34,24 @@ export default function WarehouseMovementsPage() {
       title: "Tipo",
       dataIndex: "type",
       key: "type",
-      render: (t: string) => <Tag color={TYPE_COLORS[t]}>{TYPE_LABELS[t] ?? t}</Tag>,
+      render: (t: string) => <Tag color={MOVEMENT_TYPE_COLORS[t]}>{MOVEMENT_TYPE_LABELS[t] ?? t}</Tag>,
     },
     {
-      title: "Insumo",
-      key: "ingredient",
-      render: (_: unknown, r: Movement) => (
+      title: "Origen",
+      dataIndex: "origin",
+      key: "origin",
+      render: (o: "ingredient" | "product") =>
+        o === "ingredient"
+          ? <Tag color="default">🧂 Insumo</Tag>
+          : <Tag color="purple">📦 Reventa</Tag>,
+    },
+    {
+      title: "Detalle",
+      key: "detail",
+      render: (_: unknown, r: UnifiedMovement) => (
         <Space>
-          <Text>{r.ingredients?.name}</Text>
-          <Tag>{r.ingredients?.unit}</Tag>
+          <Text>{r.detailName}</Text>
+          {r.unit && <Tag>{r.unit}</Tag>}
         </Space>
       ),
     },
@@ -107,15 +59,15 @@ export default function WarehouseMovementsPage() {
       title: "Cantidad",
       dataIndex: "quantity",
       key: "quantity",
-      render: (q: number, r: Movement) => {
-        const display = r.type === "compra" ? `+${q}` : q >= 0 ? `+${q}` : `${q}`;
-        return <Text style={{ color: q >= 0 ? "#16a34a" : "#ef4444" }}>{display} {r.ingredients?.unit}</Text>;
+      render: (q: number, r: UnifiedMovement) => {
+        const display = r.type === "compra" || q >= 0 ? `+${q}` : `${q}`;
+        return <Text style={{ color: q >= 0 ? "#16a34a" : "#ef4444" }}>{display} {r.unit}</Text>;
       },
     },
     {
       title: "Destino",
       key: "branch",
-      render: (_: unknown, r: Movement) =>
+      render: (_: unknown, r: UnifiedMovement) =>
         r.branches ? <Tag>{r.branches.name}</Tag> : <Text type="secondary">—</Text>,
     },
     {
@@ -139,51 +91,33 @@ export default function WarehouseMovementsPage() {
         <Title level={4} style={{ margin: 0 }}>Historial de movimientos — Bodega</Title>
       </div>
 
-      {/* Filters */}
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} md={6}>
-          <Select
-            allowClear
-            placeholder="Tipo"
-            style={{ width: "100%" }}
-            value={filterType}
-            onChange={setFilterType}
-            options={[
-              { value: "compra", label: "Compra" },
-              { value: "transferencia", label: "Transferencia" },
-              { value: "ajuste", label: "Ajuste" },
-            ]}
+        <Col xs={24} sm={12} md={4}>
+          <Select allowClear placeholder="Origen" style={{ width: "100%" }} value={filterOrigin} onChange={setFilterOrigin}
+            options={[{ value: "ingredient", label: "🧂 Insumo" }, { value: "product", label: "📦 Reventa" }]}
+          />
+        </Col>
+        <Col xs={24} sm={12} md={4}>
+          <Select allowClear placeholder="Tipo" style={{ width: "100%" }} value={filterType} onChange={setFilterType}
+            options={[{ value: "compra", label: "Compra" }, { value: "transferencia", label: "Transferencia" }, { value: "ajuste", label: "Ajuste" }]}
           />
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Select
-            allowClear
-            showSearch
-            placeholder="Insumo"
-            style={{ width: "100%" }}
-            value={filterIngredient}
-            onChange={setFilterIngredient}
+          <Select allowClear showSearch placeholder="Insumo / Producto" style={{ width: "100%" }}
+            value={filterIngredient} onChange={setFilterIngredient} disabled={filterOrigin === "product"}
             options={ingredients.map((i) => ({ value: i.id, label: i.name }))}
-            filterOption={(input, option) =>
-              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-            }
+            filterOption={(input, option) => (option?.label ?? "").toLowerCase().includes(input.toLowerCase())}
           />
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Select
-            allowClear
-            placeholder="Sucursal destino"
-            style={{ width: "100%" }}
-            value={filterBranch}
-            onChange={setFilterBranch}
+        <Col xs={24} sm={12} md={4}>
+          <Select allowClear placeholder="Sucursal destino" style={{ width: "100%" }}
+            value={filterBranch} onChange={setFilterBranch}
             options={branches.map((b) => ({ value: b.id, label: b.name }))}
           />
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <RangePicker
-            style={{ width: "100%" }}
-            value={filterDates}
-            onChange={(dates) => setFilterDates(dates as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null)}
+        <Col xs={24} sm={24} md={6}>
+          <RangePicker style={{ width: "100%" }} value={filterDates}
+            onChange={(dates) => setFilterDates(dates as [import("dayjs").Dayjs | null, import("dayjs").Dayjs | null] | null)}
             format="DD/MM/YYYY"
           />
         </Col>
@@ -195,21 +129,25 @@ export default function WarehouseMovementsPage() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {movements.map((r) => {
-              const qty = r.quantity;
-              const display = r.type === "compra" ? `+${qty}` : qty >= 0 ? `+${qty}` : `${qty}`;
+              const display = r.type === "compra" || r.quantity >= 0 ? `+${r.quantity}` : `${r.quantity}`;
               return (
                 <div key={r.id} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "12px 14px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <Tag color={TYPE_COLORS[r.type]} style={{ margin: 0 }}>{TYPE_LABELS[r.type] ?? r.type}</Tag>
+                    <Space size={4}>
+                      <Tag color={MOVEMENT_TYPE_COLORS[r.type]} style={{ margin: 0 }}>{MOVEMENT_TYPE_LABELS[r.type] ?? r.type}</Tag>
+                      {r.origin === "ingredient"
+                        ? <Tag color="default" style={{ margin: 0 }}>🧂 Insumo</Tag>
+                        : <Tag color="purple" style={{ margin: 0 }}>📦 Reventa</Tag>}
+                    </Space>
                     <Text type="secondary" style={{ fontSize: 12 }}>{new Date(r.created_at).toLocaleString("es-BO")}</Text>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <Text strong>{r.ingredients?.name}</Text>
-                      <Tag style={{ margin: "0 0 0 6px" }}>{r.ingredients?.unit}</Tag>
+                      <Text strong>{r.detailName}</Text>
+                      {r.unit && <Tag style={{ margin: "0 0 0 6px" }}>{r.unit}</Tag>}
                     </div>
-                    <Text strong style={{ color: qty >= 0 ? "#16a34a" : "#ef4444", fontSize: 15 }}>
-                      {display} {r.ingredients?.unit}
+                    <Text strong style={{ color: r.quantity >= 0 ? "#16a34a" : "#ef4444", fontSize: 15 }}>
+                      {display} {r.unit}
                     </Text>
                   </div>
                   {(r.branches || r.notes) && (
@@ -224,13 +162,7 @@ export default function WarehouseMovementsPage() {
           </div>
         )
       ) : (
-        <Table
-          dataSource={movements}
-          columns={columns}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 30 }}
-        />
+        <Table dataSource={movements} columns={columns} rowKey="id" loading={loading} pagination={{ pageSize: 30 }} />
       )}
     </div>
   );
