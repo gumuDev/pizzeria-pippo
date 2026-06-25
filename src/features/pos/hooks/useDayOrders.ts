@@ -43,6 +43,7 @@ export function useDayOrders(branchId: string | undefined, showOrders: boolean) 
   const handleMarkReady = async (orderId: string) => {
     setMarkingReady(orderId);
     await PosService.markOrderReady(orderId);
+    if (branchId) await fetchDayOrders(branchId);
     setMarkingReady(null);
   };
 

@@ -104,7 +104,11 @@ export const PosService = {
   },
 
   async markOrderReady(orderId: string): Promise<void> {
-    await supabase.from("orders").update({ kitchen_status: "ready" }).eq("id", orderId);
+    const token = await PosService.getToken();
+    await fetch(`/api/orders/${orderId}/ready`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
   },
 
   async cancelOrder(orderId: string, reason: string, token: string): Promise<{ ok: boolean; error?: string }> {
