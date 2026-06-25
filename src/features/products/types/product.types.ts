@@ -43,6 +43,7 @@ export interface Product {
   image_url: string;
   is_active: boolean;
   track_stock: boolean;
+  product_type: ProductType;
   product_variants: Array<{ id: string; name: string; base_price: number }>;
 }
 

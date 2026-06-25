@@ -93,8 +93,10 @@ export function useProductForm(onSuccess: () => void) {
       recipes: v.recipes ?? [],
     }));
 
-    const anyHasRecipeForType = loadedVariants.some((v) => v.recipes.length > 0);
-    const productType = anyHasRecipeForType ? "made" : "resale";
+    // Use the product_type stored in the DB — do NOT re-derive it from
+    // whether the variants have recipes (a "made" product can have none).
+    const productType = record.product_type ?? "made";
+    const anyHasRecipe = loadedVariants.some((v) => v.recipes.length > 0);
 
     formStep1.setFieldsValue({
       name: record.name,
@@ -113,7 +115,7 @@ export function useProductForm(onSuccess: () => void) {
     });
 
     setVariants(loadedVariants);
-    setHasRecipe(anyHasRecipeForType);
+    setHasRecipe(anyHasRecipe);
     // Simple mode: single variant named "Unidad"
     const isSimple = loadedVariants.length === 1 && loadedVariants[0].name === "Unidad";
     setHasVariants(!isSimple);

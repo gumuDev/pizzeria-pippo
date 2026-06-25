@@ -100,11 +100,11 @@ export const GET = apiHandler(async (request: NextRequest) => {
 export const POST = apiHandler(async (request: NextRequest) => {
   const { client: supabase } = await createAuthClient(request);
   const body = await request.json();
-  const { name, category, description, image_url, product_type, variants } = body;
+  const { name, category, description, image_url, product_type, track_stock, variants } = body;
 
   const { data: product, error: productError } = await supabase
     .from("products")
-    .insert({ name, category, description, image_url, product_type: product_type ?? "made" })
+    .insert({ name, category, description, image_url, product_type: product_type ?? "made", track_stock: track_stock ?? true })
     .select()
     .single();
 

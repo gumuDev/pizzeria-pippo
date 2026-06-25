@@ -99,7 +99,8 @@ export const ProductsService = {
       category: step1Data.category,
       description: step1Data.description,
       image_url: imageUrl,
-      track_stock: true,
+      product_type: step1Data.product_type,
+      track_stock: step1Data.track_stock,
       variants: cleanVariants,
     };
   },
