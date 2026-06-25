@@ -1,6 +1,9 @@
 "use client";
 
 import dayjs from "dayjs";
+import Link from "next/link";
+import { Button } from "antd";
+import { ShoppingCartOutlined } from "@ant-design/icons";
 import { DashboardSummaryCards } from "@/features/dashboard/components/DashboardSummaryCards";
 import { DashboardCharts } from "@/features/dashboard/components/DashboardCharts";
 import { DashboardStockAlerts } from "@/features/dashboard/components/DashboardStockAlerts";
@@ -11,9 +14,16 @@ export default function DashboardPage() {
 
   return (
     <div style={{ padding: 24 }}>
-      <div style={{ marginBottom: 24 }}>
-        <h2 className="text-lg font-semibold m-0">Dashboard</h2>
-        <p className="text-gray-400 text-sm mt-0.5">Resumen de hoy — {dayjs().format("dddd, D [de] MMMM YYYY")}</p>
+      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
+        <div>
+          <h2 className="text-lg font-semibold m-0">Dashboard</h2>
+          <p className="text-gray-400 text-sm mt-0.5">Resumen de hoy — {dayjs().format("dddd, D [de] MMMM YYYY")}</p>
+        </div>
+        <Link href="/pos">
+          <Button type="primary" size="large" icon={<ShoppingCartOutlined />} style={{ background: "#ea580c", borderColor: "#ea580c" }}>
+            Ir al POS
+          </Button>
+        </Link>
       </div>
 
       <DashboardSummaryCards

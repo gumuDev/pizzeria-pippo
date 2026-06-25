@@ -112,7 +112,7 @@ export default function ProductDetailPage() {
           <Title level={4} style={{ margin: 0 }}>{product.name}</Title>
           {!product.is_active && <Tag color="default">Inactivo</Tag>}
         </Space>
-        <Button icon={<EditOutlined />} type="primary" onClick={() => router.push("/products")}>
+        <Button icon={<EditOutlined />} type="primary" onClick={() => router.push(`/products?edit=${product.id}`)}>
           Editar
         </Button>
       </div>

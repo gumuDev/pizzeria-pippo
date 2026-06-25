@@ -50,3 +50,4 @@ node_modules/
 CLAUDE.local.md
 # production dumps / data for local analysis only
 docs/database/local-dumps/
+/docker/volumes/

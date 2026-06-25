@@ -9,7 +9,13 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "kewrgrmyeisiruteuhnd.supabase.co",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+      // Supabase local (Docker) — solo dev
+      {
+        protocol: "http",
+        hostname: "localhost",
         pathname: "/storage/v1/object/public/**",
       },
     ],

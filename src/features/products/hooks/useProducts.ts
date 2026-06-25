@@ -33,12 +33,12 @@ export function useProducts() {
     return data.session?.access_token ?? "";
   };
 
-  const openModal = (record?: Product) => {
+  const openModal = useCallback((record?: Product) => {
     setEditing(record ?? null);
     setModalOpen(true);
-  };
+  }, []);
 
-  const closeModal = () => setModalOpen(false);
+  const closeModal = useCallback(() => setModalOpen(false), []);
 
   const handleToggleActive = async (product: Product) => {
     const token = await getToken();

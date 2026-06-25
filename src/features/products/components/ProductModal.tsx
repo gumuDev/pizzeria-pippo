@@ -53,6 +53,7 @@ export function ProductModal({ open, editing, ingredients, onClose, onSave }: Pr
       onCancel={onClose}
       footer={null}
       width={700}
+      style={{ top: 20 }}
       destroyOnHidden
     >
       <Steps current={form.currentStep} items={steps} className="my-6" />
