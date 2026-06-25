@@ -1,6 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
+// Sin esto, Vercel cachea la lista de categorías del build y no refleja
+// las que se crean/editan después en producción.
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

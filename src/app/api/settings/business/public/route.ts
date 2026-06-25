@@ -2,6 +2,10 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { BusinessConfig, DEFAULT_CONFIG } from "@/features/business-config/types/business-config.types";
 
+// Sin esto, Vercel pre-renderiza el GET en build time y sirve la config
+// congelada (el negocio queda con el business_type que había al buildear).
+export const dynamic = "force-dynamic";
+
 const BUSINESS_KEYS = ["business_name", "business_type", "business_logo_url", "business_primary_color"];
 
 export async function GET() {
