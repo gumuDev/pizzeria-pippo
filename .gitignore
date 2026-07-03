@@ -2,19 +2,26 @@
 
 # dependencies
 /node_modules
+**/node_modules
 /.pnp
 .pnp.js
 .yarn/install-state.gz
 
+# backend (NestJS)
+backend/dist
+backend/.env
+backend/logs
+packages/*/dist
+
 # testing
-/coverage
+frontend/coverage
 
 # next.js
-/.next/
-/out/
+frontend/.next/
+frontend/out/
 
 # production
-/build
+frontend/build
 
 # misc
 .DS_Store
@@ -26,27 +33,29 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env.local
-.env.production
-.env*.local
-.env.test
+frontend/.env.local
+frontend/.env.production
+frontend/.env*.local
+frontend/.env.test
 
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+frontend/next-env.d.ts
 
 # Playwright
-node_modules/
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/playwright/.auth/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/playwright/.cache/
+frontend/playwright/.auth/
 
 #claude local
 CLAUDE.local.md
 # production dumps / data for local analysis only
 docs/database/local-dumps/
+
+# local docker volumes (postgres data dir, etc.) — never version raw DB files
+docker/volumes/

@@ -1,0 +1,214 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { ProductsService } from './products.service';
+import { PrismaService } from '../prisma/prisma.service';
+
+function decimal(value: number) {
+  return { toNumber: () => value };
+}
+
+describe('ProductsService', () => {
+  let service: ProductsService;
+  let prisma: {
+    product: { findMany: jest.Mock; count: jest.Mock; findUnique: jest.Mock; create: jest.Mock; update: jest.Mock };
+    productVariant: { findMany: jest.Mock; create: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
+    branchPrice: { createMany: jest.Mock; deleteMany: jest.Mock };
+    recipe: { createMany: jest.Mock; deleteMany: jest.Mock };
+  };
+
+  beforeEach(async () => {
+    prisma = {
+      product: { findMany: jest.fn(), count: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+      productVariant: { findMany: jest.fn(), create: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
+      branchPrice: { createMany: jest.fn(), deleteMany: jest.fn() },
+      recipe: { createMany: jest.fn(), deleteMany: jest.fn() },
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [ProductsService, { provide: PrismaService, useValue: prisma }],
+    }).compile();
+
+    service = module.get(ProductsService);
+  });
+
+  describe('list', () => {
+    it('filtra por is_active=true cuando showInactive no viene', async () => {
+      prisma.product.findMany.mockResolvedValue([]);
+      prisma.product.count.mockResolvedValue(0);
+
+      await service.list({});
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { isActive: true } }),
+      );
+    });
+
+    it('mapea productos y variantes al shape de @pippo/shared, con Decimal a number', async () => {
+      prisma.product.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          name: 'Muzzarella',
+          category: 'pizza',
+          description: null,
+          imageUrl: null,
+          productType: 'made',
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          isActive: true,
+          variants: [
+            {
+              id: 'v1',
+              productId: 'p1',
+              name: 'Chica',
+              basePrice: decimal(20),
+              createdAt: new Date('2026-01-01T00:00:00.000Z'),
+              isActive: true,
+            },
+          ],
+        },
+      ]);
+      prisma.product.count.mockResolvedValue(1);
+
+      const result = await service.list({});
+
+      expect(result.data[0].product_variants?.[0].base_price).toBe(20);
+      expect(result.data[0].created_at).toBe('2026-01-01T00:00:00.000Z');
+      expect(result.total).toBe(1);
+    });
+  });
+
+  describe('create', () => {
+    it('crea el producto y sus variantes con branch_prices y recipes', async () => {
+      prisma.product.create.mockResolvedValue({ id: 'p1' });
+      prisma.productVariant.create.mockResolvedValue({ id: 'v1' });
+
+      await service.create({
+        name: 'Muzzarella',
+        category: 'pizza',
+        variants: [
+          {
+            name: 'Chica',
+            base_price: 20,
+            branch_prices: [{ branch_id: 'b1', price: 22 }],
+            recipes: [{ ingredient_id: 'i1', quantity: 1 }],
+          },
+        ],
+      } as never);
+
+      expect(prisma.productVariant.create).toHaveBeenCalledWith({
+        data: { productId: 'p1', name: 'Chica', basePrice: 20 },
+      });
+      expect(prisma.branchPrice.createMany).toHaveBeenCalledWith({
+        data: [{ branchId: 'b1', variantId: 'v1', price: 22 }],
+      });
+      expect(prisma.recipe.createMany).toHaveBeenCalledWith({
+        data: [{ variantId: 'v1', ingredientId: 'i1', quantity: 1, applyCondition: 'always' }],
+      });
+    });
+  });
+
+  describe('update', () => {
+    it('desactiva variantes que ya no vienen en el payload', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([{ id: 'v1', name: 'Chica' }, { id: 'v2', name: 'Grande' }]);
+
+      await service.update('p1', {
+        name: 'Muzzarella',
+        category: 'pizza',
+        variants: [{ name: 'Chica', base_price: 20, branch_prices: [], recipes: [] }],
+      } as never);
+
+      expect(prisma.productVariant.update).toHaveBeenCalledWith({ where: { id: 'v2' }, data: { isActive: false } });
+    });
+
+    it('reactiva y actualiza precio de una variante existente', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([{ id: 'v1', name: 'Chica' }]);
+
+      await service.update('p1', {
+        name: 'Muzzarella',
+        category: 'pizza',
+        variants: [{ name: 'Chica', base_price: 25, branch_prices: [], recipes: [] }],
+      } as never);
+
+      expect(prisma.productVariant.update).toHaveBeenCalledWith({
+        where: { id: 'v1' },
+        data: { basePrice: 25, isActive: true },
+      });
+    });
+
+    it('crea una variante nueva si no existe por nombre', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([]);
+      prisma.productVariant.create.mockResolvedValue({ id: 'v-new' });
+
+      await service.update('p1', {
+        name: 'Muzzarella',
+        category: 'pizza',
+        variants: [{ name: 'Familiar', base_price: 30, branch_prices: [], recipes: [] }],
+      } as never);
+
+      expect(prisma.productVariant.create).toHaveBeenCalledWith({
+        data: { productId: 'p1', name: 'Familiar', basePrice: 30 },
+      });
+    });
+
+    it('borra y recrea branch_prices y recipes de cada variante (config reemplazable)', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([{ id: 'v1', name: 'Chica' }]);
+
+      await service.update('p1', {
+        name: 'Muzzarella',
+        category: 'pizza',
+        variants: [{ name: 'Chica', base_price: 20, branch_prices: [{ branch_id: 'b1', price: 22 }], recipes: [] }],
+      } as never);
+
+      expect(prisma.branchPrice.deleteMany).toHaveBeenCalledWith({ where: { variantId: 'v1' } });
+      expect(prisma.branchPrice.createMany).toHaveBeenCalledWith({
+        data: [{ branchId: 'b1', variantId: 'v1', price: 22 }],
+      });
+    });
+  });
+
+  describe('setActive / softDelete', () => {
+    it('cascada is_active a las variantes del producto', async () => {
+      await service.setActive('p1', false);
+
+      expect(prisma.productVariant.updateMany).toHaveBeenCalledWith({ where: { productId: 'p1' }, data: { isActive: false } });
+      expect(prisma.product.update).toHaveBeenCalledWith({ where: { id: 'p1' }, data: { isActive: false } });
+    });
+
+    it('softDelete desactiva producto y variantes', async () => {
+      await service.softDelete('p1');
+
+      expect(prisma.productVariant.updateMany).toHaveBeenCalledWith({ where: { productId: 'p1' }, data: { isActive: false } });
+      expect(prisma.product.update).toHaveBeenCalledWith({ where: { id: 'p1' }, data: { isActive: false } });
+    });
+  });
+
+  describe('getVariantsWithDetails', () => {
+    it('mapea variantes con branch_prices y recipes, Decimal a number', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([
+        {
+          id: 'v1',
+          productId: 'p1',
+          name: 'Chica',
+          basePrice: decimal(20),
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          isActive: true,
+          branchPrices: [{ branchId: 'b1', variantId: 'v1', price: decimal(22) }],
+          recipes: [{ ingredientId: 'i1', quantity: decimal(1), applyCondition: 'always' }],
+        },
+      ]);
+
+      const result = await service.getVariantsWithDetails('p1');
+
+      expect(result).toEqual([
+        {
+          id: 'v1',
+          product_id: 'p1',
+          name: 'Chica',
+          base_price: 20,
+          created_at: '2026-01-01T00:00:00.000Z',
+          is_active: true,
+          branch_prices: [{ branch_id: 'b1', variant_id: 'v1', price: 22 }],
+          recipes: [{ ingredient_id: 'i1', quantity: 1, apply_condition: 'always' }],
+        },
+      ]);
+    });
+  });
+});
