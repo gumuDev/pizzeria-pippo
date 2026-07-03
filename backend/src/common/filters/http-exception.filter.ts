@@ -26,7 +26,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
             ? (body as { message: string[] }).message.join(', ')
             : ((body as { message?: string }).message ?? exception.message);
 
-      response.status(status).json({ error: message, code: exception.name });
+      // Reenvía campos extra del body (ej. `available` en InsufficientStockException)
+      // sin tocar el shape { error, code } para el resto de excepciones.
+      const extra =
+        typeof body === 'object' && body !== null
+          ? Object.fromEntries(Object.entries(body).filter(([key]) => key !== 'message' && key !== 'statusCode' && key !== 'error'))
+          : {};
+
+      response.status(status).json({ error: message, code: exception.name, ...extra });
       return;
     }
 

@@ -1,3 +1,8 @@
+import type { Product, ProductType, ProductCategory, RecipeItem, RecipeApplyCondition } from "@pippo/shared";
+
+export type { Product, ProductType, ProductCategory, RecipeItem };
+export type ApplyCondition = RecipeApplyCondition;
+
 export interface Ingredient {
   id: string;
   name: string;
@@ -9,19 +14,9 @@ export interface Branch {
   name: string;
 }
 
-export type ProductType = "made" | "resale";
-
-export type ApplyCondition = "always" | "takeaway" | "dine_in";
-
 export interface VariantTypeOption {
   value: string;
   label: string;
-}
-
-export interface RecipeItem {
-  ingredient_id: string;
-  quantity: number;
-  apply_condition: ApplyCondition;
 }
 
 export interface BranchPrice {
@@ -35,17 +30,6 @@ export interface Variant {
   branch_prices: BranchPrice[];
   recipes: RecipeItem[];
   is_active?: boolean;
-}
-
-export interface Product {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  image_url: string;
-  is_active: boolean;
-  product_type: ProductType;
-  product_variants: Array<{ id: string; name: string; base_price: number }>;
 }
 
 export interface Step1Data {

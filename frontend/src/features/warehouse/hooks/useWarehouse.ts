@@ -28,15 +28,15 @@ export function useWarehouse() {
   const [minQtyForm] = Form.useForm();
   const [adjustForm] = Form.useForm();
 
-  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-  if (filterStatus) params.set("status", filterStatus);
-  const swrKey = `/api/warehouse/stock?${params.toString()}`;
-
-  const { data, isLoading, mutate } = useSWR(swrKey, fetchWarehouseStock, {
-    revalidateOnFocus: false,
-    dedupingInterval: 30 * 1000,
-    keepPreviousData: true,
-  });
+  const { data, isLoading, mutate } = useSWR(
+    ["warehouse-stock", page, filterStatus] as const,
+    ([, page, status]) => fetchWarehouseStock({ page, pageSize: PAGE_SIZE, status }),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30 * 1000,
+      keepPreviousData: true,
+    },
+  );
 
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;

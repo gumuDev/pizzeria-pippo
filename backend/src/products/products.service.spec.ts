@@ -75,6 +75,56 @@ describe('ProductsService', () => {
     });
   });
 
+  describe('getDetail', () => {
+    it('devuelve null si no existe', async () => {
+      prisma.product.findUnique.mockResolvedValue(null);
+
+      const result = await service.getDetail('missing');
+
+      expect(result).toBeNull();
+    });
+
+    it('mapea el shape rico con nombre de sucursal e insumo denormalizados', async () => {
+      prisma.product.findUnique.mockResolvedValue({
+        id: 'p1',
+        name: 'Muzzarella',
+        category: 'pizza',
+        description: null,
+        imageUrl: null,
+        productType: 'made',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        isActive: true,
+        variants: [
+          {
+            id: 'v1',
+            productId: 'p1',
+            name: 'Chica',
+            basePrice: decimal(20),
+            createdAt: new Date('2026-01-01T00:00:00.000Z'),
+            isActive: true,
+            branchPrices: [{ branchId: 'b1', variantId: 'v1', price: decimal(22), branch: { name: 'Centro' } }],
+            recipes: [{ ingredientId: 'i1', quantity: decimal(1), applyCondition: 'always', ingredient: { name: 'Harina', unit: 'kg' } }],
+          },
+        ],
+      });
+
+      const result = await service.getDetail('p1');
+
+      expect(result?.product_variants[0].branch_prices[0]).toEqual({
+        branch_id: 'b1',
+        variant_id: 'v1',
+        price: 22,
+        branches: { name: 'Centro' },
+      });
+      expect(result?.product_variants[0].recipes[0]).toEqual({
+        ingredient_id: 'i1',
+        quantity: 1,
+        apply_condition: 'always',
+        ingredients: { name: 'Harina', unit: 'kg' },
+      });
+    });
+  });
+
   describe('create', () => {
     it('crea el producto y sus variantes con branch_prices y recipes', async () => {
       prisma.product.create.mockResolvedValue({ id: 'p1' });

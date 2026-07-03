@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Form, notification } from "antd";
+import { mutate } from "swr";
 import { getToken } from "@/lib/auth";
 import { ProductsService } from "../services/products.service";
 import type { Product, Variant, Step1Data, RecipeItem, VariantTypeOption } from "../types/product.types";
@@ -84,7 +85,7 @@ export function useProductForm(onSuccess: () => void) {
       name: v.name,
       base_price: v.base_price,
       branch_prices: v.branch_prices ?? [],
-      recipes: (v.recipes ?? []).map((r: { ingredient_id: string; quantity: number; apply_condition?: string }) => ({
+      recipes: (v.recipes ?? []).map((r) => ({
         ingredient_id: r.ingredient_id,
         quantity: r.quantity,
         apply_condition: r.apply_condition ?? "always",
@@ -138,8 +139,15 @@ export function useProductForm(onSuccess: () => void) {
       ? await ProductsService.updateProduct(editing.id, payload, token)
       : await ProductsService.createProduct(payload, token);
     setSaving(false);
-    if (result.ok) onSuccess();
-    else notification.error({ message: result.error });
+    if (result.ok) {
+      // Invalida cualquier página/filtro cacheado de la lista de productos
+      // (la navegación de vuelta a /products remonta el hook con el mismo swrKey,
+      // y SWR sirve el caché sin refetch si no pasó el dedupingInterval).
+      mutate((key) => Array.isArray(key) && key[0] === "products");
+      onSuccess();
+    } else {
+      notification.error({ message: result.error });
+    }
   };
 
   const handleSetStep1Data = (data: Step1Data) => {

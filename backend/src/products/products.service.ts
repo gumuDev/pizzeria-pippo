@@ -5,6 +5,7 @@ import type { ListProductsQueryDto } from './dto/list-products-query.dto';
 import type { CreateProductDto } from './dto/create-product.dto';
 import type { UpdateProductDto } from './dto/update-product.dto';
 import type { ProductListResult } from './types/product-list-result.types';
+import type { ProductDetailResult } from './types/product-detail.types';
 
 @Injectable()
 export class ProductsService {
@@ -35,9 +36,52 @@ export class ProductsService {
     return { data: rows.map((row) => this.mapProduct(row)), total, page, pageSize };
   }
 
-  async getDetail(id: string): Promise<Product | null> {
-    const row = await this.prisma.product.findUnique({ where: { id }, include: { variants: true } });
-    return row ? this.mapProduct(row) : null;
+  // Shape rica (con nombre de sucursal e insumo denormalizados) — la usa la vista de detalle
+  // del producto; la vista de edición solo toma el subset básico, vía el `list()`/mapProduct().
+  async getDetail(id: string): Promise<ProductDetailResult | null> {
+    const row = await this.prisma.product.findUnique({
+      where: { id },
+      include: {
+        variants: {
+          include: {
+            branchPrices: { include: { branch: true } },
+            recipes: { include: { ingredient: true } },
+          },
+        },
+      },
+    });
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      description: row.description,
+      image_url: row.imageUrl,
+      product_type: row.productType,
+      created_at: row.createdAt.toISOString(),
+      is_active: row.isActive,
+      product_variants: row.variants.map((v) => ({
+        id: v.id,
+        product_id: v.productId,
+        name: v.name,
+        base_price: v.basePrice.toNumber(),
+        created_at: v.createdAt.toISOString(),
+        is_active: v.isActive,
+        branch_prices: v.branchPrices.map((bp) => ({
+          branch_id: bp.branchId,
+          variant_id: bp.variantId,
+          price: bp.price.toNumber(),
+          branches: { name: bp.branch.name },
+        })),
+        recipes: v.recipes.map((r) => ({
+          ingredient_id: r.ingredientId,
+          quantity: r.quantity.toNumber(),
+          apply_condition: r.applyCondition,
+          ingredients: { name: r.ingredient.name, unit: r.ingredient.unit },
+        })),
+      })),
+    };
   }
 
   async getVariantsWithDetails(productId: string): Promise<ProductVariant[]> {

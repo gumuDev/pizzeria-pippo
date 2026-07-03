@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getToken } from "@/lib/auth";
-import { getIngredients, getBranches } from "../services/warehouse-stock.service";
+import { getIngredients, getBranches, getWarehouseMovements, getWarehouseProductMovements } from "../services/warehouse-stock.service";
 import dayjs from "dayjs";
 import type {
   IngredientMovement, ProductMovement, UnifiedMovement,
@@ -63,30 +62,22 @@ export function useWarehouseMovements() {
 
   const fetchMovements = useCallback(async () => {
     setLoading(true);
-    const token = await getToken();
-    const headers = { Authorization: `Bearer ${token}` };
 
-    const params = new URLSearchParams();
-    if (filterType) params.set("type", filterType);
-    if (filterBranch) params.set("branchId", filterBranch);
-    if (filterDates?.[0]) params.set("from", filterDates[0].startOf("day").toISOString());
-    if (filterDates?.[1]) params.set("to", filterDates[1].endOf("day").toISOString());
-
-    const ingParams = new URLSearchParams(params);
-    if (filterIngredient && filterOrigin !== "product") ingParams.set("ingredientId", filterIngredient);
+    const from = filterDates?.[0]?.startOf("day").toISOString();
+    const to = filterDates?.[1]?.endOf("day").toISOString();
 
     const fetchIng = filterOrigin !== "product"
-      ? fetch(`/api/warehouse/movements?${ingParams.toString()}`, { headers }).then(r => r.json())
+      ? getWarehouseMovements({ type: filterType, ingredientId: filterIngredient, branchId: filterBranch, from, to })
       : Promise.resolve([]);
     const fetchProd = filterOrigin !== "ingredient"
-      ? fetch(`/api/warehouse/product-movements?${params.toString()}`, { headers }).then(r => r.json())
+      ? getWarehouseProductMovements({ type: filterType, branchId: filterBranch, from, to })
       : Promise.resolve([]);
 
     const [ingData, prodData] = await Promise.all([fetchIng, fetchProd]);
 
     const merged = [
-      ...(Array.isArray(ingData) ? ingData.map(toUnified) : []),
-      ...(Array.isArray(prodData) ? prodData.map(toUnifiedProduct) : []),
+      ...ingData.map(toUnified),
+      ...prodData.map(toUnifiedProduct),
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     setMovements(merged);

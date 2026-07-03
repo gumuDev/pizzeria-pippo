@@ -12,15 +12,6 @@ import type {
 const PAGE_SIZE = 10;
 const REVALIDATE_INTERVAL = 60 * 1000;
 
-async function fetcher<T>(url: string): Promise<{ data: T[]; total: number }> {
-  const { getToken } = await import("@/lib/auth");
-  const token = await getToken();
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  const json = await res.json();
-  if (json.data && Array.isArray(json.data)) return { data: json.data, total: json.total ?? 0 };
-  return { data: Array.isArray(json) ? json : [], total: 0 };
-}
-
 export function useStock() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -52,37 +43,41 @@ export function useStock() {
   const swrOpts = { revalidateOnFocus: false, dedupingInterval: REVALIDATE_INTERVAL, keepPreviousData: true };
   const swrFresh = { ...swrOpts, keepPreviousData: false, dedupingInterval: REVALIDATE_INTERVAL };
 
-  const stockKey = selectedBranch
-    ? `/api/stock?branchId=${selectedBranch}&page=${pageStock}&pageSize=${PAGE_SIZE}`
-    : null;
+  const { data: stockData, isLoading: loadingStock, mutate: mutateStock } = useSWR(
+    selectedBranch ? (["stock", selectedBranch, pageStock] as const) : null,
+    ([, branchId, page]) => StockService.getStock({ branchId, page, pageSize: PAGE_SIZE }),
+    swrOpts,
+  );
 
-  const ingredientMovementsKey = selectedBranch
-    ? `/api/stock/movements?branchId=${selectedBranch}&page=${pageHistory}&pageSize=${PAGE_SIZE}`
-    : null;
+  const { data: alertsData, mutate: mutateAlerts } = useSWR(
+    selectedBranch ? (["stock-alerts", selectedBranch] as const) : null,
+    ([, branchId]) => StockService.getAlerts(branchId).then((data) => ({ data, total: data.length })),
+    swrOpts,
+  );
 
-  const productMovementsKey = selectedBranch
-    ? `/api/stock/product-movements?branchId=${selectedBranch}&page=${pageHistory}&pageSize=${PAGE_SIZE}`
-    : null;
+  const { data: ingredientMovementsData, isLoading: loadingIngredientMovements, mutate: mutateIngredientMovements } = useSWR(
+    selectedBranch ? (["stock-movements", selectedBranch, pageHistory] as const) : null,
+    ([, branchId, page]) => StockService.getMovements({ branchId, page, pageSize: PAGE_SIZE }),
+    swrOpts,
+  );
 
-  const productStockKey = selectedBranch ? `/api/stock/products?branchId=${selectedBranch}` : null;
+  const { data: productMovementsData, isLoading: loadingProductMovements, mutate: mutateProductMovements } = useSWR(
+    selectedBranch ? (["stock-product-movements", selectedBranch, pageHistory] as const) : null,
+    ([, branchId, page]) => StockService.getProductMovements({ branchId, page, pageSize: PAGE_SIZE }),
+    swrOpts,
+  );
 
-  const { data: stockData, isLoading: loadingStock, mutate: mutateStock } =
-    useSWR(stockKey, fetcher<StockRow>, swrOpts);
+  const { data: productStockData, isLoading: loadingProductStock, mutate: mutateProductStock } = useSWR(
+    selectedBranch ? (["stock-product-stock", selectedBranch] as const) : null,
+    ([, branchId]) => StockService.getProductStock(branchId).then((data) => ({ data, total: data.length })),
+    swrFresh,
+  );
 
-  const { data: alertsData, mutate: mutateAlerts } =
-    useSWR(selectedBranch ? `/api/stock/alerts?branchId=${selectedBranch}` : null, fetcher<StockRow>, swrOpts);
-
-  const { data: ingredientMovementsData, isLoading: loadingIngredientMovements, mutate: mutateIngredientMovements } =
-    useSWR(ingredientMovementsKey, fetcher<Movement>, swrOpts);
-
-  const { data: productMovementsData, isLoading: loadingProductMovements, mutate: mutateProductMovements } =
-    useSWR(productMovementsKey, fetcher<ProductMovement>, swrOpts);
-
-  const { data: productStockData, isLoading: loadingProductStock, mutate: mutateProductStock } =
-    useSWR(productStockKey, fetcher<ProductStockRow>, swrFresh);
-
-  const { data: resaleVariantsData } =
-    useSWR("/api/stock/resale-variants", fetcher<{ id: string; name: string; products: { id: string; name: string } | null }>, swrOpts);
+  const { data: resaleVariantsData } = useSWR(
+    "stock-resale-variants",
+    () => StockService.getResaleVariants().then((data) => ({ data, total: data.length })),
+    swrOpts,
+  );
 
   const stock = stockData?.data ?? [];
   const totalStock = stockData?.total ?? 0;

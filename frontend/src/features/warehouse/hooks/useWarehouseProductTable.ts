@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Form, message } from "antd";
-import { getToken } from "@/lib/auth";
+import { getWarehouseProductStock, adjustWarehouseProductStock } from "../services/warehouse-stock.service";
 
 export interface ProductStockRow {
   id: string;
@@ -25,12 +25,8 @@ export function useWarehouseProductTable() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const token = await getToken();
-    const res = await fetch("/api/warehouse/product-stock", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const json = await res.json();
-    setRows(json.data ?? []);
+    const data = await getWarehouseProductStock();
+    setRows(data as ProductStockRow[]);
     setLoading(false);
   }, []);
 
@@ -49,16 +45,14 @@ export function useWarehouseProductTable() {
   const handleAdjust = async (values: { real_quantity: number; notes: string }) => {
     if (!adjustingRow) return;
     setAdjustLoading(true);
-    const token = await getToken();
-    const res = await fetch("/api/warehouse/product-adjust", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ variant_id: adjustingRow.variant_id, real_quantity: values.real_quantity, notes: values.notes }),
+    const result = await adjustWarehouseProductStock({
+      variant_id: adjustingRow.variant_id,
+      real_quantity: values.real_quantity,
+      notes: values.notes,
     });
     setAdjustLoading(false);
-    if (!res.ok) {
-      const json = await res.json();
-      message.error(json.error ?? "Error al ajustar");
+    if (!result.ok) {
+      message.error(result.error ?? "Error al ajustar");
       return;
     }
     message.success("Stock ajustado correctamente");

@@ -5,17 +5,10 @@ import useSWR from "swr";
 import { notification } from "antd";
 import { getToken } from "@/lib/auth";
 import { ProductsService } from "../services/products.service";
-import type { Product, Branch } from "../types/product.types";
+import type { Branch, Product } from "../types/product.types";
 
 const PAGE_SIZE = 10;
 const DEDUP_INTERVAL = 60 * 1000;
-
-async function fetchProducts(url: string): Promise<{ data: Product[]; total: number }> {
-  const token = await getToken();
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  const json = await res.json();
-  return { data: json.data ?? [], total: json.total ?? 0 };
-}
 
 export function useProducts() {
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -34,13 +27,18 @@ export function useProducts() {
     ProductsService.getBranches().then(setBranches);
   }, []);
 
-  const swrKey = `/api/products?showInactive=${showInactive}&page=${page}&pageSize=${PAGE_SIZE}${debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : ""}${filterCategory ? `&category=${filterCategory}` : ""}`;
+  const swrKey = ["products", showInactive, page, debouncedSearch, filterCategory] as const;
 
-  const { data, isLoading: loading, mutate } = useSWR(swrKey, fetchProducts, {
-    revalidateOnFocus: false,
-    dedupingInterval: DEDUP_INTERVAL,
-    keepPreviousData: true,
-  });
+  const { data, isLoading: loading, mutate } = useSWR(
+    swrKey,
+    ([, showInactive, page, search, category]) =>
+      ProductsService.getProducts({ showInactive, page, pageSize: PAGE_SIZE, search: search || undefined, category }),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: DEDUP_INTERVAL,
+      keepPreviousData: true,
+    },
+  );
 
   const products = data?.data ?? [];
   const total = data?.total ?? 0;

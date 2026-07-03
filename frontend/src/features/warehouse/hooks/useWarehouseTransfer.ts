@@ -2,16 +2,30 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Form } from "antd";
-import { getToken } from "@/lib/auth";
-import { getIngredients, getBranches } from "../services/warehouse-stock.service";
+import { mutate } from "swr";
+import {
+  getIngredients,
+  getBranches,
+  getResaleVariants,
+  fetchWarehouseStock,
+  getWarehouseProductStock,
+  transferWarehouseStock,
+  transferWarehouseProductStock,
+} from "../services/warehouse-stock.service";
 
 export type TransferType = "ingredient" | "product";
 
 interface Ingredient { id: string; name: string; unit: string; }
 interface Branch { id: string; name: string; }
 interface ProductVariant { id: string; name: string; products: { name: string } | null; }
-interface WarehouseIngredientStock { ingredient_id: string; quantity: number; ingredients: Ingredient; }
+interface WarehouseIngredientStock { ingredient_id: string; quantity: number; unit: string; }
 interface WarehouseProductStock { variant_id: string; quantity: number; }
+
+function isRelevantCacheKey(key: unknown): boolean {
+  return (
+    (Array.isArray(key) && typeof key[0] === "string" && (key[0].startsWith("stock") || key[0].startsWith("warehouse-")))
+  );
+}
 
 export function useWarehouseTransfer(preselectedIngredient: string | null, preselectedVariant: string | null = null) {
   const [form] = Form.useForm();
@@ -28,34 +42,30 @@ export function useWarehouseTransfer(preselectedIngredient: string | null, prese
   const [success, setSuccess] = useState(false);
 
   const load = useCallback(async () => {
-    const token = await getToken();
-    const [ings, brs, stockRes, varRes, productStockRes] = await Promise.all([
+    const [ings, brs, stockData, loadedVariants, loadedProductStock] = await Promise.all([
       getIngredients(),
       getBranches(),
-      fetch("/api/warehouse/stock?pageSize=500", { headers: { Authorization: `Bearer ${token}` } }),
-      fetch("/api/stock/resale-variants", { headers: { Authorization: `Bearer ${token}` } }),
-      fetch("/api/warehouse/product-stock", { headers: { Authorization: `Bearer ${token}` } }),
+      fetchWarehouseStock({ page: 1, pageSize: 500 }),
+      getResaleVariants(),
+      getWarehouseProductStock(),
     ]);
 
     setIngredients(ings);
     setBranches(brs);
 
-    const stockData = await stockRes.json();
-    const stockRows: WarehouseIngredientStock[] = stockData.data ?? [];
+    const stockRows: WarehouseIngredientStock[] = stockData.rows.map((r) => ({
+      ingredient_id: r.ingredient_id,
+      quantity: r.quantity,
+      unit: r.unit,
+    }));
     setWarehouseIngredientStock(stockRows);
-
-    const varData = await varRes.json();
-    const loadedVariants: ProductVariant[] = varData.data ?? [];
     setVariants(loadedVariants);
-
-    const productStockData = await productStockRes.json();
-    const loadedProductStock: WarehouseProductStock[] = productStockData.data ?? [];
-    setWarehouseProductStock(loadedProductStock);
+    setWarehouseProductStock(loadedProductStock.map((r) => ({ variant_id: r.variant_id, quantity: r.quantity })));
 
     if (preselectedIngredient) {
       form.setFieldValue("ingredient_id", preselectedIngredient);
       const stockRow = stockRows.find((s) => s.ingredient_id === preselectedIngredient);
-      if (stockRow) { setAvailable(stockRow.quantity); setSelectedUnit(stockRow.ingredients.unit); }
+      if (stockRow) { setAvailable(stockRow.quantity); setSelectedUnit(stockRow.unit); }
     }
 
     if (preselectedVariant) {
@@ -93,20 +103,21 @@ export function useWarehouseTransfer(preselectedIngredient: string | null, prese
   const handleSubmit = async (values: Record<string, unknown>, onSuccess: () => void) => {
     setLoading(true);
     setError(null);
-    const token = await getToken();
-    const url = transferType === "ingredient" ? "/api/warehouse/transfer" : "/api/warehouse/product-transfer";
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(values),
-    });
-    const json = await res.json();
+    const result = transferType === "ingredient"
+      ? await transferWarehouseStock(values as { ingredient_id: string; quantity: number; branch_id: string; notes?: string })
+      : await transferWarehouseProductStock(values as { variant_id: string; quantity: number; branch_id: string; notes?: string });
     setLoading(false);
-    if (!res.ok) {
-      setError(json.error ?? "Error al transferir");
-      if (json.available != null) setAvailable(json.available);
+    if (!result.ok) {
+      setError(result.error ?? "Error al transferir");
+      if (result.available != null) setAvailable(result.available);
       return;
     }
+    // Invalida el caché de SWR de /stock (useStock.ts) y de la tabla de bodega
+    // central (useWarehouse.ts) — la transferencia modifica branch_stock/
+    // branch_product_stock Y warehouse_stock/warehouse_product_stock, y ninguna
+    // de esas páginas se entera sola.
+    mutate(isRelevantCacheKey);
+
     setSuccess(true);
     form.resetFields();
     setAvailable(null);

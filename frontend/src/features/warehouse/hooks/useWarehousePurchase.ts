@@ -2,8 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { Form } from "antd";
-import { getToken } from "@/lib/auth";
-import { getIngredients } from "../services/warehouse-stock.service";
+import { mutate } from "swr";
+import {
+  getIngredients,
+  getResaleVariants,
+  fetchWarehouseStock,
+  getWarehouseProductStock,
+  purchaseWarehouseStock,
+  purchaseWarehouseProductStock,
+} from "../services/warehouse-stock.service";
 
 export type PurchaseType = "ingredient" | "product";
 
@@ -11,6 +18,10 @@ interface Ingredient { id: string; name: string; unit: string; }
 interface ProductVariant { id: string; name: string; products: { name: string } | null; }
 interface WarehouseStock { ingredient_id: string; quantity: number; min_quantity: number; }
 interface WarehouseProductStock { variant_id: string; quantity: number; min_quantity: number; }
+
+function isWarehouseCacheKey(key: unknown): boolean {
+  return Array.isArray(key) && typeof key[0] === "string" && key[0].startsWith("warehouse-");
+}
 
 export function useWarehousePurchase() {
   const [form] = Form.useForm();
@@ -27,20 +38,16 @@ export function useWarehousePurchase() {
 
   useEffect(() => {
     const load = async () => {
-      const token = await getToken();
-      const [ings, varRes, stockRes, productStockRes] = await Promise.all([
+      const [ings, varData, stockData, productStockData] = await Promise.all([
         getIngredients(),
-        fetch("/api/stock/resale-variants", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/warehouse/stock?pageSize=500", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/warehouse/product-stock", { headers: { Authorization: `Bearer ${token}` } }),
+        getResaleVariants(),
+        fetchWarehouseStock({ page: 1, pageSize: 500 }),
+        getWarehouseProductStock(),
       ]);
       setIngredients(ings);
-      const varData = await varRes.json();
-      setVariants(varData.data ?? []);
-      const stockData = await stockRes.json();
-      setWarehouseStock(stockData.data ?? []);
-      const productStockData = await productStockRes.json();
-      setWarehouseProductStock(productStockData.data ?? []);
+      setVariants(varData);
+      setWarehouseStock(stockData.rows.map((r) => ({ ingredient_id: r.ingredient_id, quantity: r.quantity, min_quantity: r.min_quantity })));
+      setWarehouseProductStock(productStockData.map((r) => ({ variant_id: r.variant_id, quantity: r.quantity, min_quantity: r.min_quantity })));
     };
     load();
   }, []);
@@ -71,16 +78,17 @@ export function useWarehousePurchase() {
   const handleSubmit = async (values: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
-    const token = await getToken();
-    const url = purchaseType === "ingredient" ? "/api/warehouse/purchase" : "/api/warehouse/product-purchase";
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(values),
-    });
-    const json = await res.json();
+    const result = purchaseType === "ingredient"
+      ? await purchaseWarehouseStock(values as { ingredient_id: string; quantity: number; notes?: string; min_quantity?: number })
+      : await purchaseWarehouseProductStock(values as { variant_id: string; quantity: number; notes?: string; min_quantity?: number });
     setLoading(false);
-    if (!res.ok) { setError(json.error ?? "Error al registrar compra"); return; }
+    if (!result.ok) { setError(result.error ?? "Error al registrar compra"); return; }
+
+    // Invalida el caché de SWR de la tabla de bodega central (useWarehouse.ts) —
+    // la compra modifica warehouse_stock/warehouse_product_stock pero esa página
+    // no se entera sola.
+    mutate(isWarehouseCacheKey);
+
     setSuccess(true);
     form.resetFields();
     setSelectedUnit("");

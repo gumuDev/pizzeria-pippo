@@ -2,7 +2,7 @@ import { CATEGORY_BG } from "../constants/product.constants";
 import { CategoryIcon } from "./CategoryIcon";
 
 interface Props {
-  url: string;
+  url: string | null;
   category: string;
   width?: number;
   height?: number;
