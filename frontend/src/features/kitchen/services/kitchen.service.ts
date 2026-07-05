@@ -1,8 +1,26 @@
 import { supabase } from "@/lib/supabase";
+import { getToken } from "@/lib/auth";
 import type { KitchenOrder } from "../types/kitchen.types";
 
+const USE_NEST = process.env.NEXT_PUBLIC_USE_NEST_SETTINGS === "true";
+const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
+
 export const KitchenService = {
+  // Antes de NEXT_PUBLIC_USE_NEST_SETTINGS, esto leía app_settings directo con
+  // el cliente anon de Supabase, bloqueado por RLS (admin-only) para el rol
+  // cocinero — el umbral nunca llegaba a la pantalla de cocina real (bugs/03).
+  // Con el flag activo pega a un endpoint sin restricción de rol.
   async getLateThresholdMinutes(): Promise<number | null> {
+    if (USE_NEST) {
+      const token = await getToken();
+      const res = await fetch(`${NEST_API_URL}/settings/kitchen-threshold`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.kitchen_late_threshold_minutes ?? null;
+    }
+
     const { data } = await supabase
       .from("app_settings")
       .select("value")

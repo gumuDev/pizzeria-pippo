@@ -12,6 +12,8 @@ import { WarehouseModule } from './warehouse/warehouse.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { BranchesModule } from './branches/branches.module';
 import { VariantTypesModule } from './variant-types/variant-types.module';
+import { UsersModule } from './users/users.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { VariantTypesModule } from './variant-types/variant-types.module';
     PromotionsModule,
     BranchesModule,
     VariantTypesModule,
+    UsersModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

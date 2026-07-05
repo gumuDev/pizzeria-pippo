@@ -1,10 +1,10 @@
 // Prisma schema — refleja a mano las tablas reales de docs/database/schema-base.sql
 // (no se corrió `prisma db pull` todavía: falta un DATABASE_URL real, ver backend/.env)
 //
-// Alcance actual: tablas de reports (Fase 1), ingredients/products (Fase 3) y
-// branch_stock/stock_movements (Fase 3, módulo stock). El resto de tablas
-// (warehouse_movements, order_item_flavors, app_settings, etc.)
-// se agregan cuando les toque su fase de migración.
+// Alcance actual: tablas de reports (Fase 1), ingredients/products/stock/
+// warehouse/promotions/branches/variant_types/users/app_settings (Fase 3).
+// El resto de tablas (order_item_flavors, telegram_*, etc.) se agregan
+// cuando les toque su fase de migración.
 
 generator client {
   provider = "prisma-client-js"
@@ -35,17 +35,47 @@ model Branch {
   @@map("branches")
 }
 
-model Profile {
-  id        String   @id @db.Uuid
-  role      String
-  branchId  String?  @map("branch_id") @db.Uuid
-  fullName  String?  @map("full_name")
+model Business {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
 
-  branch Branch? @relation(fields: [branchId], references: [id])
-  orders Order[]
+  profiles    Profile[]
+  appSettings AppSetting[]
+
+  @@map("businesses")
+}
+
+model Profile {
+  id         String   @id @db.Uuid
+  role       String
+  branchId   String?  @map("branch_id") @db.Uuid
+  fullName   String?  @map("full_name")
+  createdAt  DateTime @default(now()) @map("created_at")
+  businessId String?  @map("business_id") @db.Uuid
+
+  branch   Branch?   @relation(fields: [branchId], references: [id])
+  business Business? @relation(fields: [businessId], references: [id])
+  orders   Order[]
 
   @@map("profiles")
+}
+
+model AppSetting {
+  key        String
+  value      String   @default("")
+  updatedAt  DateTime @default(now()) @map("updated_at")
+  // La columna real es nullable (multi-tenant "a medias"), pero en la
+  // práctica toda fila existente ya tiene business_id — Prisma exige un
+  // campo requerido para poder usarlo en un @@unique compuesto. El service
+  // siempre resuelve y escribe el business_id del usuario autenticado.
+  businessId String   @map("business_id") @db.Uuid
+
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@unique([businessId, key])
+  @@map("app_settings")
 }
 
 model Ingredient {

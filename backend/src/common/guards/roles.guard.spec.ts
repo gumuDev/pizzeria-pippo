@@ -20,6 +20,7 @@ describe('RolesGuard', () => {
     role,
     branch_id: null,
     full_name: 'Test',
+    business_id: null,
   });
 
   beforeEach(() => {

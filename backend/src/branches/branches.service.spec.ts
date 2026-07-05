@@ -11,8 +11,8 @@ describe('BranchesService', () => {
     profile: { findMany: jest.Mock };
   };
 
-  const admin: CurrentUserPayload = { id: 'u1', role: 'admin', branch_id: null, full_name: 'Admin' };
-  const cajero: CurrentUserPayload = { id: 'u2', role: 'cajero', branch_id: 'b1', full_name: 'Cajero' };
+  const admin: CurrentUserPayload = { id: 'u1', role: 'admin', branch_id: null, full_name: 'Admin', business_id: null };
+  const cajero: CurrentUserPayload = { id: 'u2', role: 'cajero', branch_id: 'b1', full_name: 'Cajero', business_id: null };
 
   beforeEach(async () => {
     prisma = {

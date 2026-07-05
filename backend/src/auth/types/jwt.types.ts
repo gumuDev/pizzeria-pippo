@@ -7,4 +7,5 @@ export interface CurrentUserPayload {
   role: string;
   branch_id: string | null;
   full_name: string | null;
+  business_id: string | null;
 }

@@ -16,6 +16,7 @@ describe('OwnBranchOrAdminGuard', () => {
     role,
     branch_id: branchId,
     full_name: 'Test',
+    business_id: null,
   });
 
   beforeEach(() => {

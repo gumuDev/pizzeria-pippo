@@ -2,10 +2,14 @@ import { getToken } from "@/lib/auth";
 import { DEFAULT_PAPER_WIDTH } from "../constants/printing.constants";
 import type { PaperWidth } from "../types/printing.types";
 
+const USE_NEST = process.env.NEXT_PUBLIC_USE_NEST_SETTINGS === "true";
+const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
+
 /** Reads the configured paper width. Falls back to the default on any error. */
 export async function getPaperWidth(): Promise<PaperWidth> {
   try {
-    const res = await fetch("/api/settings/printer", {
+    const url = USE_NEST ? `${NEST_API_URL}/settings/printer` : "/api/settings/printer";
+    const res = await fetch(url, {
       headers: { Authorization: `Bearer ${await getToken()}` },
     });
     if (!res.ok) return DEFAULT_PAPER_WIDTH;

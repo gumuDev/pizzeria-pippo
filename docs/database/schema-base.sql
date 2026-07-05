@@ -6,6 +6,10 @@
 -- Para aplicar cambios usar los archivos en migrations/
 --
 -- Última migración aplicada: 017_stock_movements_add_anulacion_type.sql
+-- (parcialmente desactualizado más allá de esto — ver docs/database/migrations/
+-- para el historial completo; se agregaron acá `businesses`/`app_settings`/
+-- `profiles.business_id` puntualmente por la migración 034, sin resincronizar
+-- el resto del archivo)
 -- ============================================================
 
 CREATE TABLE public.branches (
@@ -17,15 +21,34 @@ CREATE TABLE public.branches (
   CONSTRAINT branches_pkey PRIMARY KEY (id)
 );
 
+CREATE TABLE public.businesses (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT businesses_pkey PRIMARY KEY (id)
+);
+
 CREATE TABLE public.profiles (
   id uuid NOT NULL,
   role text NOT NULL CHECK (role = ANY (ARRAY['admin'::text, 'cajero'::text, 'cocinero'::text])),
   branch_id uuid,
   full_name text,
   created_at timestamp with time zone DEFAULT now(),
+  business_id uuid,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
-  CONSTRAINT profiles_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id)
+  CONSTRAINT profiles_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
+  CONSTRAINT profiles_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(id)
+);
+
+CREATE TABLE public.app_settings (
+  key text NOT NULL,
+  value text NOT NULL DEFAULT ''::text,
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  business_id uuid,
+  CONSTRAINT app_settings_business_key_unique UNIQUE (business_id, key),
+  CONSTRAINT app_settings_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(id)
 );
 
 CREATE TABLE public.products (
