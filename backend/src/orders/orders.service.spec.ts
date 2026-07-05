@@ -13,7 +13,7 @@ function decimal(value: number) {
 
 describe('OrdersService', () => {
   let service: OrdersService;
-  let prisma: { productVariant: { findMany: jest.Mock }; $queryRaw: jest.Mock };
+  let prisma: { productVariant: { findMany: jest.Mock }; $queryRaw: jest.Mock; order: { findMany: jest.Mock } };
   let promotionsService: { list: jest.Mock };
   let lowStockAlertService: { checkAndNotify: jest.Mock };
 
@@ -61,6 +61,7 @@ describe('OrdersService', () => {
     prisma = {
       productVariant: { findMany: jest.fn() },
       $queryRaw: jest.fn(),
+      order: { findMany: jest.fn() },
     };
     promotionsService = { list: jest.fn().mockResolvedValue([]) };
     lowStockAlertService = { checkAndNotify: jest.fn() };
@@ -153,5 +154,61 @@ describe('OrdersService', () => {
     await service.create(baseDto({ total: 75 }), cashier);
 
     expect(lowStockAlertService.checkAndNotify).not.toHaveBeenCalled();
+  });
+
+  describe('getDayOrders', () => {
+    it('mapea las órdenes del día con sus items, sin excluir canceladas', async () => {
+      prisma.order.findMany.mockResolvedValue([
+        {
+          id: 'o1',
+          dailyNumber: 5,
+          createdAt: new Date('2026-07-05T18:00:00Z'),
+          total: decimal(75),
+          kitchenStatus: 'ready',
+          paymentMethod: 'efectivo',
+          orderType: 'dine_in',
+          cancelledAt: null,
+          items: [{ qty: 1, variant: { name: 'Familiar', product: { name: 'Hawaiana' } } }],
+        },
+        {
+          id: 'o2',
+          dailyNumber: 4,
+          createdAt: new Date('2026-07-05T17:00:00Z'),
+          total: decimal(10),
+          kitchenStatus: 'pending',
+          paymentMethod: 'qr',
+          orderType: 'takeaway',
+          cancelledAt: new Date('2026-07-05T17:05:00Z'),
+          items: [],
+        },
+      ]);
+
+      const result = await service.getDayOrders('b1', '2026-07-05');
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ branchId: 'b1' }) }),
+      );
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        id: 'o1',
+        daily_number: 5,
+        created_at: '2026-07-05T18:00:00.000Z',
+        total: 75,
+        kitchen_status: 'ready',
+        payment_method: 'efectivo',
+        order_type: 'dine_in',
+        cancelled_at: null,
+        order_items: [{ qty: 1, product_variants: { name: 'Familiar', products: { name: 'Hawaiana' } } }],
+      });
+      expect(result[1].cancelled_at).toBe('2026-07-05T17:05:00.000Z');
+    });
+
+    it('usa el día de hoy en Bolivia cuando no se especifica fecha', async () => {
+      prisma.order.findMany.mockResolvedValue([]);
+
+      await service.getDayOrders('b1');
+
+      expect(prisma.order.findMany).toHaveBeenCalled();
+    });
   });
 });

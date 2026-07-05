@@ -10,6 +10,7 @@ import type { RecipeRow, StockItem } from './lib/order-stock';
 import type { CreateOrderDto } from './dto/create-order.dto';
 import type { CurrentUserPayload } from '../auth/types/jwt.types';
 import type { CreateOrderResult } from './types/create-order-result.types';
+import type { DayOrderResult } from './types/day-order-result.types';
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -129,5 +130,37 @@ export class OrdersService {
     }
 
     return result;
+  }
+
+  async getDayOrders(branchId: string, date?: string): Promise<DayOrderResult[]> {
+    const day = date ?? todayInBolivia();
+
+    const orders = await this.prisma.order.findMany({
+      where: {
+        branchId,
+        createdAt: { gte: new Date(dateRangeFrom(day)), lte: new Date(dateRangeTo(day)) },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        items: { include: { variant: { include: { product: true } } } },
+      },
+    });
+
+    return orders.map((order) => ({
+      id: order.id,
+      daily_number: order.dailyNumber,
+      created_at: order.createdAt.toISOString(),
+      total: order.total.toNumber(),
+      kitchen_status: order.kitchenStatus,
+      payment_method: order.paymentMethod,
+      order_type: order.orderType,
+      cancelled_at: order.cancelledAt?.toISOString() ?? null,
+      order_items: order.items.map((item) => ({
+        qty: item.qty,
+        product_variants: item.variant
+          ? { name: item.variant.name, products: item.variant.product ? { name: item.variant.product.name } : null }
+          : null,
+      })),
+    }));
   }
 }

@@ -17,13 +17,15 @@ interface Props {
 }
 
 export function DaySummaryPanel({ dayOrders }: Props) {
-  const totalSales = dayOrders.reduce((sum, o) => sum + Number(o.total), 0);
-  const pendingCount = dayOrders.filter((o) => o.kitchen_status === "pending").length;
-  const readyCount = dayOrders.filter((o) => o.kitchen_status === "ready").length;
-  const dineInCount = dayOrders.filter((o) => o.order_type === "dine_in").length;
-  const takeawayCount = dayOrders.filter((o) => o.order_type === "takeaway").length;
-  const efectivoTotal = dayOrders.filter((o) => o.payment_method === "efectivo").reduce((s, o) => s + Number(o.total), 0);
-  const qrTotal = dayOrders.filter((o) => o.payment_method === "qr").reduce((s, o) => s + Number(o.total), 0);
+  // Cancelled orders don't count towards the day's sales/stats
+  const activeOrders = dayOrders.filter((o) => o.cancelled_at === null);
+  const totalSales = activeOrders.reduce((sum, o) => sum + Number(o.total), 0);
+  const pendingCount = activeOrders.filter((o) => o.kitchen_status === "pending").length;
+  const readyCount = activeOrders.filter((o) => o.kitchen_status === "ready").length;
+  const dineInCount = activeOrders.filter((o) => o.order_type === "dine_in").length;
+  const takeawayCount = activeOrders.filter((o) => o.order_type === "takeaway").length;
+  const efectivoTotal = activeOrders.filter((o) => o.payment_method === "efectivo").reduce((s, o) => s + Number(o.total), 0);
+  const qrTotal = activeOrders.filter((o) => o.payment_method === "qr").reduce((s, o) => s + Number(o.total), 0);
 
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: 24, background: "#f5f5f5" }}>
@@ -39,7 +41,7 @@ export function DaySummaryPanel({ dayOrders }: Props) {
         <SummaryCard
           icon={<ShoppingOutlined style={{ fontSize: 28, color: "#3b82f6" }} />}
           label="Ventas realizadas"
-          value={String(dayOrders.length)}
+          value={String(activeOrders.length)}
           valueColor="#3b82f6"
         />
         <SummaryCard

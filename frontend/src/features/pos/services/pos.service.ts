@@ -64,6 +64,15 @@ export const PosService = {
   },
 
   async getDayOrders(branchId: string): Promise<DayOrder[]> {
+    if (USE_NEST_POS) {
+      const token = await PosService.getToken();
+      const res = await fetch(`${NEST_API_URL}/orders?branchId=${branchId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    }
+
     const today = todayInBolivia();
     const { data } = await supabase
       .from("orders")
