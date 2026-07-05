@@ -19,7 +19,7 @@ interface Props {
   editing: boolean;
   hasRecipe: boolean;
   onToggleRecipe: (val: boolean) => void;
-  onAddRecipeItem: (variantIndex: number) => void;
+  onAddRecipeItem: (variantIndex: number, ingredientId?: string) => void;
   onUpdateRecipeItem: (variantIndex: number, recipeIndex: number, field: keyof RecipeItem, value: string | number) => void;
   onRemoveRecipeItem: (variantIndex: number, recipeIndex: number) => void;
   onPrev: () => void;
@@ -85,7 +85,7 @@ interface CardProps {
   variant: Variant;
   variantIndex: number;
   ingredients: Ingredient[];
-  onAddRecipeItem: (variantIndex: number) => void;
+  onAddRecipeItem: (variantIndex: number, ingredientId?: string) => void;
   onUpdateRecipeItem: (variantIndex: number, recipeIndex: number, field: keyof RecipeItem, value: string | number) => void;
   onRemoveRecipeItem: (variantIndex: number, recipeIndex: number) => void;
 }
@@ -95,10 +95,7 @@ function VariantRecipeCard({ variant, variantIndex, ingredients, onAddRecipeItem
 
   const handleAddIngredient = (ingredientId: string | null) => {
     if (!ingredientId) return;
-    onAddRecipeItem(variantIndex);
-    setTimeout(() => {
-      onUpdateRecipeItem(variantIndex, variant.recipes.length, "ingredient_id", ingredientId);
-    }, 0);
+    onAddRecipeItem(variantIndex, ingredientId);
   };
 
   return (

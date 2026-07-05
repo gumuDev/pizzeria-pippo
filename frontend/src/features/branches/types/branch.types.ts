@@ -1,10 +1,4 @@
-export interface Branch {
-  id: string;
-  name: string;
-  address: string | null;
-  created_at: string;
-  is_active: boolean;
-}
+export type { Branch } from "@pippo/shared";
 
 export interface Cashier {
   id: string;

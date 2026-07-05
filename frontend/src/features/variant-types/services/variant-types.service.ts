@@ -1,33 +1,40 @@
 import { getToken } from "@/lib/auth";
 import type { VariantType } from "../types/variant-type.types";
 
+const USE_NEST = process.env.NEXT_PUBLIC_USE_NEST_VARIANT_TYPES === "true";
+const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
+
+function baseUrl(path: string): string {
+  return USE_NEST ? `${NEST_API_URL}${path}` : `/api${path}`;
+}
+
 export const VariantTypesService = {
   async getVariantTypes(onlyActive = false): Promise<VariantType[]> {
     const token = await getToken();
     const params = onlyActive ? "" : "?onlyActive=false";
-    const res = await fetch(`/api/variant-types${params}`, {
+    const res = await fetch(`${baseUrl("/variant-types")}${params}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return [];
     return res.json();
   },
 
-  async create(name: string, sort_order: number, token: string): Promise<{ ok: boolean; error?: string }> {
-    const res = await fetch("/api/variant-types", {
+  async create(name: string, token: string): Promise<{ ok: boolean; error?: string }> {
+    const res = await fetch(baseUrl("/variant-types"), {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name, sort_order }),
+      body: JSON.stringify({ name }),
     });
     if (res.ok) return { ok: true };
     const { error } = await res.json();
     return { ok: false, error };
   },
 
-  async update(id: string, name: string, sort_order: number, token: string): Promise<{ ok: boolean; error?: string }> {
-    const res = await fetch(`/api/variant-types/${id}`, {
+  async update(id: string, name: string, token: string): Promise<{ ok: boolean; error?: string }> {
+    const res = await fetch(`${baseUrl("/variant-types")}/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name, sort_order }),
+      body: JSON.stringify({ name }),
     });
     if (res.ok) return { ok: true };
     const { error } = await res.json();
@@ -35,7 +42,7 @@ export const VariantTypesService = {
   },
 
   async toggle(id: string, is_active: boolean, token: string): Promise<{ ok: boolean; error?: string }> {
-    const res = await fetch(`/api/variant-types/${id}`, {
+    const res = await fetch(`${baseUrl("/variant-types")}/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ is_active }),

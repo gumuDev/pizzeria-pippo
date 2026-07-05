@@ -5,13 +5,13 @@ import { apiHandler } from "@/lib/api-handler";
 export const PUT = apiHandler(async (request: NextRequest, ctx?: { params: Record<string, string> }) => {
   const params = { id: ctx?.params?.id ?? "" };
   const { client: supabase } = await createAuthClient(request);
-  const { name, sort_order } = await request.json();
+  const { name } = await request.json();
 
   if (!name?.trim()) return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 });
 
   const { data, error } = await supabase
     .from("variant_types")
-    .update({ name: name.trim(), sort_order: sort_order ?? 0 })
+    .update({ name: name.trim() })
     .eq("id", params.id)
     .select()
     .single();

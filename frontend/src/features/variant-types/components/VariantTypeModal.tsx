@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { Modal, Form, Input, InputNumber } from "antd";
+import { Modal, Form, Input } from "antd";
 import type { VariantType } from "../types/variant-type.types";
 
 interface Props {
   open: boolean;
   editing: VariantType | null;
   saving: boolean;
-  onSave: (name: string, sort_order: number) => void;
+  onSave: (name: string) => void;
   onClose: () => void;
 }
 
@@ -17,16 +17,13 @@ export function VariantTypeModal({ open, editing, saving, onSave, onClose }: Pro
 
   useEffect(() => {
     if (open) {
-      form.setFieldsValue(editing
-        ? { name: editing.name, sort_order: editing.sort_order }
-        : { name: "", sort_order: 0 }
-      );
+      form.setFieldsValue(editing ? { name: editing.name } : { name: "" });
     }
   }, [open, editing, form]);
 
   const handleOk = async () => {
     const values = await form.validateFields();
-    onSave(values.name.trim(), values.sort_order ?? 0);
+    onSave(values.name.trim());
   };
 
   return (
@@ -47,13 +44,6 @@ export function VariantTypeModal({ open, editing, saving, onSave, onClose }: Pro
           rules={[{ required: true, message: "El nombre es requerido" }]}
         >
           <Input placeholder="Ej: Personal, XL, Litro..." maxLength={50} />
-        </Form.Item>
-        <Form.Item
-          name="sort_order"
-          label="Orden"
-          tooltip="Define el orden en que aparece en el selector de variantes"
-        >
-          <InputNumber min={0} style={{ width: "100%" }} />
         </Form.Item>
       </Form>
     </Modal>

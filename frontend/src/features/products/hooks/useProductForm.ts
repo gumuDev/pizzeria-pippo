@@ -5,6 +5,7 @@ import { Form, notification } from "antd";
 import { mutate } from "swr";
 import { getToken } from "@/lib/auth";
 import { ProductsService } from "../services/products.service";
+import { VariantTypesService } from "@/features/variant-types/services/variant-types.service";
 import type { Product, Variant, Step1Data, RecipeItem, VariantTypeOption } from "../types/product.types";
 
 export function useProductForm(onSuccess: () => void) {
@@ -22,15 +23,9 @@ export function useProductForm(onSuccess: () => void) {
 
   useEffect(() => {
     const loadVariantTypes = async () => {
-      const token = await getToken();
-      const res = await fetch("/api/variant-types", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const options = data.map((vt: { name: string }) => ({ value: vt.name, label: vt.name }));
-        setVariantTypeOptions(options);
-      }
+      const data = await VariantTypesService.getVariantTypes(true);
+      const options = data.map((vt) => ({ value: vt.name, label: vt.name }));
+      setVariantTypeOptions(options);
     };
     loadVariantTypes();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,10 +170,10 @@ export function useProductForm(onSuccess: () => void) {
     setVariants((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const addRecipeItem = (variantIndex: number) => {
+  const addRecipeItem = (variantIndex: number, ingredientId = "") => {
     updateVariant(variantIndex, "recipes", [
       ...variants[variantIndex].recipes,
-      { ingredient_id: "", quantity: 0, apply_condition: "always" as const },
+      { ingredient_id: ingredientId, quantity: 0, apply_condition: "always" as const },
     ]);
   };
 

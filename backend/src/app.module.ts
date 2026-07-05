@@ -9,6 +9,9 @@ import { IngredientsModule } from './ingredients/ingredients.module';
 import { ProductsModule } from './products/products.module';
 import { StockModule } from './stock/stock.module';
 import { WarehouseModule } from './warehouse/warehouse.module';
+import { PromotionsModule } from './promotions/promotions.module';
+import { BranchesModule } from './branches/branches.module';
+import { VariantTypesModule } from './variant-types/variant-types.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { WarehouseModule } from './warehouse/warehouse.module';
     ProductsModule,
     StockModule,
     WarehouseModule,
+    PromotionsModule,
+    BranchesModule,
+    VariantTypesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -9,7 +9,7 @@ export const GET = apiHandler(async (request: NextRequest) => {
   let query = supabase
     .from("variant_types")
     .select("*")
-    .order("sort_order", { ascending: true });
+    .order("created_at", { ascending: true });
 
   if (onlyActive) query = query.eq("is_active", true);
 
@@ -20,13 +20,13 @@ export const GET = apiHandler(async (request: NextRequest) => {
 
 export const POST = apiHandler(async (request: NextRequest) => {
   const { client: supabase } = await createAuthClient(request);
-  const { name, sort_order } = await request.json();
+  const { name } = await request.json();
 
   if (!name?.trim()) return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 });
 
   const { data, error } = await supabase
     .from("variant_types")
-    .insert({ name: name.trim(), sort_order: sort_order ?? 0 })
+    .insert({ name: name.trim() })
     .select()
     .single();
 

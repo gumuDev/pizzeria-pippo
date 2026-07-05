@@ -26,12 +26,12 @@ export function useVariantTypes() {
   const openEdit = (record: VariantType) => { setEditing(record); setModalOpen(true); };
   const closeModal = () => { setModalOpen(false); setEditing(null); };
 
-  const handleSave = async (name: string, sort_order: number) => {
+  const handleSave = async (name: string) => {
     setSaving(true);
     const token = await getToken();
     const result = editing
-      ? await VariantTypesService.update(editing.id, name, sort_order, token)
-      : await VariantTypesService.create(name, sort_order, token);
+      ? await VariantTypesService.update(editing.id, name, token)
+      : await VariantTypesService.create(name, token);
     setSaving(false);
 
     if (result.ok) {

@@ -20,7 +20,6 @@ export function VariantTypesTable({ variantTypes, loading, onCreate, onEdit, onT
 
   const columns = [
     { title: "Nombre", dataIndex: "name", key: "name" },
-    { title: "Orden", dataIndex: "sort_order", key: "sort_order", width: 80 },
     {
       title: "Estado",
       dataIndex: "is_active",
@@ -78,7 +77,6 @@ export function VariantTypesTable({ variantTypes, loading, onCreate, onEdit, onT
                 <div>
                   <Text strong style={{ fontSize: 15 }}>{vt.name}</Text>
                   <div style={{ marginTop: 4, display: "flex", gap: 4 }}>
-                    <Tag style={{ margin: 0 }}>Orden: {vt.sort_order}</Tag>
                     {vt.is_active
                       ? <Tag color="green" style={{ margin: 0 }}>Activo</Tag>
                       : <Tag color="default" style={{ margin: 0 }}>Inactivo</Tag>}

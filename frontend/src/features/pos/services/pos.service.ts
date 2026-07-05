@@ -4,6 +4,9 @@ import { todayInBolivia } from "@/lib/timezone";
 import type { Identity, Product, DayOrder, OrderType } from "../types/pos.types";
 import type { Promotion, DiscountedItem, FlavorItem } from "@/lib/promotions";
 
+const USE_NEST_PROMOTIONS = process.env.NEXT_PUBLIC_USE_NEST_PROMOTIONS === "true";
+const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
+
 export const PosService = {
   async getToken(): Promise<string> {
     return _getToken();
@@ -39,9 +42,12 @@ export const PosService = {
   async getProductsAndPromotions(branchId: string, token: string): Promise<{ products: Product[]; promotions: Promotion[] }> {
     const today = todayInBolivia();
     const headers = { Authorization: `Bearer ${token}` };
+    const promoUrl = USE_NEST_PROMOTIONS
+      ? `${NEST_API_URL}/promotions?branchId=${branchId}&date=${today}`
+      : `/api/promotions?branchId=${branchId}&date=${today}`;
     const [productsRes, promoRes] = await Promise.all([
       fetch(`/api/products?branchId=${branchId}`, { headers }),
-      fetch(`/api/promotions?branchId=${branchId}&date=${today}`, { headers }),
+      fetch(promoUrl, { headers }),
     ]);
     const [productsData, promoData] = await Promise.all([productsRes.json(), promoRes.json()]);
     return {
