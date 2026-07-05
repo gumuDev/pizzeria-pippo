@@ -92,7 +92,8 @@ export const PosService = {
     idempotencyKey?: string
   ): Promise<{ ok: boolean; order_id?: string; daily_number?: number; error?: string }> {
     try {
-      const res = await fetch("/api/orders", {
+      const url = USE_NEST_POS ? `${NEST_API_URL}/orders` : "/api/orders";
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         signal,

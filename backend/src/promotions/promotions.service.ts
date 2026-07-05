@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { getActivePromotions } from '../orders/lib/promotions-engine';
 import type { ListPromotionsQueryDto } from './dto/list-promotions-query.dto';
 import type { CreatePromotionDto } from './dto/create-promotion.dto';
 import type { UpdatePromotionDto } from './dto/update-promotion.dto';
@@ -29,7 +30,7 @@ export class PromotionsService {
     let promotions = rows.map((row) => this.mapPromotion(row));
 
     if (query.branchId && query.date) {
-      promotions = this.getActivePromotions(promotions, query.branchId, query.date);
+      promotions = getActivePromotions(promotions, query.branchId, query.date);
     }
 
     return promotions;
@@ -118,25 +119,6 @@ export class PromotionsService {
 
   async remove(id: string): Promise<void> {
     await this.prisma.promotion.update({ where: { id }, data: { isActive: false } });
-  }
-
-  /**
-   * Réplica de getActivePromotions (frontend/src/lib/promotions.ts) — filtra
-   * promociones activas para una sucursal y fecha dadas, usadas por el POS.
-   */
-  private getActivePromotions(promotions: PromotionResult[], branchId: string, dateParam: string): PromotionResult[] {
-    const [year, month, day] = dateParam.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    const dayOfWeek = date.getDay();
-    const dateStr = dateParam;
-
-    return promotions.filter((p) => {
-      if (!p.active) return false;
-      if (p.branch_id && p.branch_id !== branchId) return false;
-      if (dateStr < p.start_date || dateStr > p.end_date) return false;
-      if (p.days_of_week.length > 0 && !p.days_of_week.includes(dayOfWeek)) return false;
-      return true;
-    });
   }
 
   private mapPromotion(row: {

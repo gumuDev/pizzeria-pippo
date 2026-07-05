@@ -131,6 +131,7 @@ model ProductVariant {
   branchPrices              BranchPrice[]
   recipes                   Recipe[]
   orderItems                OrderItem[]
+  orderItemFlavors          OrderItemFlavor[]
   promotionRules            PromotionRule[]
   branchStock               BranchProductStock[]
   stockMovements            ProductStockMovement[]
@@ -332,6 +333,7 @@ model Order {
   cancelledAt   DateTime? @map("cancelled_at")
   cancelledBy   String?   @map("cancelled_by") @db.Uuid
   cancelReason  String?   @map("cancel_reason")
+  idempotencyKey String?  @unique @map("idempotency_key")
 
   branch  Branch      @relation(fields: [branchId], references: [id])
   cashier Profile     @relation(fields: [cashierId], references: [id])
@@ -350,8 +352,21 @@ model OrderItem {
   qtyPhysical      Int     @default(1) @map("qty_physical")
   promoLabel       String? @map("promo_label")
 
-  order   Order          @relation(fields: [orderId], references: [id])
-  variant ProductVariant @relation(fields: [variantId], references: [id])
+  order   Order              @relation(fields: [orderId], references: [id])
+  variant ProductVariant     @relation(fields: [variantId], references: [id])
+  flavors OrderItemFlavor[]
 
   @@map("order_items")
+}
+
+model OrderItemFlavor {
+  id          String  @id @default(uuid()) @db.Uuid
+  orderItemId String  @map("order_item_id") @db.Uuid
+  variantId   String  @map("variant_id") @db.Uuid
+  proportion  Decimal @default(0.5)
+
+  orderItem OrderItem      @relation(fields: [orderItemId], references: [id])
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@map("order_item_flavors")
 }

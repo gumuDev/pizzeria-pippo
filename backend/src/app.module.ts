@@ -14,6 +14,8 @@ import { BranchesModule } from './branches/branches.module';
 import { VariantTypesModule } from './variant-types/variant-types.module';
 import { UsersModule } from './users/users.module';
 import { SettingsModule } from './settings/settings.module';
+import { OrdersModule } from './orders/orders.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { SettingsModule } from './settings/settings.module';
     VariantTypesModule,
     UsersModule,
     SettingsModule,
+    NotificationsModule,
+    OrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
