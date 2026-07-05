@@ -1,10 +1,12 @@
 import { supabase } from "@/lib/supabase";
 import { getToken as _getToken, getValidSession } from "@/lib/auth";
 import { todayInBolivia } from "@/lib/timezone";
+import { BranchesService } from "@/features/branches/services/branches.service";
 import type { Identity, Product, DayOrder, OrderType } from "../types/pos.types";
 import type { Promotion, DiscountedItem, FlavorItem } from "@/lib/promotions";
 
 const USE_NEST_PROMOTIONS = process.env.NEXT_PUBLIC_USE_NEST_PROMOTIONS === "true";
+const USE_NEST_POS = process.env.NEXT_PUBLIC_USE_NEST_POS === "true";
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
 
 export const PosService = {
@@ -13,8 +15,10 @@ export const PosService = {
   },
 
   async getBranches(): Promise<{ id: string; name: string }[]> {
-    const { data } = await supabase.from("branches").select("id, name").order("name");
-    return data ?? [];
+    const branches = await BranchesService.getBranches();
+    return branches
+      .map((b) => ({ id: b.id, name: b.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   },
 
   async logout(): Promise<void> {
@@ -45,8 +49,11 @@ export const PosService = {
     const promoUrl = USE_NEST_PROMOTIONS
       ? `${NEST_API_URL}/promotions?branchId=${branchId}&date=${today}`
       : `/api/promotions?branchId=${branchId}&date=${today}`;
+    const productsUrl = USE_NEST_POS
+      ? `${NEST_API_URL}/products/pos-catalog?branchId=${branchId}`
+      : `/api/products?branchId=${branchId}`;
     const [productsRes, promoRes] = await Promise.all([
-      fetch(`/api/products?branchId=${branchId}`, { headers }),
+      fetch(productsUrl, { headers }),
       fetch(promoUrl, { headers }),
     ]);
     const [productsData, promoData] = await Promise.all([productsRes.json(), promoRes.json()]);

@@ -6,6 +6,7 @@ import type { CreateProductDto } from './dto/create-product.dto';
 import type { UpdateProductDto } from './dto/update-product.dto';
 import type { ProductListResult } from './types/product-list-result.types';
 import type { ProductDetailResult } from './types/product-detail.types';
+import type { PosCatalogProduct, PosCatalogVariant } from './types/pos-catalog-result.types';
 
 @Injectable()
 export class ProductsService {
@@ -82,6 +83,74 @@ export class ProductsService {
         })),
       })),
     };
+  }
+
+  // Catálogo del POS: solo variantes con precio de sucursal para productos
+  // "made" (los de reventa no necesitan branch_price), + stock_quantity
+  // embebido para variantes de reventa. Réplica exacta de la ruta vieja
+  // /api/products?branchId= (rama isPOS), que es distinta del list() de arriba.
+  async getPosCatalog(branchId: string): Promise<PosCatalogProduct[]> {
+    const rows = await this.prisma.product.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+      include: {
+        variants: { include: { branchPrices: true, recipes: true } },
+      },
+    });
+
+    const mapped: PosCatalogProduct[] = rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      description: row.description,
+      image_url: row.imageUrl,
+      is_active: row.isActive,
+      product_type: row.productType,
+      product_variants: row.variants.map((v) => ({
+        id: v.id,
+        name: v.name,
+        base_price: v.basePrice.toNumber(),
+        is_active: v.isActive,
+        branch_prices: v.branchPrices.map((bp) => ({ branch_id: bp.branchId, price: bp.price.toNumber() })),
+        recipes: v.recipes.map((r) => ({
+          ingredient_id: r.ingredientId,
+          quantity: r.quantity.toNumber(),
+          apply_condition: r.applyCondition,
+        })),
+      })),
+    }));
+
+    const filtered = mapped
+      .map((p) => {
+        if (p.product_type === 'resale') return p;
+        return {
+          ...p,
+          product_variants: p.product_variants.filter((v) =>
+            v.branch_prices.some((bp) => bp.branch_id === branchId),
+          ),
+        };
+      })
+      .filter((p) => p.product_type === 'resale' || p.product_variants.length > 0);
+
+    const resaleVariantIds = filtered.flatMap((p) =>
+      p.product_type === 'resale' ? p.product_variants.map((v) => v.id) : [],
+    );
+
+    if (resaleVariantIds.length > 0) {
+      const stockRows = await this.prisma.branchProductStock.findMany({
+        where: { branchId, variantId: { in: resaleVariantIds } },
+      });
+      const stockMap = new Map(stockRows.map((r) => [r.variantId, r.quantity.toNumber()]));
+
+      for (const product of filtered) {
+        if (product.product_type !== 'resale') continue;
+        for (const variant of product.product_variants as PosCatalogVariant[]) {
+          variant.stock_quantity = stockMap.get(variant.id) ?? null;
+        }
+      }
+    }
+
+    return filtered;
   }
 
   async getVariantsWithDetails(productId: string): Promise<ProductVariant[]> {

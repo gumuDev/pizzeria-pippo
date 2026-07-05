@@ -7,6 +7,7 @@ import { ListProductsQueryDto } from './dto/list-products-query.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PatchProductDto } from './dto/patch-product.dto';
+import { PosCatalogQueryDto } from './dto/pos-catalog-query.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('products')
@@ -16,6 +17,12 @@ export class ProductsController {
   @Get()
   list(@Query() query: ListProductsQueryDto) {
     return this.productsService.list(query);
+  }
+
+  // Antes de ':id' a propósito: si no, ':id' intercepta esta ruta literal.
+  @Get('pos-catalog')
+  getPosCatalog(@Query() query: PosCatalogQueryDto) {
+    return this.productsService.getPosCatalog(query.branchId);
   }
 
   @Get(':id')

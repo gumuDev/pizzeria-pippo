@@ -4,17 +4,31 @@ import withBundleAnalyzer from "@next/bundle-analyzer";
 
 const withNextIntl = createNextIntlPlugin();
 
+const isDev = process.env.NODE_ENV !== "production";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    // Wildcard cubre cualquier proyecto Supabase (el ID varía por entorno)
-    // No usar hostname fijo — el project ID de .env no es accesible en build time
+    // Wildcard covers any Supabase project (the project ID varies per env)
+    // Don't use a fixed hostname — the project ID from .env isn't available at build time
     remotePatterns: [
       {
         protocol: "https",
         hostname: "*.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      // Local Supabase stack (docker-compose) serves storage over plain HTTP on
+      // localhost — dev-only, never allowed in production builds.
+      ...(isDev
+        ? [
+            {
+              protocol: "http",
+              hostname: "localhost",
+              port: "54321",
+              pathname: "/storage/v1/object/public/**",
+            },
+          ]
+        : []),
     ],
   },
 };

@@ -13,6 +13,7 @@ describe('ProductsService', () => {
     productVariant: { findMany: jest.Mock; create: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
     branchPrice: { createMany: jest.Mock; deleteMany: jest.Mock };
     recipe: { createMany: jest.Mock; deleteMany: jest.Mock };
+    branchProductStock: { findMany: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -21,6 +22,7 @@ describe('ProductsService', () => {
       productVariant: { findMany: jest.fn(), create: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
       branchPrice: { createMany: jest.fn(), deleteMany: jest.fn() },
       recipe: { createMany: jest.fn(), deleteMany: jest.fn() },
+      branchProductStock: { findMany: jest.fn() },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -259,6 +261,115 @@ describe('ProductsService', () => {
           recipes: [{ ingredient_id: 'i1', quantity: 1, apply_condition: 'always' }],
         },
       ]);
+    });
+  });
+
+  describe('getPosCatalog', () => {
+    it('filtra variantes "made" sin branch_price para esta sucursal, y descarta el producto si queda sin variantes', async () => {
+      prisma.product.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          name: 'Pizza',
+          category: 'pizza',
+          description: null,
+          imageUrl: null,
+          isActive: true,
+          productType: 'made',
+          variants: [
+            {
+              id: 'v1',
+              name: 'Chica',
+              basePrice: decimal(20),
+              isActive: true,
+              branchPrices: [{ branchId: 'b1', price: decimal(22) }],
+              recipes: [],
+            },
+            {
+              id: 'v2',
+              name: 'Grande',
+              basePrice: decimal(30),
+              isActive: true,
+              branchPrices: [{ branchId: 'other-branch', price: decimal(35) }],
+              recipes: [],
+            },
+          ],
+        },
+        {
+          id: 'p2',
+          name: 'Sin precio en b1',
+          category: 'pizza',
+          description: null,
+          imageUrl: null,
+          isActive: true,
+          productType: 'made',
+          variants: [
+            {
+              id: 'v3',
+              name: 'Chica',
+              basePrice: decimal(20),
+              isActive: true,
+              branchPrices: [{ branchId: 'other-branch', price: decimal(20) }],
+              recipes: [],
+            },
+          ],
+        },
+      ]);
+
+      const result = await service.getPosCatalog('b1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('p1');
+      expect(result[0].product_variants).toHaveLength(1);
+      expect(result[0].product_variants[0].id).toBe('v1');
+    });
+
+    it('a los productos de reventa no les exige branch_price, y les agrega stock_quantity', async () => {
+      prisma.product.findMany.mockResolvedValue([
+        {
+          id: 'p3',
+          name: 'Gaseosa',
+          category: 'bebida',
+          description: null,
+          imageUrl: null,
+          isActive: true,
+          productType: 'resale',
+          variants: [
+            { id: 'v4', name: 'Unidad', basePrice: decimal(10), isActive: true, branchPrices: [], recipes: [] },
+          ],
+        },
+      ]);
+      prisma.branchProductStock.findMany.mockResolvedValue([
+        { variantId: 'v4', quantity: decimal(15) },
+      ]);
+
+      const result = await service.getPosCatalog('b1');
+
+      expect(prisma.branchProductStock.findMany).toHaveBeenCalledWith({
+        where: { branchId: 'b1', variantId: { in: ['v4'] } },
+      });
+      expect(result[0].product_variants[0].stock_quantity).toBe(15);
+    });
+
+    it('stock_quantity queda null si no hay fila de stock para esa variante', async () => {
+      prisma.product.findMany.mockResolvedValue([
+        {
+          id: 'p4',
+          name: 'Agua',
+          category: 'bebida',
+          description: null,
+          imageUrl: null,
+          isActive: true,
+          productType: 'resale',
+          variants: [
+            { id: 'v5', name: 'Unidad', basePrice: decimal(5), isActive: true, branchPrices: [], recipes: [] },
+          ],
+        },
+      ]);
+      prisma.branchProductStock.findMany.mockResolvedValue([]);
+
+      const result = await service.getPosCatalog('b1');
+
+      expect(result[0].product_variants[0].stock_quantity).toBeNull();
     });
   });
 });
