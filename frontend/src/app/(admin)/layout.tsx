@@ -7,12 +7,11 @@ import {
   ThemedSider,
   useNotificationProvider,
 } from "@refinedev/antd";
-import { dataProvider, liveProvider } from "@refinedev/supabase";
 import routerProvider from "@refinedev/nextjs-router";
 import "@refinedev/antd/dist/reset.css";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
-import { supabase } from "@/lib/supabase";
 import { authProvider } from "@/lib/authProvider";
+import { refineUnusedDataProvider } from "@/lib/refineUnusedDataProvider";
 import Image from "next/image";
 import {
   DashboardOutlined,
@@ -66,8 +65,7 @@ export default function AdminLayout({
     <AntdRegistry>
       <RefineKbarProvider>
         <Refine
-          dataProvider={dataProvider(supabase)}
-          liveProvider={liveProvider(supabase)}
+          dataProvider={refineUnusedDataProvider}
           routerProvider={routerProvider}
           authProvider={authProvider}
           notificationProvider={useNotificationProvider}
