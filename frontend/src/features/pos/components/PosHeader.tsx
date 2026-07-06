@@ -6,7 +6,7 @@ import { Button, Tag, Typography } from "antd";
 import { LogoutOutlined, ShoppingCartOutlined, UnorderedListOutlined, BarChartOutlined, GiftOutlined } from "@ant-design/icons";
 import { formatTimeBolivia } from "@/lib/timezone";
 import { useIsMobile } from "@/lib/useIsMobile";
-import type { Identity } from "../types/pos.types";
+import type { Branch, Identity } from "../types/pos.types";
 
 const { Text } = Typography;
 
@@ -14,6 +14,7 @@ export type PosTab = "sale" | "promos" | "orders" | "summary";
 
 interface Props {
   identity: Identity;
+  branches: Branch[];
   activeTab: PosTab;
   pendingCount: number;
   promoCount: number;
@@ -22,7 +23,8 @@ interface Props {
   printerSlot?: React.ReactNode;
 }
 
-export function PosHeader({ identity, activeTab, pendingCount, promoCount, onTabChange, onLogout, printerSlot }: Props) {
+export function PosHeader({ identity, branches, activeTab, pendingCount, promoCount, onTabChange, onLogout, printerSlot }: Props) {
+  const branchName = branches.find((b) => b.id === identity.branch_id)?.name;
   const [currentTime, setCurrentTime] = useState("");
   const isMobile = useIsMobile();
 
@@ -105,7 +107,7 @@ export function PosHeader({ identity, activeTab, pendingCount, promoCount, onTab
             <Text strong style={{ fontSize: 16, color: "#ea580c" }}>Pizzería Pippo — POS</Text>
           </div>
           <Tag color="blue" style={{ margin: 0 }}>{identity.name}</Tag>
-          {identity.branch_id && <Tag color="green" style={{ margin: 0 }}>Sucursal</Tag>}
+          {identity.branch_id && <Tag color="green" style={{ margin: 0 }}>{branchName ?? "Sucursal"}</Tag>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Text style={{ fontFamily: "monospace", fontSize: 16, fontWeight: 600, color: "#374151" }}>{currentTime}</Text>

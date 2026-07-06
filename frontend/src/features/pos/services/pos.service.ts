@@ -137,7 +137,8 @@ export const PosService = {
 
   async markOrderReady(orderId: string): Promise<void> {
     const token = await PosService.getToken();
-    await fetch(`/api/orders/${orderId}/ready`, {
+    const url = USE_NEST_POS ? `${NEST_API_URL}/orders/${orderId}/ready` : `/api/orders/${orderId}/ready`;
+    await fetch(url, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });

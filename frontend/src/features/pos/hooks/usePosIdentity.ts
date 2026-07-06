@@ -18,11 +18,10 @@ export function usePosIdentity() {
       }
       setIdentity(result);
 
-      // Admin sin sucursal asignada → cargar lista de sucursales para elegir
-      if (result.role === "admin" && !result.branch_id) {
-        const data = await PosService.getBranches();
-        setBranches(data);
-      }
+      // Se carga siempre: además de armar el selector para admin sin sucursal
+      // fija, alimenta el nombre de sucursal mostrado en el header (PosHeader)
+      const data = await PosService.getBranches();
+      setBranches(data);
     };
     load();
   }, []);

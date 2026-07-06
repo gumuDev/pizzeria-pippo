@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PromotionsService } from '../promotions/promotions.service';
 import { LowStockAlertService } from '../notifications/low-stock-alert.service';
@@ -162,5 +162,19 @@ export class OrdersService {
           : null,
       })),
     }));
+  }
+
+  async markReady(orderId: string, user: CurrentUserPayload): Promise<void> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { branchId: true, cancelledAt: true },
+    });
+    if (!order) throw new NotFoundException('Orden no encontrada');
+    if (order.cancelledAt) throw new ConflictException('La orden está anulada');
+    if (user.role !== 'admin' && user.branch_id !== order.branchId) {
+      throw new ForbiddenException('No tenés permiso para esta orden');
+    }
+
+    await this.prisma.order.update({ where: { id: orderId }, data: { kitchenStatus: 'ready' } });
   }
 }

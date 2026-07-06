@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PromotionsService } from '../promotions/promotions.service';
@@ -13,7 +13,11 @@ function decimal(value: number) {
 
 describe('OrdersService', () => {
   let service: OrdersService;
-  let prisma: { productVariant: { findMany: jest.Mock }; $queryRaw: jest.Mock; order: { findMany: jest.Mock } };
+  let prisma: {
+    productVariant: { findMany: jest.Mock };
+    $queryRaw: jest.Mock;
+    order: { findMany: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
+  };
   let promotionsService: { list: jest.Mock };
   let lowStockAlertService: { checkAndNotify: jest.Mock };
 
@@ -61,7 +65,7 @@ describe('OrdersService', () => {
     prisma = {
       productVariant: { findMany: jest.fn() },
       $queryRaw: jest.fn(),
-      order: { findMany: jest.fn() },
+      order: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     };
     promotionsService = { list: jest.fn().mockResolvedValue([]) };
     lowStockAlertService = { checkAndNotify: jest.fn() };
@@ -209,6 +213,47 @@ describe('OrdersService', () => {
       await service.getDayOrders('b1');
 
       expect(prisma.order.findMany).toHaveBeenCalled();
+    });
+  });
+
+  describe('markReady', () => {
+    it('marca la orden como lista cuando el cajero es de la misma sucursal', async () => {
+      prisma.order.findUnique.mockResolvedValue({ branchId: 'b1', cancelledAt: null });
+
+      await service.markReady('o1', cashier);
+
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: 'o1' },
+        data: { kitchenStatus: 'ready' },
+      });
+    });
+
+    it('permite a un admin marcar lista una orden de cualquier sucursal', async () => {
+      prisma.order.findUnique.mockResolvedValue({ branchId: 'otra-sucursal', cancelledAt: null });
+      const admin: CurrentUserPayload = { ...cashier, role: 'admin' };
+
+      await expect(service.markReady('o1', admin)).resolves.toBeUndefined();
+    });
+
+    it('rechaza con 404 si la orden no existe', async () => {
+      prisma.order.findUnique.mockResolvedValue(null);
+
+      await expect(service.markReady('o404', cashier)).rejects.toThrow(NotFoundException);
+      expect(prisma.order.update).not.toHaveBeenCalled();
+    });
+
+    it('rechaza con 409 si la orden está anulada', async () => {
+      prisma.order.findUnique.mockResolvedValue({ branchId: 'b1', cancelledAt: new Date() });
+
+      await expect(service.markReady('o1', cashier)).rejects.toThrow(ConflictException);
+      expect(prisma.order.update).not.toHaveBeenCalled();
+    });
+
+    it('rechaza con 403 si el cajero no es de la sucursal de la orden', async () => {
+      prisma.order.findUnique.mockResolvedValue({ branchId: 'otra-sucursal', cancelledAt: null });
+
+      await expect(service.markReady('o1', cashier)).rejects.toThrow(ForbiddenException);
+      expect(prisma.order.update).not.toHaveBeenCalled();
     });
   });
 });

@@ -157,6 +157,7 @@ export default function PosPage() {
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#f5f5f5", overflow: "hidden" }}>
       <PosHeader
         identity={identity}
+        branches={branches}
         activeTab={activeTab}
         pendingCount={dayOrders.filter((o) => o.kitchen_status === "pending" && !o.cancelled_at).length}
         promoCount={activePromotions.length}

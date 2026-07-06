@@ -1,6 +1,8 @@
-import { Body, Controller, Get, Post, Query, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../auth/types/jwt.types';
 import { OrdersService } from './orders.service';
@@ -27,5 +29,12 @@ export class OrdersController {
   @Get()
   getDayOrders(@Query() query: GetDayOrdersQueryDto) {
     return this.ordersService.getDayOrders(query.branchId, query.date);
+  }
+
+  @Post(':id/ready')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'cajero', 'cocinero')
+  markReady(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.ordersService.markReady(id, user);
   }
 }
