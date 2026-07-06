@@ -4,6 +4,7 @@ import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PromotionsService } from '../promotions/promotions.service';
 import { LowStockAlertService } from '../notifications/low-stock-alert.service';
+import { OrdersGateway } from './realtime/orders.gateway';
 import type { CurrentUserPayload } from '../auth/types/jwt.types';
 import type { CreateOrderDto } from './dto/create-order.dto';
 import { todayInBolivia } from '../common/utils/timezone';
@@ -31,6 +32,7 @@ describe('OrdersService', () => {
   };
   let promotionsService: { list: jest.Mock };
   let lowStockAlertService: { checkAndNotify: jest.Mock };
+  let ordersGateway: { emitOrderCreated: jest.Mock; emitOrderUpdated: jest.Mock };
 
   const cashier: CurrentUserPayload = {
     id: 'u1',
@@ -88,6 +90,7 @@ describe('OrdersService', () => {
     };
     promotionsService = { list: jest.fn().mockResolvedValue([]) };
     lowStockAlertService = { checkAndNotify: jest.fn() };
+    ordersGateway = { emitOrderCreated: jest.fn(), emitOrderUpdated: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -95,6 +98,7 @@ describe('OrdersService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: PromotionsService, useValue: promotionsService },
         { provide: LowStockAlertService, useValue: lowStockAlertService },
+        { provide: OrdersGateway, useValue: ordersGateway },
       ],
     }).compile();
 
@@ -179,6 +183,24 @@ describe('OrdersService', () => {
     expect(lowStockAlertService.checkAndNotify).not.toHaveBeenCalled();
   });
 
+  it('emite order:created para que cocina/POS se enteren en vivo de la orden nueva', async () => {
+    prisma.productVariant.findMany.mockResolvedValue([madeVariant]);
+    prisma.$queryRaw.mockResolvedValue([{ create_order_atomic: { order_id: 'o1', daily_number: 3, duplicate: false } }]);
+
+    await service.create(baseDto({ total: 75 }), cashier);
+
+    expect(ordersGateway.emitOrderCreated).toHaveBeenCalledWith('b1', { id: 'o1', daily_number: 3 });
+  });
+
+  it('no emite order:created cuando la orden ya existía (hit de idempotencia)', async () => {
+    prisma.productVariant.findMany.mockResolvedValue([madeVariant]);
+    prisma.$queryRaw.mockResolvedValue([{ create_order_atomic: { order_id: 'o1', daily_number: 3, duplicate: true } }]);
+
+    await service.create(baseDto({ total: 75 }), cashier);
+
+    expect(ordersGateway.emitOrderCreated).not.toHaveBeenCalled();
+  });
+
   describe('getDayOrders', () => {
     it('mapea las órdenes del día con sus items, sin excluir canceladas', async () => {
       prisma.order.findMany.mockResolvedValue([
@@ -245,6 +267,11 @@ describe('OrdersService', () => {
         where: { id: 'o1' },
         data: { kitchenStatus: 'ready' },
       });
+      expect(ordersGateway.emitOrderUpdated).toHaveBeenCalledWith('b1', {
+        id: 'o1',
+        kitchen_status: 'ready',
+        cancelled_at: null,
+      });
     });
 
     it('permite a un admin marcar lista una orden de cualquier sucursal', async () => {
@@ -285,6 +312,7 @@ describe('OrdersService', () => {
         id: 'o1',
         branchId: 'b1',
         orderType: 'dine_in',
+        kitchenStatus: 'pending',
         createdAt: today,
         cancelledAt: null,
         items: [{ variantId: 'v-pizza', qtyPhysical: 1, flavors: [] }],
@@ -361,6 +389,10 @@ describe('OrdersService', () => {
       });
       expect(tx.productStockMovement.create).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ type: 'anulacion', variantId: 'v-coca' }) }),
+      );
+      expect(ordersGateway.emitOrderUpdated).toHaveBeenCalledWith(
+        'b1',
+        expect.objectContaining({ id: 'o1', kitchen_status: 'pending', cancelled_at: expect.any(String) }),
       );
     });
 

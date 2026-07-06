@@ -1,3 +1,4 @@
+import { io, type Socket } from "socket.io-client";
 import { supabase } from "@/lib/supabase";
 import { getToken as _getToken, getValidSession } from "@/lib/auth";
 import { todayInBolivia } from "@/lib/timezone";
@@ -7,7 +8,12 @@ import type { Promotion, DiscountedItem, FlavorItem } from "@/lib/promotions";
 
 const USE_NEST_PROMOTIONS = process.env.NEXT_PUBLIC_USE_NEST_PROMOTIONS === "true";
 const USE_NEST_POS = process.env.NEXT_PUBLIC_USE_NEST_POS === "true";
+const USE_NEST_REALTIME = process.env.NEXT_PUBLIC_USE_NEST_REALTIME === "true";
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
+
+type KitchenStatusSubscription =
+  | { kind: "supabase"; channel: ReturnType<typeof supabase.channel> }
+  | { kind: "nest"; socket: Socket };
 
 export const PosService = {
   async getToken(): Promise<string> {
@@ -144,8 +150,23 @@ export const PosService = {
     });
   },
 
-  subscribeToKitchenStatus(branchId: string, onUpdate: (payload: { new: { id: string; kitchen_status: string } }) => void) {
-    return supabase
+  subscribeToKitchenStatus(
+    branchId: string,
+    onUpdate: (payload: { new: { id: string; kitchen_status: string } }) => void
+  ): KitchenStatusSubscription {
+    if (USE_NEST_REALTIME) {
+      const socket: Socket = io(NEST_API_URL, {
+        auth: (cb) => { PosService.getToken().then((token) => cb({ token })); },
+        query: { branchId },
+        transports: ["websocket"],
+      });
+      socket.on("order:updated", (payload: { id: string; kitchen_status: string }) => {
+        onUpdate({ new: payload });
+      });
+      return { kind: "nest", socket };
+    }
+
+    const channel = supabase
       .channel("pos-kitchen-status")
       .on("postgres_changes", {
         event: "UPDATE",
@@ -154,10 +175,15 @@ export const PosService = {
         filter: `branch_id=eq.${branchId}`,
       }, onUpdate)
       .subscribe();
+    return { kind: "supabase", channel };
   },
 
-  unsubscribe(channel: ReturnType<typeof supabase.channel>) {
-    supabase.removeChannel(channel);
+  unsubscribe(subscription: KitchenStatusSubscription) {
+    if (subscription.kind === "nest") {
+      subscription.socket.disconnect();
+    } else {
+      supabase.removeChannel(subscription.channel);
+    }
   },
 
   async cancelOrder(orderId: string, reason: string, token: string): Promise<{ ok: boolean; error?: string }> {

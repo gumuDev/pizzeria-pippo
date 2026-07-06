@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PromotionsService } from '../promotions/promotions.service';
 import { LowStockAlertService } from '../notifications/low-stock-alert.service';
+import { OrdersGateway } from './realtime/orders.gateway';
 import { applyPromotions, getActivePromotions, getCartTotal } from './lib/promotions-engine';
 import { computeStockDeductions } from './lib/order-stock';
 import { dateRangeFrom, dateRangeTo, todayInBolivia } from '../common/utils/timezone';
@@ -28,6 +29,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly promotionsService: PromotionsService,
     private readonly lowStockAlertService: LowStockAlertService,
+    private readonly ordersGateway: OrdersGateway,
   ) {}
 
   async create(dto: CreateOrderDto, user: CurrentUserPayload): Promise<CreateOrderResult> {
@@ -135,6 +137,12 @@ export class OrdersService {
       );
     }
 
+    // 8. Live update for kitchen/POS — skip on an idempotency-key hit, the
+    // order already existed and was already broadcast the first time.
+    if (!result.duplicate) {
+      this.ordersGateway.emitOrderCreated(dto.branch_id, { id: result.order_id, daily_number: result.daily_number });
+    }
+
     return result;
   }
 
@@ -182,6 +190,7 @@ export class OrdersService {
     }
 
     await this.prisma.order.update({ where: { id: orderId }, data: { kitchenStatus: 'ready' } });
+    this.ordersGateway.emitOrderUpdated(order.branchId, { id: orderId, kitchen_status: 'ready', cancelled_at: null });
   }
 
   async cancelOrder(orderId: string, dto: CancelOrderDto, user: CurrentUserPayload): Promise<void> {
@@ -190,7 +199,13 @@ export class OrdersService {
     this.assertUserCanCancelOrder(order, user);
 
     const deductions = await this.computeReversalDeductions(order);
-    await this.revertStockAndMarkCancelled(order, reason, user, deductions);
+    const cancelledAt = await this.revertStockAndMarkCancelled(order, reason, user, deductions);
+
+    this.ordersGateway.emitOrderUpdated(order.branchId, {
+      id: order.id,
+      kitchen_status: order.kitchenStatus,
+      cancelled_at: cancelledAt.toISOString(),
+    });
   }
 
   private parseCancelReason(rawReason: string): string {
@@ -260,11 +275,12 @@ export class OrdersService {
     reason: string,
     user: CurrentUserPayload,
     deductions: ReturnType<typeof computeStockDeductions>,
-  ): Promise<void> {
+  ): Promise<Date> {
+    const cancelledAt = new Date();
     await this.prisma.$transaction(async (tx) => {
       const updated = await tx.order.updateMany({
         where: { id: order.id, cancelledAt: null },
-        data: { cancelledAt: new Date(), cancelledBy: user.id, cancelReason: reason },
+        data: { cancelledAt, cancelledBy: user.id, cancelReason: reason },
       });
       // Someone else cancelled it in the meantime (race) — abort, nothing to revert twice
       if (updated.count === 0) throw new ConflictException('La orden ya fue anulada');
@@ -274,6 +290,7 @@ export class OrdersService {
       // ingredients, silently leaving resale stock short after a cancellation.
       await this.revertResaleStock(tx, order, deductions.resale_deductions, reason, user.id);
     });
+    return cancelledAt;
   }
 
   private async revertIngredientStock(

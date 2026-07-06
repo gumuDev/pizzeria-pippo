@@ -1,9 +1,17 @@
+import { io, type Socket } from "socket.io-client";
 import { supabase } from "@/lib/supabase";
 import { getToken } from "@/lib/auth";
 import type { KitchenOrder } from "../types/kitchen.types";
 
 const USE_NEST = process.env.NEXT_PUBLIC_USE_NEST_SETTINGS === "true";
+const USE_NEST_REALTIME = process.env.NEXT_PUBLIC_USE_NEST_REALTIME === "true";
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
+
+type OrderUpdatePayload = { new: { id: string; kitchen_status: string; cancelled_at: string | null } };
+
+type OrdersSubscription =
+  | { kind: "supabase"; channel: ReturnType<typeof supabase.channel> }
+  | { kind: "nest"; socket: Socket };
 
 export const KitchenService = {
   // Antes de NEXT_PUBLIC_USE_NEST_SETTINGS, esto leía app_settings directo con
@@ -64,15 +72,41 @@ export const KitchenService = {
   },
 
   async markOrderReady(orderId: string): Promise<void> {
+    // Must go through the Nest endpoint when USE_NEST_REALTIME is on — that's
+    // the only place that emits order:updated to the Gateway; writing to
+    // Supabase directly would silently skip notifying the POS.
+    if (USE_NEST_REALTIME) {
+      const token = await getToken();
+      await fetch(`${NEST_API_URL}/orders/${orderId}/ready`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return;
+    }
+
     await supabase.from("orders").update({ kitchen_status: "ready" }).eq("id", orderId);
   },
 
   subscribeToOrders(
     branchId: string,
     onInsert: () => void,
-    onUpdate: (payload: { new: { id: string; kitchen_status: string; cancelled_at: string | null } }) => void
-  ) {
-    return supabase
+    onUpdate: (payload: OrderUpdatePayload) => void
+  ): OrdersSubscription {
+    if (USE_NEST_REALTIME) {
+      const socket: Socket = io(NEST_API_URL, {
+        auth: (cb) => { getToken().then((token) => cb({ token })); },
+        query: { branchId },
+        transports: ["websocket"],
+      });
+      socket.on("order:created", onInsert);
+      socket.on("order:updated", (payload: { id: string; kitchen_status: string; cancelled_at: string | null }) => {
+        onUpdate({ new: payload });
+      });
+
+      return { kind: "nest", socket };
+    }
+
+    const channel = supabase
       .channel("kitchen-orders")
       .on(
         "postgres_changes",
@@ -85,9 +119,15 @@ export const KitchenService = {
         onUpdate
       )
       .subscribe();
+
+    return { kind: "supabase", channel };
   },
 
-  unsubscribe(channel: ReturnType<typeof supabase.channel>) {
-    supabase.removeChannel(channel);
+  unsubscribe(subscription: OrdersSubscription) {
+    if (subscription.kind === "nest") {
+      subscription.socket.disconnect();
+    } else {
+      supabase.removeChannel(subscription.channel);
+    }
   },
 };
