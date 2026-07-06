@@ -6,16 +6,27 @@ import { PromotionsService } from '../promotions/promotions.service';
 import { LowStockAlertService } from '../notifications/low-stock-alert.service';
 import type { CurrentUserPayload } from '../auth/types/jwt.types';
 import type { CreateOrderDto } from './dto/create-order.dto';
+import { todayInBolivia } from '../common/utils/timezone';
 
 function decimal(value: number) {
   return { toNumber: () => value };
 }
 
+interface TxMock {
+  order: { updateMany: jest.Mock };
+  branchStock: { updateMany: jest.Mock };
+  stockMovement: { create: jest.Mock };
+  branchProductStock: { updateMany: jest.Mock };
+  productStockMovement: { create: jest.Mock };
+}
+
 describe('OrdersService', () => {
   let service: OrdersService;
+  let tx: TxMock;
   let prisma: {
     productVariant: { findMany: jest.Mock };
     $queryRaw: jest.Mock;
+    $transaction: jest.Mock;
     order: { findMany: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
   };
   let promotionsService: { list: jest.Mock };
@@ -62,9 +73,17 @@ describe('OrdersService', () => {
   }
 
   beforeEach(async () => {
+    tx = {
+      order: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      branchStock: { updateMany: jest.fn() },
+      stockMovement: { create: jest.fn() },
+      branchProductStock: { updateMany: jest.fn() },
+      productStockMovement: { create: jest.fn() },
+    };
     prisma = {
       productVariant: { findMany: jest.fn() },
       $queryRaw: jest.fn(),
+      $transaction: jest.fn(async (cb: (tx: TxMock) => unknown) => cb(tx)),
       order: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     };
     promotionsService = { list: jest.fn().mockResolvedValue([]) };
@@ -254,6 +273,104 @@ describe('OrdersService', () => {
 
       await expect(service.markReady('o1', cashier)).rejects.toThrow(ForbiddenException);
       expect(prisma.order.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cancel', () => {
+    // Noon in Bolivia time, safely inside "today" regardless of when the test suite runs
+    const today = new Date(`${todayInBolivia()}T12:00:00-04:00`);
+
+    function orderWithItems(overrides: Partial<Record<string, unknown>> = {}) {
+      return {
+        id: 'o1',
+        branchId: 'b1',
+        orderType: 'dine_in',
+        createdAt: today,
+        cancelledAt: null,
+        items: [{ variantId: 'v-pizza', qtyPhysical: 1, flavors: [] }],
+        ...overrides,
+      };
+    }
+
+    it('rechaza con 400 si falta el motivo', async () => {
+      await expect(service.cancelOrder('o1', { reason: '  ' }, cashier)).rejects.toThrow(BadRequestException);
+      expect(prisma.order.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('rechaza con 404 si la orden no existe', async () => {
+      prisma.order.findUnique.mockResolvedValue(null);
+
+      await expect(service.cancelOrder('o404', { reason: 'motivo' }, cashier)).rejects.toThrow(NotFoundException);
+    });
+
+    it('rechaza con 409 si la orden ya está anulada', async () => {
+      prisma.order.findUnique.mockResolvedValue(orderWithItems({ cancelledAt: new Date() }));
+
+      await expect(service.cancelOrder('o1', { reason: 'motivo' }, cashier)).rejects.toThrow(ConflictException);
+    });
+
+    it('rechaza con 403 si el cajero no es de la sucursal de la orden', async () => {
+      prisma.order.findUnique.mockResolvedValue(orderWithItems({ branchId: 'otra-sucursal' }));
+
+      await expect(service.cancelOrder('o1', { reason: 'motivo' }, cashier)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rechaza con 403 si el cajero intenta anular una orden de otro día', async () => {
+      prisma.order.findUnique.mockResolvedValue(orderWithItems({ createdAt: new Date('2020-01-01T12:00:00Z') }));
+
+      await expect(service.cancelOrder('o1', { reason: 'motivo' }, cashier)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('un admin puede anular una orden de otra sucursal y de otro día', async () => {
+      prisma.order.findUnique.mockResolvedValue(
+        orderWithItems({ branchId: 'otra-sucursal', createdAt: new Date('2020-01-01T12:00:00Z') }),
+      );
+      prisma.productVariant.findMany.mockResolvedValue([madeVariant]);
+      const admin: CurrentUserPayload = { ...cashier, role: 'admin' };
+
+      await expect(service.cancelOrder('o1', { reason: 'motivo' }, admin)).resolves.toBeUndefined();
+    });
+
+    it('revierte stock de insumos y de reventa, y registra los movimientos de anulación', async () => {
+      prisma.order.findUnique.mockResolvedValue(
+        orderWithItems({
+          items: [
+            { variantId: 'v-pizza', qtyPhysical: 1, flavors: [] },
+            { variantId: 'v-coca', qtyPhysical: 2, flavors: [] },
+          ],
+        }),
+      );
+      prisma.productVariant.findMany.mockResolvedValue([madeVariant, resaleVariant]);
+
+      await service.cancelOrder('o1', { reason: 'cliente se arrepintió' }, cashier);
+
+      expect(tx.order.updateMany).toHaveBeenCalledWith({
+        where: { id: 'o1', cancelledAt: null },
+        data: expect.objectContaining({ cancelledBy: 'u1', cancelReason: 'cliente se arrepintió' }),
+      });
+      expect(tx.branchStock.updateMany).toHaveBeenCalledWith({
+        where: { branchId: 'b1', ingredientId: 'i-masa' },
+        data: { quantity: { increment: 1 } },
+      });
+      expect(tx.stockMovement.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ type: 'anulacion', ingredientId: 'i-masa' }) }),
+      );
+      expect(tx.branchProductStock.updateMany).toHaveBeenCalledWith({
+        where: { branchId: 'b1', variantId: 'v-coca' },
+        data: { quantity: { increment: 2 } },
+      });
+      expect(tx.productStockMovement.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ type: 'anulacion', variantId: 'v-coca' }) }),
+      );
+    });
+
+    it('rechaza con 409 si la orden fue anulada por otro proceso justo antes (carrera)', async () => {
+      prisma.order.findUnique.mockResolvedValue(orderWithItems());
+      prisma.productVariant.findMany.mockResolvedValue([madeVariant]);
+      tx.order.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.cancelOrder('o1', { reason: 'motivo' }, cashier)).rejects.toThrow(ConflictException);
+      expect(tx.branchStock.updateMany).not.toHaveBeenCalled();
     });
   });
 });

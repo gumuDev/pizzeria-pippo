@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PromotionsService } from '../promotions/promotions.service';
 import { LowStockAlertService } from '../notifications/low-stock-alert.service';
@@ -8,13 +9,18 @@ import { dateRangeFrom, dateRangeTo, todayInBolivia } from '../common/utils/time
 import type { CartItem, Promotion } from './lib/promotions-engine';
 import type { RecipeRow, StockItem } from './lib/order-stock';
 import type { CreateOrderDto } from './dto/create-order.dto';
+import type { CancelOrderDto } from './dto/cancel-order.dto';
 import type { CurrentUserPayload } from '../auth/types/jwt.types';
 import type { CreateOrderResult } from './types/create-order-result.types';
 import type { DayOrderResult } from './types/day-order-result.types';
+import type { OrderType } from './lib/order-stock';
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
+
+type CancellableOrder = Prisma.OrderGetPayload<{ include: { items: { include: { flavors: true } } } }>;
+type PrismaTransaction = Prisma.TransactionClient;
 
 @Injectable()
 export class OrdersService {
@@ -176,5 +182,147 @@ export class OrdersService {
     }
 
     await this.prisma.order.update({ where: { id: orderId }, data: { kitchenStatus: 'ready' } });
+  }
+
+  async cancelOrder(orderId: string, dto: CancelOrderDto, user: CurrentUserPayload): Promise<void> {
+    const reason = this.parseCancelReason(dto.reason);
+    const order = await this.findCancellableOrderOrThrow(orderId);
+    this.assertUserCanCancelOrder(order, user);
+
+    const deductions = await this.computeReversalDeductions(order);
+    await this.revertStockAndMarkCancelled(order, reason, user, deductions);
+  }
+
+  private parseCancelReason(rawReason: string): string {
+    const reason = rawReason?.trim() ?? '';
+    if (!reason) throw new BadRequestException('El motivo de anulación es requerido');
+    return reason;
+  }
+
+  private async findCancellableOrderOrThrow(orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { flavors: true } } },
+    });
+    if (!order) throw new NotFoundException('Orden no encontrada');
+    if (order.cancelledAt) throw new ConflictException('La orden ya fue anulada');
+    return order;
+  }
+
+  private assertUserCanCancelOrder(order: CancellableOrder, user: CurrentUserPayload): void {
+    if (user.role !== 'cajero') return;
+
+    if (user.branch_id !== order.branchId) {
+      throw new ForbiddenException('No tenés permiso para anular esta orden');
+    }
+    if (order.createdAt.toISOString().split('T')[0] !== todayInBolivia()) {
+      throw new ForbiddenException('Solo podés anular órdenes del día actual');
+    }
+  }
+
+  // Reconstructs the same StockItem[] shape used at sale time, to reuse
+  // computeStockDeductions (pure, unit-tested) with the recipes as they are
+  // configured today. Includes flavor variants (mixed pizzas), which have
+  // their own recipes separate from the base variant.
+  private async computeReversalDeductions(order: CancellableOrder) {
+    const flavorVariantIds = order.items.flatMap((i) => i.flavors.map((f) => f.variantId));
+    const variantIds = Array.from(new Set(order.items.map((i) => i.variantId).concat(flavorVariantIds)));
+    const variants = await this.prisma.productVariant.findMany({
+      where: { id: { in: variantIds } },
+      include: { recipes: true, product: true },
+    });
+    const variantById = new Map(variants.map((v) => [v.id, v]));
+
+    const recipesByVariant: Record<string, RecipeRow[]> = {};
+    for (const v of variants) {
+      recipesByVariant[v.id] = v.recipes.map((r) => ({
+        ingredient_id: r.ingredientId,
+        quantity: r.quantity.toNumber(),
+        apply_condition: r.applyCondition,
+      }));
+    }
+
+    const stockItems: StockItem[] = order.items.map((item) => ({
+      variant_id: item.variantId,
+      qty_physical: item.qtyPhysical,
+      product_type: variantById.get(item.variantId)?.product.productType ?? 'made',
+      flavors: item.flavors.map((f) => ({ variant_id: f.variantId, proportion: f.proportion.toNumber() })),
+    }));
+
+    return computeStockDeductions(stockItems, recipesByVariant, order.orderType as OrderType);
+  }
+
+  // Everything below runs in one DB transaction: reverting stock, logging
+  // the audit trail movements and marking the order cancelled either all
+  // happens or none does (fixes the old non-atomic cancellation bug).
+  private async revertStockAndMarkCancelled(
+    order: CancellableOrder,
+    reason: string,
+    user: CurrentUserPayload,
+    deductions: ReturnType<typeof computeStockDeductions>,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.order.updateMany({
+        where: { id: order.id, cancelledAt: null },
+        data: { cancelledAt: new Date(), cancelledBy: user.id, cancelReason: reason },
+      });
+      // Someone else cancelled it in the meantime (race) — abort, nothing to revert twice
+      if (updated.count === 0) throw new ConflictException('La orden ya fue anulada');
+
+      await this.revertIngredientStock(tx, order, deductions.ingredient_deductions, reason, user.id);
+      // Reverts resale product stock too — the old Next.js route only reverted
+      // ingredients, silently leaving resale stock short after a cancellation.
+      await this.revertResaleStock(tx, order, deductions.resale_deductions, reason, user.id);
+    });
+  }
+
+  private async revertIngredientStock(
+    tx: PrismaTransaction,
+    order: CancellableOrder,
+    deductions: { ingredient_id: string; quantity: number }[],
+    reason: string,
+    userId: string,
+  ): Promise<void> {
+    for (const d of deductions) {
+      await tx.branchStock.updateMany({
+        where: { branchId: order.branchId, ingredientId: d.ingredient_id },
+        data: { quantity: { increment: d.quantity } },
+      });
+      await tx.stockMovement.create({
+        data: {
+          branchId: order.branchId,
+          ingredientId: d.ingredient_id,
+          quantity: d.quantity,
+          type: 'anulacion',
+          notes: `Anulación orden ${order.id}: ${reason}`,
+          createdBy: userId,
+        },
+      });
+    }
+  }
+
+  private async revertResaleStock(
+    tx: PrismaTransaction,
+    order: CancellableOrder,
+    deductions: { variant_id: string; quantity: number }[],
+    reason: string,
+    userId: string,
+  ): Promise<void> {
+    for (const d of deductions) {
+      await tx.branchProductStock.updateMany({
+        where: { branchId: order.branchId, variantId: d.variant_id },
+        data: { quantity: { increment: d.quantity } },
+      });
+      await tx.productStockMovement.create({
+        data: {
+          branchId: order.branchId,
+          variantId: d.variant_id,
+          quantity: d.quantity,
+          type: 'anulacion',
+          notes: `Anulación orden ${order.id}: ${reason}`,
+          createdBy: userId,
+        },
+      });
+    }
   }
 }

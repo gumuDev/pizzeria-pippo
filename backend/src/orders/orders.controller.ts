@@ -8,6 +8,7 @@ import type { CurrentUserPayload } from '../auth/types/jwt.types';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { GetDayOrdersQueryDto } from './dto/get-day-orders-query.dto';
+import { CancelOrderDto } from './dto/cancel-order.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('orders')
@@ -36,5 +37,14 @@ export class OrdersController {
   @Roles('admin', 'cajero', 'cocinero')
   markReady(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: CurrentUserPayload) {
     return this.ordersService.markReady(id, user);
+  }
+
+  @Post(':id/cancel')
+  cancelOrder(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CancelOrderDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.ordersService.cancelOrder(id, dto, user);
   }
 }

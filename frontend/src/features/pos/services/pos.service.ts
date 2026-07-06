@@ -161,7 +161,8 @@ export const PosService = {
   },
 
   async cancelOrder(orderId: string, reason: string, token: string): Promise<{ ok: boolean; error?: string }> {
-    const res = await fetch(`/api/orders/${orderId}/cancel`, {
+    const url = USE_NEST_POS ? `${NEST_API_URL}/orders/${orderId}/cancel` : `/api/orders/${orderId}/cancel`;
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ reason }),
