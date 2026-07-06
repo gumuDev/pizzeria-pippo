@@ -8,6 +8,7 @@ import type { CurrentUserPayload } from '../auth/types/jwt.types';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { GetDayOrdersQueryDto } from './dto/get-day-orders-query.dto';
+import { GetKitchenOrdersQueryDto } from './dto/get-kitchen-orders-query.dto';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 
 @UseGuards(JwtAuthGuard)
@@ -30,6 +31,11 @@ export class OrdersController {
   @Get()
   getDayOrders(@Query() query: GetDayOrdersQueryDto) {
     return this.ordersService.getDayOrders(query.branchId, query.date);
+  }
+
+  @Get('kitchen')
+  getPendingKitchenOrders(@Query() query: GetKitchenOrdersQueryDto) {
+    return this.ordersService.getPendingKitchenOrders(query.branchId);
   }
 
   @Post(':id/ready')

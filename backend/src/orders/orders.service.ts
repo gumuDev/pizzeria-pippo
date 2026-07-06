@@ -14,6 +14,7 @@ import type { CancelOrderDto } from './dto/cancel-order.dto';
 import type { CurrentUserPayload } from '../auth/types/jwt.types';
 import type { CreateOrderResult } from './types/create-order-result.types';
 import type { DayOrderResult } from './types/day-order-result.types';
+import type { KitchenOrderResult } from './types/kitchen-order-result.types';
 import type { OrderType } from './lib/order-stock';
 
 function round2(n: number): number {
@@ -174,6 +175,49 @@ export class OrdersService {
         product_variants: item.variant
           ? { name: item.variant.name, products: item.variant.product ? { name: item.variant.product.name } : null }
           : null,
+      })),
+    }));
+  }
+
+  async getPendingKitchenOrders(branchId: string): Promise<KitchenOrderResult[]> {
+    const orders = await this.prisma.order.findMany({
+      where: { branchId, kitchenStatus: 'pending', cancelledAt: null },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        items: {
+          include: {
+            variant: { include: { product: true } },
+            flavors: { include: { variant: { include: { product: true } } } },
+          },
+        },
+      },
+    });
+
+    return orders.map((order) => ({
+      id: order.id,
+      daily_number: order.dailyNumber,
+      created_at: order.createdAt.toISOString(),
+      kitchen_status: order.kitchenStatus,
+      order_type: order.orderType,
+      order_items: order.items.map((item) => ({
+        id: item.id,
+        qty: item.qty,
+        qty_physical: item.qtyPhysical,
+        product_variants: item.variant
+          ? {
+              name: item.variant.name,
+              products: item.variant.product
+                ? { name: item.variant.product.name, description: item.variant.product.description }
+                : null,
+            }
+          : null,
+        order_item_flavors: item.flavors.map((flavor) => ({
+          variant_id: flavor.variantId,
+          proportion: flavor.proportion.toNumber(),
+          product_variants: flavor.variant
+            ? { products: flavor.variant.product ? { name: flavor.variant.product.name } : null }
+            : null,
+        })),
       })),
     }));
   }

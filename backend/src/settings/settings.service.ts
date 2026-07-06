@@ -79,6 +79,28 @@ export class SettingsService {
     return parseInt(row?.value ?? '10', 10);
   }
 
+  // Store genérico de key-value para configuración que no encaja en el shape
+  // fijo de SettingsResult (ej. la config del bot de IA de Telegram: proveedor,
+  // modelo, límites por plan — un conjunto de keys distinto y más grande).
+  async getRawSettings(user: CurrentUserPayload, keys: string[]): Promise<Record<string, string>> {
+    const businessId = this.resolveBusinessId(user);
+    const rows = await this.prisma.appSetting.findMany({ where: { businessId, key: { in: keys } } });
+    return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  }
+
+  async saveRawSettings(user: CurrentUserPayload, updates: { key: string; value: string }[]): Promise<void> {
+    const businessId = this.resolveBusinessId(user);
+    await Promise.all(
+      updates.map(({ key, value }) =>
+        this.prisma.appSetting.upsert({
+          where: { businessId_key: { businessId, key } },
+          create: { businessId, key, value },
+          update: { value, updatedAt: new Date() },
+        }),
+      ),
+    );
+  }
+
   async testTelegramConnection(dto: TestTelegramDto): Promise<{ ok: boolean; message?: string; error?: string }> {
     try {
       const res = await fetch(`https://api.telegram.org/bot${dto.telegram_bot_token}/sendMessage`, {

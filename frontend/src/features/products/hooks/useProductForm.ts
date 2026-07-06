@@ -129,10 +129,9 @@ export function useProductForm(onSuccess: () => void) {
   const handleSave = async (editing: Product | null) => {
     setSaving(true);
     const payload = ProductsService.buildPayload(step1Data, imageUrl, variants);
-    const token = await getToken();
     const result = editing
-      ? await ProductsService.updateProduct(editing.id, payload, token)
-      : await ProductsService.createProduct(payload, token);
+      ? await ProductsService.updateProduct(editing.id, payload)
+      : await ProductsService.createProduct(payload);
     setSaving(false);
     if (result.ok) {
       // Invalida cualquier página/filtro cacheado de la lista de productos

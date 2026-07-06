@@ -5,6 +5,8 @@ import useSWR from "swr";
 import { message } from "antd";
 import { getToken } from "@/lib/auth";
 
+const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
+
 export interface BranchPriceRow {
   id: string;
   branch_id: string;
@@ -34,7 +36,7 @@ export function useProductBranchPrices(productId: string) {
   const [saving, setSaving] = useState(false);
 
   const { data, isLoading, mutate } = useSWR(
-    productId ? `/api/products/${productId}/branch-prices` : null,
+    productId ? `${NEST_API_URL}/products/${productId}/branch-prices` : null,
     fetcher
   );
 
@@ -45,7 +47,7 @@ export function useProductBranchPrices(productId: string) {
     setSaving(true);
     const token = await getToken();
 
-    const res = await fetch(`/api/products/${productId}/branch-prices`, {
+    const res = await fetch(`${NEST_API_URL}/products/${productId}/branch-prices`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ variant_id: variantId, branch_id: branchId, price }),

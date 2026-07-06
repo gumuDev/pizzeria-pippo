@@ -12,6 +12,7 @@ describe('SettingsService', () => {
 
   const admin: CurrentUserPayload = {
     id: 'u1',
+    email: 'admin@pippo.local',
     role: 'admin',
     branch_id: null,
     full_name: 'Admin',
@@ -19,6 +20,7 @@ describe('SettingsService', () => {
   };
   const adminSinNegocio: CurrentUserPayload = {
     id: 'u2',
+    email: 'sinnegocio@pippo.local',
     role: 'admin',
     branch_id: null,
     full_name: 'Sin negocio',
@@ -109,10 +111,44 @@ describe('SettingsService', () => {
     });
   });
 
+  describe('getRawSettings', () => {
+    it('devuelve un mapa key -> value solo con las keys pedidas', async () => {
+      prisma.appSetting.findMany.mockResolvedValue([
+        { key: 'ai_provider', value: 'anthropic' },
+        { key: 'telegram_ai_model', value: 'claude-haiku-4-5-20251001' },
+      ]);
+
+      const result = await service.getRawSettings(admin, ['ai_provider', 'telegram_ai_model']);
+
+      expect(prisma.appSetting.findMany).toHaveBeenCalledWith({
+        where: { businessId: 'biz1', key: { in: ['ai_provider', 'telegram_ai_model'] } },
+      });
+      expect(result).toEqual({ ai_provider: 'anthropic', telegram_ai_model: 'claude-haiku-4-5-20251001' });
+    });
+  });
+
+  describe('saveRawSettings', () => {
+    it('hace upsert de cada entrada bajo el business_id del usuario', async () => {
+      await service.saveRawSettings(admin, [
+        { key: 'ai_provider', value: 'anthropic' },
+        { key: 'telegram_ai_model', value: 'claude-haiku-4-5-20251001' },
+      ]);
+
+      expect(prisma.appSetting.upsert).toHaveBeenCalledTimes(2);
+      expect(prisma.appSetting.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { businessId_key: { businessId: 'biz1', key: 'ai_provider' } },
+          create: { businessId: 'biz1', key: 'ai_provider', value: 'anthropic' },
+        }),
+      );
+    });
+  });
+
   describe('getKitchenLateThresholdMinutes', () => {
     it('cualquier usuario autenticado con business_id puede leerlo (fix del bug de RLS)', async () => {
       const cocinero: CurrentUserPayload = {
         id: 'u3',
+        email: 'cocinero@pippo.local',
         role: 'cocinero',
         branch_id: 'b1',
         full_name: 'Cocinero',

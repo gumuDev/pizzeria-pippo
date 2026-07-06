@@ -1,11 +1,10 @@
 import { getToken } from "@/lib/auth";
 import { AppSettings } from "@/features/settings/types";
 
-const USE_NEST = process.env.NEXT_PUBLIC_USE_NEST_SETTINGS === "true";
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
 
 function baseUrl(path: string): string {
-  return USE_NEST ? `${NEST_API_URL}${path}` : `/api${path}`;
+  return `${NEST_API_URL}${path}`;
 }
 
 async function getAuthHeader(): Promise<HeadersInit> {

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -11,6 +11,7 @@ import { ListWarehouseMovementsQueryDto } from './dto/list-warehouse-movements-q
 import { PurchaseWarehouseStockDto } from './dto/purchase-warehouse-stock.dto';
 import { AdjustWarehouseStockDto } from './dto/adjust-warehouse-stock.dto';
 import { TransferWarehouseStockDto } from './dto/transfer-warehouse-stock.dto';
+import { UpdateWarehouseMinQuantityDto } from './dto/update-warehouse-min-quantity.dto';
 import { ListWarehouseProductMovementsQueryDto } from './dto/list-warehouse-product-movements-query.dto';
 import { PurchaseWarehouseProductStockDto } from './dto/purchase-warehouse-product-stock.dto';
 import { AdjustWarehouseProductStockDto } from './dto/adjust-warehouse-product-stock.dto';
@@ -40,6 +41,13 @@ export class WarehouseController {
   @Get('movements')
   getMovements(@Query() query: ListWarehouseMovementsQueryDto) {
     return this.warehouseService.getMovements(query);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  @Patch('stock/:id')
+  updateMinQuantity(@Param('id') id: string, @Body() dto: UpdateWarehouseMinQuantityDto) {
+    return this.warehouseService.updateMinQuantity(id, dto);
   }
 
   @UseGuards(RolesGuard)

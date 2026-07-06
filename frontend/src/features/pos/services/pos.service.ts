@@ -1,19 +1,13 @@
 import { io, type Socket } from "socket.io-client";
-import { supabase } from "@/lib/supabase";
-import { getToken as _getToken, getValidSession } from "@/lib/auth";
+import { getToken as _getToken, getUserProfile, signOut } from "@/lib/auth";
 import { todayInBolivia } from "@/lib/timezone";
 import { BranchesService } from "@/features/branches/services/branches.service";
 import type { Identity, Product, DayOrder, OrderType } from "../types/pos.types";
 import type { Promotion, DiscountedItem, FlavorItem } from "@/lib/promotions";
 
-const USE_NEST_PROMOTIONS = process.env.NEXT_PUBLIC_USE_NEST_PROMOTIONS === "true";
-const USE_NEST_POS = process.env.NEXT_PUBLIC_USE_NEST_POS === "true";
-const USE_NEST_REALTIME = process.env.NEXT_PUBLIC_USE_NEST_REALTIME === "true";
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
 
-type KitchenStatusSubscription =
-  | { kind: "supabase"; channel: ReturnType<typeof supabase.channel> }
-  | { kind: "nest"; socket: Socket };
+type KitchenStatusSubscription = { socket: Socket };
 
 export const PosService = {
   async getToken(): Promise<string> {
@@ -28,22 +22,15 @@ export const PosService = {
   },
 
   async logout(): Promise<void> {
-    await supabase.auth.signOut();
+    await signOut();
   },
 
   async getIdentity(): Promise<Identity | null> {
-    const session = await getValidSession();
-    if (!session) return null;
-    const user = session.user;
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, branch_id, full_name")
-      .eq("id", user.id)
-      .single();
+    const profile = await getUserProfile();
     if (!profile) return null;
     return {
-      id: user.id,
-      name: profile.full_name ?? user.email ?? "",
+      id: profile.id,
+      name: profile.full_name ?? profile.email,
       role: profile.role,
       branch_id: profile.branch_id,
     };
@@ -52,12 +39,8 @@ export const PosService = {
   async getProductsAndPromotions(branchId: string, token: string): Promise<{ products: Product[]; promotions: Promotion[] }> {
     const today = todayInBolivia();
     const headers = { Authorization: `Bearer ${token}` };
-    const promoUrl = USE_NEST_PROMOTIONS
-      ? `${NEST_API_URL}/promotions?branchId=${branchId}&date=${today}`
-      : `/api/promotions?branchId=${branchId}&date=${today}`;
-    const productsUrl = USE_NEST_POS
-      ? `${NEST_API_URL}/products/pos-catalog?branchId=${branchId}`
-      : `/api/products?branchId=${branchId}`;
+    const promoUrl = `${NEST_API_URL}/promotions?branchId=${branchId}&date=${today}`;
+    const productsUrl = `${NEST_API_URL}/products/pos-catalog?branchId=${branchId}`;
     const [productsRes, promoRes] = await Promise.all([
       fetch(productsUrl, { headers }),
       fetch(promoUrl, { headers }),
@@ -70,30 +53,12 @@ export const PosService = {
   },
 
   async getDayOrders(branchId: string): Promise<DayOrder[]> {
-    if (USE_NEST_POS) {
-      const token = await PosService.getToken();
-      const res = await fetch(`${NEST_API_URL}/orders?branchId=${branchId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
-    }
-
-    const today = todayInBolivia();
-    const { data } = await supabase
-      .from("orders")
-      .select(`
-        id, daily_number, created_at, total, kitchen_status, payment_method, order_type, cancelled_at,
-        order_items (
-          qty,
-          product_variants ( name, products ( name ) )
-        )
-      `)
-      .eq("branch_id", branchId)
-      .gte("created_at", `${today}T00:00:00-04:00`)
-      .lte("created_at", `${today}T23:59:59-04:00`)
-      .order("created_at", { ascending: false });
-    return (data as unknown as DayOrder[]) ?? [];
+    const token = await PosService.getToken();
+    const res = await fetch(`${NEST_API_URL}/orders?branchId=${branchId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
   },
 
   async confirmSale(
@@ -107,8 +72,7 @@ export const PosService = {
     idempotencyKey?: string
   ): Promise<{ ok: boolean; order_id?: string; daily_number?: number; error?: string }> {
     try {
-      const url = USE_NEST_POS ? `${NEST_API_URL}/orders` : "/api/orders";
-      const res = await fetch(url, {
+      const res = await fetch(`${NEST_API_URL}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         signal,
@@ -143,8 +107,7 @@ export const PosService = {
 
   async markOrderReady(orderId: string): Promise<void> {
     const token = await PosService.getToken();
-    const url = USE_NEST_POS ? `${NEST_API_URL}/orders/${orderId}/ready` : `/api/orders/${orderId}/ready`;
-    await fetch(url, {
+    await fetch(`${NEST_API_URL}/orders/${orderId}/ready`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -154,41 +117,23 @@ export const PosService = {
     branchId: string,
     onUpdate: (payload: { new: { id: string; kitchen_status: string } }) => void
   ): KitchenStatusSubscription {
-    if (USE_NEST_REALTIME) {
-      const socket: Socket = io(NEST_API_URL, {
-        auth: (cb) => { PosService.getToken().then((token) => cb({ token })); },
-        query: { branchId },
-        transports: ["websocket"],
-      });
-      socket.on("order:updated", (payload: { id: string; kitchen_status: string }) => {
-        onUpdate({ new: payload });
-      });
-      return { kind: "nest", socket };
-    }
-
-    const channel = supabase
-      .channel("pos-kitchen-status")
-      .on("postgres_changes", {
-        event: "UPDATE",
-        schema: "public",
-        table: "orders",
-        filter: `branch_id=eq.${branchId}`,
-      }, onUpdate)
-      .subscribe();
-    return { kind: "supabase", channel };
+    const socket: Socket = io(NEST_API_URL, {
+      auth: (cb) => { PosService.getToken().then((token) => cb({ token })); },
+      query: { branchId },
+      transports: ["websocket"],
+    });
+    socket.on("order:updated", (payload: { id: string; kitchen_status: string }) => {
+      onUpdate({ new: payload });
+    });
+    return { socket };
   },
 
   unsubscribe(subscription: KitchenStatusSubscription) {
-    if (subscription.kind === "nest") {
-      subscription.socket.disconnect();
-    } else {
-      supabase.removeChannel(subscription.channel);
-    }
+    subscription.socket.disconnect();
   },
 
   async cancelOrder(orderId: string, reason: string, token: string): Promise<{ ok: boolean; error?: string }> {
-    const url = USE_NEST_POS ? `${NEST_API_URL}/orders/${orderId}/cancel` : `/api/orders/${orderId}/cancel`;
-    const res = await fetch(url, {
+    const res = await fetch(`${NEST_API_URL}/orders/${orderId}/cancel`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ reason }),

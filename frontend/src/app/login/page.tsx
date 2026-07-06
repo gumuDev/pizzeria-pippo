@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn, getUserProfile } from "@/lib/auth";
+import { signIn } from "@/lib/auth";
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
@@ -18,9 +18,8 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      await signIn(email, password);
-      const profile = await getUserProfile();
-      const role = profile?.role;
+      const { user } = await signIn(email, password);
+      const role = user.role;
 
       if (role === "admin") {
         window.location.href = "/dashboard";

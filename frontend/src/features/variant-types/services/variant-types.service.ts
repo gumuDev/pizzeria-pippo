@@ -1,11 +1,10 @@
 import { getToken } from "@/lib/auth";
 import type { VariantType } from "../types/variant-type.types";
 
-const USE_NEST = process.env.NEXT_PUBLIC_USE_NEST_VARIANT_TYPES === "true";
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
 
 function baseUrl(path: string): string {
-  return USE_NEST ? `${NEST_API_URL}${path}` : `/api${path}`;
+  return `${NEST_API_URL}${path}`;
 }
 
 export const VariantTypesService = {

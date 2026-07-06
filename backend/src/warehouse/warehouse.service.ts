@@ -6,6 +6,7 @@ import type { ListWarehouseMovementsQueryDto } from './dto/list-warehouse-moveme
 import type { PurchaseWarehouseStockDto } from './dto/purchase-warehouse-stock.dto';
 import type { AdjustWarehouseStockDto } from './dto/adjust-warehouse-stock.dto';
 import type { TransferWarehouseStockDto } from './dto/transfer-warehouse-stock.dto';
+import type { UpdateWarehouseMinQuantityDto } from './dto/update-warehouse-min-quantity.dto';
 import type { WarehouseStockListResult, WarehouseStockRow } from './types/warehouse-stock-row.types';
 import type { WarehouseMovementRow } from './types/warehouse-movement.types';
 
@@ -86,6 +87,16 @@ export class WarehouseService {
       ingredients: { name: row.ingredient.name, unit: row.ingredient.unit },
       branches: row.branch ? { name: row.branch.name } : null,
     }));
+  }
+
+  async updateMinQuantity(id: string, dto: UpdateWarehouseMinQuantityDto): Promise<void> {
+    const row = await this.prisma.warehouseStock.findUnique({ where: { id } });
+    if (!row) throw new NotFoundException('Insumo no encontrado');
+
+    await this.prisma.warehouseStock.update({
+      where: { id },
+      data: { minQuantity: dto.min_quantity },
+    });
   }
 
   async remove(id: string): Promise<void> {

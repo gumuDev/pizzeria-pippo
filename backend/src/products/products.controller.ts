@@ -8,6 +8,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PatchProductDto } from './dto/patch-product.dto';
 import { PosCatalogQueryDto } from './dto/pos-catalog-query.dto';
+import { UpsertBranchPriceDto } from './dto/upsert-branch-price.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('products')
@@ -25,6 +26,12 @@ export class ProductsController {
     return this.productsService.getPosCatalog(query.branchId);
   }
 
+  // También antes de ':id' por la misma razón.
+  @Get('all-variants')
+  listAllVariants() {
+    return this.productsService.listAllVariants();
+  }
+
   @Get(':id')
   getDetail(@Param('id') id: string) {
     return this.productsService.getDetail(id);
@@ -33,6 +40,22 @@ export class ProductsController {
   @Get(':id/variants')
   getVariants(@Param('id') id: string) {
     return this.productsService.getVariantsWithDetails(id);
+  }
+
+  // La ruta vieja de Next.js no restringía por rol — se corrige acá, mismo
+  // criterio que el resto de las escrituras de este controller.
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  @Get(':id/branch-prices')
+  getBranchPrices(@Param('id') id: string) {
+    return this.productsService.getBranchPrices(id);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  @Post(':id/branch-prices')
+  upsertBranchPrice(@Body() dto: UpsertBranchPriceDto) {
+    return this.productsService.upsertBranchPrice(dto);
   }
 
   @UseGuards(RolesGuard)

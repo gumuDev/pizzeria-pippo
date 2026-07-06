@@ -36,6 +36,7 @@ describe('OrdersService', () => {
 
   const cashier: CurrentUserPayload = {
     id: 'u1',
+    email: 'cajero@pippo.local',
     role: 'cajero',
     branch_id: 'b1',
     full_name: 'Cajero',
@@ -254,6 +255,63 @@ describe('OrdersService', () => {
       await service.getDayOrders('b1');
 
       expect(prisma.order.findMany).toHaveBeenCalled();
+    });
+  });
+
+  describe('getPendingKitchenOrders', () => {
+    it('mapea las órdenes pendientes con items y sabores mixtos', async () => {
+      prisma.order.findMany.mockResolvedValue([
+        {
+          id: 'o1',
+          dailyNumber: 3,
+          createdAt: new Date('2026-07-06T12:00:00Z'),
+          kitchenStatus: 'pending',
+          orderType: 'dine_in',
+          items: [
+            {
+              id: 'i1',
+              qty: 2,
+              qtyPhysical: 2,
+              variant: { name: 'Familiar', product: { name: 'Hawaiana', description: 'Jamón y piña' } },
+              flavors: [
+                {
+                  variantId: 'v2',
+                  proportion: decimal(0.5),
+                  variant: { product: { name: 'Napolitana' } },
+                },
+              ],
+            },
+          ],
+        },
+      ]);
+
+      const result = await service.getPendingKitchenOrders('b1');
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { branchId: 'b1', kitchenStatus: 'pending', cancelledAt: null },
+        }),
+      );
+      expect(result).toEqual([
+        {
+          id: 'o1',
+          daily_number: 3,
+          created_at: '2026-07-06T12:00:00.000Z',
+          kitchen_status: 'pending',
+          order_type: 'dine_in',
+          order_items: [
+            {
+              id: 'i1',
+              qty: 2,
+              qty_physical: 2,
+              product_variants: { name: 'Familiar', products: { name: 'Hawaiana', description: 'Jamón y piña' } },
+              order_item_flavors: [
+                { variant_id: 'v2', proportion: 0.5, product_variants: { products: { name: 'Napolitana' } } },
+              ],
+            },
+          ],
+        },
+      ]);
     });
   });
 

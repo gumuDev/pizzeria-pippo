@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { notification } from "antd";
-import { getToken } from "@/lib/auth";
 import { ProductsService } from "../services/products.service";
 import type { Branch, Product } from "../types/product.types";
 
@@ -44,8 +43,7 @@ export function useProducts() {
   const total = data?.total ?? 0;
 
   const handleToggleActive = async (product: Product) => {
-    const token = await getToken();
-    const { ok, error } = await ProductsService.patchProduct(product.id, { is_active: !product.is_active }, token);
+    const { ok, error } = await ProductsService.patchProduct(product.id, { is_active: !product.is_active });
     if (ok) {
       mutate();
       notification.success({ message: product.is_active ? "Producto desactivado" : "Producto reactivado" });

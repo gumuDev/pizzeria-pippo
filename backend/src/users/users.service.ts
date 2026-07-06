@@ -1,6 +1,7 @@
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AUTH_ADMIN_PORT, type AuthAdminPort } from './auth-admin/auth-admin.port';
+import { PasswordHasherService } from '../auth/password/password-hasher.service';
 import type { UserResult } from './types/user-result.types';
 import type { CreateUserDto } from './dto/create-user.dto';
 import type { UpdateUserDto } from './dto/update-user.dto';
@@ -9,61 +10,69 @@ import type { UpdateUserDto } from './dto/update-user.dto';
 export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(AUTH_ADMIN_PORT) private readonly authAdmin: AuthAdminPort,
+    private readonly passwordHasher: PasswordHasherService,
   ) {}
 
   async list(): Promise<UserResult[]> {
-    const [authUsers, profiles, orders] = await Promise.all([
-      this.authAdmin.listUsers(),
-      this.prisma.profile.findMany({ select: { id: true, fullName: true, role: true, branchId: true } }),
+    const [profiles, orders] = await Promise.all([
+      this.prisma.profile.findMany({
+        select: { id: true, email: true, fullName: true, role: true, branchId: true, createdAt: true, isBanned: true },
+      }),
       this.prisma.order.findMany({ select: { cashierId: true }, distinct: ['cashierId'] }),
     ]);
 
-    const profileMap = new Map(profiles.map((p) => [p.id, p]));
     const cashierIdsWithOrders = new Set(orders.map((o) => o.cashierId));
 
-    return authUsers.map((u) => {
-      const profile = profileMap.get(u.id);
-      const metadata = u.user_metadata ?? {};
-      return {
-        id: u.id,
-        email: u.email ?? '',
-        full_name: profile?.fullName ?? (metadata.full_name as string | undefined) ?? '',
-        role: profile?.role ?? (metadata.role as string | undefined) ?? 'cajero',
-        branch_id: profile?.branchId ?? null,
-        created_at: u.created_at,
-        is_banned: !!u.banned_until,
-        has_orders: cashierIdsWithOrders.has(u.id),
-      };
-    });
+    return profiles.map((p) => ({
+      id: p.id,
+      email: p.email,
+      full_name: p.fullName ?? '',
+      role: p.role,
+      branch_id: p.branchId,
+      created_at: p.createdAt.toISOString(),
+      is_banned: p.isBanned,
+      has_orders: cashierIdsWithOrders.has(p.id),
+    }));
   }
 
   async create(dto: CreateUserDto): Promise<{ id: string }> {
-    const authUser = await this.authAdmin.createUser({
-      email: dto.email,
-      password: dto.password,
-      metadata: { full_name: dto.full_name, role: dto.role },
-    });
+    const passwordHash = await this.passwordHasher.hash(dto.password);
 
-    await this.prisma.profile.upsert({
-      where: { id: authUser.id },
-      create: { id: authUser.id, fullName: dto.full_name, role: dto.role, branchId: dto.branch_id ?? null },
-      update: { fullName: dto.full_name, role: dto.role, branchId: dto.branch_id ?? null },
-    });
-
-    return { id: authUser.id };
+    try {
+      const profile = await this.prisma.profile.create({
+        data: {
+          email: dto.email,
+          passwordHash,
+          fullName: dto.full_name,
+          role: dto.role,
+          branchId: dto.branch_id ?? null,
+        },
+      });
+      return { id: profile.id };
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('Ya existe un usuario con ese correo');
+      }
+      throw error;
+    }
   }
 
   async update(id: string, dto: UpdateUserDto): Promise<void> {
-    await this.authAdmin.updateUserMetadata(id, { full_name: dto.full_name, role: dto.role });
+    const passwordHash = dto.password ? await this.passwordHasher.hash(dto.password) : undefined;
+
     await this.prisma.profile.update({
       where: { id },
-      data: { fullName: dto.full_name, role: dto.role, branchId: dto.branch_id ?? null },
+      data: {
+        fullName: dto.full_name,
+        role: dto.role,
+        branchId: dto.branch_id ?? null,
+        ...(passwordHash ? { passwordHash } : {}),
+      },
     });
   }
 
   async toggleBan(id: string, banned: boolean): Promise<void> {
-    await this.authAdmin.setBanned(id, banned);
+    await this.prisma.profile.update({ where: { id }, data: { isBanned: banned } });
   }
 
   async remove(id: string): Promise<void> {
@@ -73,9 +82,6 @@ export class UsersService {
         'No se puede eliminar: el usuario tiene ventas registradas. Desactiva la cuenta en su lugar.',
       );
     }
-    // profiles.id tiene FK hacia auth.users.id sin ON DELETE CASCADE — hay que
-    // borrar el profile primero o Postgres rechaza el borrado del auth user.
     await this.prisma.profile.delete({ where: { id } });
-    await this.authAdmin.deleteUser(id);
   }
 }

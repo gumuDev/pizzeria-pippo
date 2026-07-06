@@ -13,6 +13,7 @@ describe('OwnBranchOrAdminGuard', () => {
 
   const user = (role: string, branchId: string | null): CurrentUserPayload => ({
     id: 'u1',
+    email: 'test@pippo.local',
     role,
     branch_id: branchId,
     full_name: 'Test',

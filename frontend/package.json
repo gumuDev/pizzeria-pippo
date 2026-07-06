@@ -23,7 +23,6 @@
     "@refinedev/core": "^5.0.9",
     "@refinedev/kbar": "^2.0.1",
     "@refinedev/nextjs-router": "^7.0.4",
-    "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.98.0",
     "antd": "^5.29.3",
     "next": "14.2.35",

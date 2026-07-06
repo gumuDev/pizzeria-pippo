@@ -17,6 +17,7 @@ describe('RolesGuard', () => {
 
   const user = (role: string): CurrentUserPayload => ({
     id: 'u1',
+    email: 'test@pippo.local',
     role,
     branch_id: null,
     full_name: 'Test',

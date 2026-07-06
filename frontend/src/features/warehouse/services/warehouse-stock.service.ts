@@ -1,9 +1,9 @@
 import { getToken } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { IngredientsService } from "@/features/ingredients/services/ingredients.service";
+import { BranchesService } from "@/features/branches/services/branches.service";
 import type { WarehouseRow } from "../types/warehouse.types";
 import type { IngredientMovement, ProductMovement } from "../types/warehouse-movements.types";
 
-const USE_NEST = process.env.NEXT_PUBLIC_USE_NEST_WAREHOUSE === "true";
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
 
 interface WarehouseStockParams {
@@ -34,35 +34,25 @@ async function nestFetch(path: string, init?: RequestInit): Promise<Response> {
 }
 
 export async function getIngredients(): Promise<{ id: string; name: string; unit: string }[]> {
-  const { data } = await supabase.from("ingredients").select("id, name, unit").eq("is_active", true).order("name");
-  return data ?? [];
+  const { data } = await IngredientsService.getIngredients({ pageSize: 9999 });
+  return data;
 }
 
 export async function getBranches(): Promise<{ id: string; name: string }[]> {
-  const { data } = await supabase.from("branches").select("id, name").eq("is_active", true).order("name");
-  return data ?? [];
+  return BranchesService.getBranches();
 }
 
 export async function getResaleVariants(): Promise<{ id: string; name: string; products: { name: string } | null }[]> {
-  if (USE_NEST) {
-    const res = await nestFetch("/stock/resale-variants");
-    if (!res.ok) return [];
-    return res.json();
-  }
-
-  const token = await getToken();
-  const res = await fetch("/api/stock/resale-variants", { headers: { Authorization: `Bearer ${token}` } });
-  const json = await res.json();
-  return json.data ?? [];
+  const res = await nestFetch("/stock/resale-variants");
+  if (!res.ok) return [];
+  return res.json();
 }
 
 export async function fetchWarehouseStock(params: WarehouseStockParams): Promise<{ rows: WarehouseRow[]; total: number }> {
   const qs = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) });
   if (params.status) qs.set("status", params.status);
 
-  const res = USE_NEST
-    ? await nestFetch(`/warehouse/stock?${qs.toString()}`)
-    : await fetch(`/api/warehouse/stock?${qs.toString()}`, { headers: { Authorization: `Bearer ${await getToken()}` } });
+  const res = await nestFetch(`/warehouse/stock?${qs.toString()}`);
 
   const json = await res.json();
   if (!json.data) return { rows: [], total: 0 };
@@ -88,18 +78,14 @@ export async function getWarehouseMovements(filters: MovementFilters): Promise<I
   if (filters.from) qs.set("from", filters.from);
   if (filters.to) qs.set("to", filters.to);
 
-  const res = USE_NEST
-    ? await nestFetch(`/warehouse/movements?${qs.toString()}`)
-    : await fetch(`/api/warehouse/movements?${qs.toString()}`, { headers: { Authorization: `Bearer ${await getToken()}` } });
+  const res = await nestFetch(`/warehouse/movements?${qs.toString()}`);
 
   const data = await res.json();
   return Array.isArray(data) ? data : [];
 }
 
 export async function getWarehouseProductStock(): Promise<{ variant_id: string; quantity: number; min_quantity: number; product_variants: { name: string; products: { name: string } | null } | null }[]> {
-  const res = USE_NEST
-    ? await nestFetch("/warehouse/product-stock")
-    : await fetch("/api/warehouse/product-stock", { headers: { Authorization: `Bearer ${await getToken()}` } });
+  const res = await nestFetch("/warehouse/product-stock");
 
   const json = await res.json();
   return json.data ?? [];
@@ -112,18 +98,14 @@ export async function getWarehouseProductMovements(filters: MovementFilters): Pr
   if (filters.from) qs.set("from", filters.from);
   if (filters.to) qs.set("to", filters.to);
 
-  const res = USE_NEST
-    ? await nestFetch(`/warehouse/product-movements?${qs.toString()}`)
-    : await fetch(`/api/warehouse/product-movements?${qs.toString()}`, { headers: { Authorization: `Bearer ${await getToken()}` } });
+  const res = await nestFetch(`/warehouse/product-movements?${qs.toString()}`);
 
   const data = await res.json();
   return Array.isArray(data) ? data : [];
 }
 
 export async function deleteWarehouseStock(id: string): Promise<{ ok: boolean; error?: string }> {
-  const res = USE_NEST
-    ? await nestFetch(`/warehouse/stock/${id}`, { method: "DELETE" })
-    : await fetch(`/api/warehouse/stock/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${await getToken()}` } });
+  const res = await nestFetch(`/warehouse/stock/${id}`, { method: "DELETE" });
 
   const json = await res.json().catch(() => ({}));
   return { ok: res.ok, error: json.error };
@@ -135,13 +117,7 @@ export async function adjustWarehouseStock(
   notes: string
 ): Promise<{ ok: boolean; error?: string }> {
   const body = JSON.stringify({ ingredient_id: ingredientId, real_quantity: realQuantity, notes });
-  const res = USE_NEST
-    ? await nestFetch("/warehouse/adjust", { method: "POST", body })
-    : await fetch("/api/warehouse/adjust", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${await getToken()}` },
-        body,
-      });
+  const res = await nestFetch("/warehouse/adjust", { method: "POST", body });
 
   const json = await res.json().catch(() => ({}));
   return { ok: res.ok, error: json.error };
@@ -154,13 +130,7 @@ export async function purchaseWarehouseStock(payload: {
   min_quantity?: number;
 }): Promise<{ ok: boolean; error?: string }> {
   const body = JSON.stringify(payload);
-  const res = USE_NEST
-    ? await nestFetch("/warehouse/purchase", { method: "POST", body })
-    : await fetch("/api/warehouse/purchase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${await getToken()}` },
-        body,
-      });
+  const res = await nestFetch("/warehouse/purchase", { method: "POST", body });
 
   const json = await res.json().catch(() => ({}));
   return { ok: res.ok, error: json.error };
@@ -173,13 +143,7 @@ export async function transferWarehouseStock(payload: {
   notes?: string;
 }): Promise<{ ok: boolean; error?: string; available?: number }> {
   const body = JSON.stringify(payload);
-  const res = USE_NEST
-    ? await nestFetch("/warehouse/transfer", { method: "POST", body })
-    : await fetch("/api/warehouse/transfer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${await getToken()}` },
-        body,
-      });
+  const res = await nestFetch("/warehouse/transfer", { method: "POST", body });
 
   const json = await res.json().catch(() => ({}));
   return { ok: res.ok, error: json.error, available: json.available };
@@ -192,13 +156,7 @@ export async function purchaseWarehouseProductStock(payload: {
   notes?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const body = JSON.stringify(payload);
-  const res = USE_NEST
-    ? await nestFetch("/warehouse/product-purchase", { method: "POST", body })
-    : await fetch("/api/warehouse/product-purchase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${await getToken()}` },
-        body,
-      });
+  const res = await nestFetch("/warehouse/product-purchase", { method: "POST", body });
 
   const json = await res.json().catch(() => ({}));
   return { ok: res.ok, error: json.error };
@@ -210,13 +168,7 @@ export async function adjustWarehouseProductStock(payload: {
   notes?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const body = JSON.stringify(payload);
-  const res = USE_NEST
-    ? await nestFetch("/warehouse/product-adjust", { method: "POST", body })
-    : await fetch("/api/warehouse/product-adjust", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${await getToken()}` },
-        body,
-      });
+  const res = await nestFetch("/warehouse/product-adjust", { method: "POST", body });
 
   const json = await res.json().catch(() => ({}));
   return { ok: res.ok, error: json.error };
@@ -229,20 +181,16 @@ export async function transferWarehouseProductStock(payload: {
   notes?: string;
 }): Promise<{ ok: boolean; error?: string; available?: number }> {
   const body = JSON.stringify(payload);
-  const res = USE_NEST
-    ? await nestFetch("/warehouse/product-transfer", { method: "POST", body })
-    : await fetch("/api/warehouse/product-transfer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${await getToken()}` },
-        body,
-      });
+  const res = await nestFetch("/warehouse/product-transfer", { method: "POST", body });
 
   const json = await res.json().catch(() => ({}));
   return { ok: res.ok, error: json.error, available: json.available };
 }
 
-// warehouse_stock.min_quantity no tiene endpoint dedicado en Next.js (se actualizaba
-// directo con Supabase desde el cliente) — se deja fuera del corte a Nest por ahora.
 export async function updateMinQuantity(id: string, minQuantity: number): Promise<void> {
-  await supabase.from("warehouse_stock").update({ min_quantity: minQuantity }).eq("id", id);
+  const res = await nestFetch(`/warehouse/stock/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ min_quantity: minQuantity }),
+  });
+  if (!res.ok) throw new Error("Error al actualizar la cantidad mínima");
 }

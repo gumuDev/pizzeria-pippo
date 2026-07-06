@@ -7,6 +7,9 @@ import type { UpdateProductDto } from './dto/update-product.dto';
 import type { ProductListResult } from './types/product-list-result.types';
 import type { ProductDetailResult } from './types/product-detail.types';
 import type { PosCatalogProduct, PosCatalogVariant } from './types/pos-catalog-result.types';
+import type { VariantOption } from './types/variant-option.types';
+import type { BranchPricesResult } from './types/branch-prices-result.types';
+import type { UpsertBranchPriceDto } from './dto/upsert-branch-price.dto';
 
 @Injectable()
 export class ProductsService {
@@ -151,6 +154,64 @@ export class ProductsService {
     }
 
     return filtered;
+  }
+
+  // Lista plana de variantes de todos los productos (nombre + producto),
+  // usada por el combo builder de promociones para elegir a qué variante
+  // aplica cada regla — no necesita precios ni recetas, solo id/nombre.
+  async listAllVariants(): Promise<VariantOption[]> {
+    const variants = await this.prisma.productVariant.findMany({
+      orderBy: { name: 'asc' },
+      include: { product: true },
+    });
+
+    return variants.map((variant) => ({
+      id: variant.id,
+      name: variant.name,
+      product_name: variant.product?.name ?? '',
+    }));
+  }
+
+  // Réplica de la vieja ruta /api/products/[id]/branch-prices — página de
+  // edición de precios por sucursal en el admin.
+  async getBranchPrices(productId: string): Promise<BranchPricesResult> {
+    const [variants, branches] = await Promise.all([
+      this.prisma.productVariant.findMany({
+        where: { productId, isActive: true },
+        orderBy: { name: 'asc' },
+        include: { branchPrices: { include: { branch: true } } },
+      }),
+      this.prisma.branch.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
+    ]);
+
+    return {
+      variants: variants.map((v) => ({
+        id: v.id,
+        name: v.name,
+        base_price: v.basePrice.toNumber(),
+        branch_prices: v.branchPrices.map((bp) => ({
+          id: bp.id,
+          branch_id: bp.branchId,
+          price: bp.price.toNumber(),
+          branches: { id: bp.branch.id, name: bp.branch.name },
+        })),
+      })),
+      branches: branches.map((b) => ({ id: b.id, name: b.name })),
+    };
+  }
+
+  async upsertBranchPrice(dto: UpsertBranchPriceDto): Promise<void> {
+    const existing = await this.prisma.branchPrice.findFirst({
+      where: { variantId: dto.variant_id, branchId: dto.branch_id },
+    });
+
+    if (existing) {
+      await this.prisma.branchPrice.update({ where: { id: existing.id }, data: { price: dto.price } });
+    } else {
+      await this.prisma.branchPrice.create({
+        data: { variantId: dto.variant_id, branchId: dto.branch_id, price: dto.price },
+      });
+    }
   }
 
   async getVariantsWithDetails(productId: string): Promise<ProductVariant[]> {

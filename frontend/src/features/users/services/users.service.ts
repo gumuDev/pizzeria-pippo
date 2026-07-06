@@ -2,11 +2,10 @@ import { getToken } from "@/lib/auth";
 import { BranchesService } from "@/features/branches/services/branches.service";
 import type { User, Branch, CreateUserPayload, UpdateUserPayload } from "../types/user.types";
 
-const USE_NEST = process.env.NEXT_PUBLIC_USE_NEST_USERS === "true";
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
 
 function baseUrl(path: string): string {
-  return USE_NEST ? `${NEST_API_URL}${path}` : `/api${path}`;
+  return `${NEST_API_URL}${path}`;
 }
 
 export const UsersService = {

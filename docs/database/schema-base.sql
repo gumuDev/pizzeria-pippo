@@ -8,8 +8,10 @@
 -- Última migración aplicada: 017_stock_movements_add_anulacion_type.sql
 -- (parcialmente desactualizado más allá de esto — ver docs/database/migrations/
 -- para el historial completo; se agregaron acá `businesses`/`app_settings`/
--- `profiles.business_id` puntualmente por la migración 034, sin resincronizar
--- el resto del archivo)
+-- `profiles.business_id` puntualmente por la migración 034, y
+-- `profiles.email`/`password_hash`/`is_banned` + drop de FKs a `auth.users`
+-- por las migraciones 035-037 (Fase 7, NestJS ahora es dueño de Auth),
+-- sin resincronizar el resto del archivo)
 -- ============================================================
 
 CREATE TABLE public.branches (
@@ -36,10 +38,13 @@ CREATE TABLE public.profiles (
   full_name text,
   created_at timestamp with time zone DEFAULT now(),
   business_id uuid,
+  email text NOT NULL,
+  password_hash text NOT NULL,
+  is_banned boolean NOT NULL DEFAULT false,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
-  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
   CONSTRAINT profiles_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
-  CONSTRAINT profiles_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(id)
+  CONSTRAINT profiles_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(id),
+  CONSTRAINT profiles_email_unique UNIQUE (email)
 );
 
 CREATE TABLE public.app_settings (
@@ -139,7 +144,7 @@ CREATE TABLE public.stock_movements (
   CONSTRAINT stock_movements_pkey PRIMARY KEY (id),
   CONSTRAINT stock_movements_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
   CONSTRAINT stock_movements_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id),
-  CONSTRAINT stock_movements_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
+  CONSTRAINT stock_movements_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id)
 );
 
 CREATE TABLE public.promotions (
@@ -188,11 +193,11 @@ CREATE TABLE public.orders (
   payment_method text CHECK (payment_method = ANY (ARRAY['efectivo'::text, 'qr'::text])),
   order_type text NOT NULL DEFAULT 'dine_in' CHECK (order_type = ANY (ARRAY['dine_in'::text, 'takeaway'::text])),
   cancelled_at timestamptz DEFAULT NULL,
-  cancelled_by uuid DEFAULT NULL REFERENCES auth.users(id) ON DELETE SET NULL,
+  cancelled_by uuid DEFAULT NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
   cancel_reason text DEFAULT NULL,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
   CONSTRAINT orders_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
-  CONSTRAINT orders_cashier_id_fkey FOREIGN KEY (cashier_id) REFERENCES auth.users(id)
+  CONSTRAINT orders_cashier_id_fkey FOREIGN KEY (cashier_id) REFERENCES public.profiles(id)
 );
 
 CREATE INDEX idx_orders_branch_date ON public.orders (branch_id, created_at);
@@ -220,7 +225,7 @@ CREATE TABLE public.warehouse_movements (
   CONSTRAINT warehouse_movements_pkey PRIMARY KEY (id),
   CONSTRAINT warehouse_movements_ingredient_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id),
   CONSTRAINT warehouse_movements_branch_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id),
-  CONSTRAINT warehouse_movements_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
+  CONSTRAINT warehouse_movements_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id)
 );
 
 CREATE INDEX idx_warehouse_movements_ingredient ON public.warehouse_movements (ingredient_id, created_at);

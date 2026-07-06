@@ -1,8 +1,5 @@
 import dayjs from "dayjs";
 
-const USE_NEST_REPORTS = process.env.NEXT_PUBLIC_USE_NEST_REPORTS === "true";
-const USE_NEST_STOCK = process.env.NEXT_PUBLIC_USE_NEST_STOCK === "true";
-const USE_NEST_WAREHOUSE = process.env.NEXT_PUBLIC_USE_NEST_WAREHOUSE === "true";
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
 
 export interface SalesSummary { total: number; count: number; avg: number; }
@@ -44,11 +41,9 @@ export const DashboardService = {
     const today = dayjs().format("YYYY-MM-DD");
     const weekStart = dayjs().subtract(6, "day").format("YYYY-MM-DD");
 
-    const reportsBase = USE_NEST_REPORTS ? `${NEST_API_URL}/reports` : "/api/reports";
-    const stockAlertsUrl = USE_NEST_STOCK ? `${NEST_API_URL}/stock/alerts` : "/api/stock/alerts";
-    const warehouseStockUrl = USE_NEST_WAREHOUSE
-      ? `${NEST_API_URL}/warehouse/stock?status=low&pageSize=9999`
-      : "/api/warehouse/stock?status=low&pageSize=9999";
+    const reportsBase = `${NEST_API_URL}/reports`;
+    const stockAlertsUrl = `${NEST_API_URL}/stock/alerts`;
+    const warehouseStockUrl = `${NEST_API_URL}/warehouse/stock?status=low&pageSize=9999`;
 
     const [salesRes, topRes, dailyRes, alertsRes, warehouseStockRes] = await Promise.all([
       fetch(`${reportsBase}/sales?from=${today}&to=${today}`, { headers }),

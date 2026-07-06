@@ -62,6 +62,26 @@ describe('WarehouseService', () => {
     });
   });
 
+  describe('updateMinQuantity', () => {
+    it('rechaza con 404 si no existe', async () => {
+      prisma.warehouseStock.findUnique.mockResolvedValue(null);
+
+      await expect(service.updateMinQuantity('missing', { min_quantity: 5 })).rejects.toThrow(NotFoundException);
+      expect(prisma.warehouseStock.update).not.toHaveBeenCalled();
+    });
+
+    it('actualiza min_quantity si existe', async () => {
+      prisma.warehouseStock.findUnique.mockResolvedValue({ id: 's1' });
+
+      await service.updateMinQuantity('s1', { min_quantity: 5 });
+
+      expect(prisma.warehouseStock.update).toHaveBeenCalledWith({
+        where: { id: 's1' },
+        data: { minQuantity: 5 },
+      });
+    });
+  });
+
   describe('remove', () => {
     it('rechaza con 409 si el insumo tiene movimientos registrados', async () => {
       prisma.warehouseStock.findUnique.mockResolvedValue({ id: 's1', ingredientId: 'i1' });

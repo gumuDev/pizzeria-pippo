@@ -1,0 +1,18 @@
+export interface KitchenOrderResult {
+  id: string;
+  daily_number: number;
+  created_at: string;
+  kitchen_status: string;
+  order_type: string;
+  order_items: {
+    id: string;
+    qty: number;
+    qty_physical: number;
+    product_variants: { name: string; products: { name: string; description: string | null } | null } | null;
+    order_item_flavors: {
+      variant_id: string;
+      proportion: number;
+      product_variants: { products: { name: string } | null } | null;
+    }[];
+  }[];
+}

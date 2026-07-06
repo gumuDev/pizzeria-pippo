@@ -1,59 +1,69 @@
-import { supabase } from "./supabase";
-import type { Session } from "@supabase/supabase-js";
-
 export type UserRole = "admin" | "cajero" | "cocinero";
 
-// Supabase free plan cannot time-box sessions server-side, so the app enforces it:
-// a session older than this (since last sign-in) is signed out locally.
-export const SESSION_MAX_HOURS = 6;
-
-export async function getValidSession(): Promise<Session | null> {
-  const { data } = await supabase.auth.getSession();
-  const session = data.session;
-  if (!session) return null;
-
-  const signedInAt = new Date(session.user.last_sign_in_at ?? 0).getTime();
-  const maxAgeMs = SESSION_MAX_HOURS * 60 * 60 * 1000;
-  if (Date.now() - signedInAt > maxAgeMs) {
-    await supabase.auth.signOut();
-    return null;
-  }
-  return session;
-}
-
-export async function getToken(): Promise<string> {
-  const session = await getValidSession();
-  return session?.access_token ?? "";
-}
+const TOKEN_STORAGE_KEY = "pippo_auth_token";
+const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
 
 export interface UserProfile {
   id: string;
+  email: string;
   role: UserRole;
   branch_id: string | null;
   full_name: string | null;
 }
 
+function decodeJwtExpiry(token: string): number | null {
+  try {
+    const payloadSegment = token.split(".")[1];
+    const json = atob(payloadSegment.replace(/-/g, "+").replace(/_/g, "/"));
+    const payload = JSON.parse(json) as { exp?: number };
+    return payload.exp ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function isTokenValid(token: string): boolean {
+  const exp = decodeJwtExpiry(token);
+  return exp !== null && exp * 1000 > Date.now();
+}
+
+// Nunca rechaza: si no hay token o expiró, resuelve a "" — muchos services
+// dependen de este contrato para armar el header Authorization sin manejar
+// un catch en cada call site.
+export async function getToken(): Promise<string> {
+  if (typeof window === "undefined") return "";
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  if (!token || !isTokenValid(token)) return "";
+  return token;
+}
+
 export async function getUserProfile(): Promise<UserProfile | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const token = await getToken();
+  if (!token) return null;
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, role, branch_id, full_name")
-    .eq("id", user.id)
-    .single();
-
-  if (error || !data) return null;
-  return data as UserProfile;
+  const res = await fetch(`${NEST_API_URL}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  return res.json();
 }
 
-export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
-  return { user: data.user, session: data.session };
+export async function signIn(email: string, password: string): Promise<{ user: UserProfile }> {
+  const res = await fetch(`${NEST_API_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error ?? "Credenciales incorrectas");
+  }
+
+  const data = await res.json();
+  localStorage.setItem(TOKEN_STORAGE_KEY, data.access_token);
+  return { user: data.user };
 }
 
-export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
+export async function signOut(): Promise<void> {
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
 }

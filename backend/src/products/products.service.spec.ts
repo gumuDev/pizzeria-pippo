@@ -11,18 +11,20 @@ describe('ProductsService', () => {
   let prisma: {
     product: { findMany: jest.Mock; count: jest.Mock; findUnique: jest.Mock; create: jest.Mock; update: jest.Mock };
     productVariant: { findMany: jest.Mock; create: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
-    branchPrice: { createMany: jest.Mock; deleteMany: jest.Mock };
+    branchPrice: { createMany: jest.Mock; deleteMany: jest.Mock; findFirst: jest.Mock; create: jest.Mock; update: jest.Mock };
     recipe: { createMany: jest.Mock; deleteMany: jest.Mock };
     branchProductStock: { findMany: jest.Mock };
+    branch: { findMany: jest.Mock };
   };
 
   beforeEach(async () => {
     prisma = {
       product: { findMany: jest.fn(), count: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
       productVariant: { findMany: jest.fn(), create: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
-      branchPrice: { createMany: jest.fn(), deleteMany: jest.fn() },
+      branchPrice: { createMany: jest.fn(), deleteMany: jest.fn(), findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
       recipe: { createMany: jest.fn(), deleteMany: jest.fn() },
       branchProductStock: { findMany: jest.fn() },
+      branch: { findMany: jest.fn() },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -229,6 +231,77 @@ describe('ProductsService', () => {
 
       expect(prisma.productVariant.updateMany).toHaveBeenCalledWith({ where: { productId: 'p1' }, data: { isActive: false } });
       expect(prisma.product.update).toHaveBeenCalledWith({ where: { id: 'p1' }, data: { isActive: false } });
+    });
+  });
+
+  describe('listAllVariants', () => {
+    it('mapea id/name/product_name de todas las variantes', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([
+        { id: 'v1', name: 'Familiar', product: { name: 'Hawaiana' } },
+        { id: 'v2', name: 'Mediana', product: null },
+      ]);
+
+      const result = await service.listAllVariants();
+
+      expect(prisma.productVariant.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ orderBy: { name: 'asc' } }),
+      );
+      expect(result).toEqual([
+        { id: 'v1', name: 'Familiar', product_name: 'Hawaiana' },
+        { id: 'v2', name: 'Mediana', product_name: '' },
+      ]);
+    });
+  });
+
+  describe('getBranchPrices', () => {
+    it('devuelve variantes activas con sus precios por sucursal y la lista de sucursales', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([
+        {
+          id: 'v1',
+          name: 'Familiar',
+          basePrice: decimal(50),
+          branchPrices: [{ id: 'bp1', branchId: 'b1', price: decimal(55), branch: { id: 'b1', name: 'Centro' } }],
+        },
+      ]);
+      prisma.branch.findMany.mockResolvedValue([{ id: 'b1', name: 'Centro' }]);
+
+      const result = await service.getBranchPrices('p1');
+
+      expect(prisma.productVariant.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { productId: 'p1', isActive: true } }),
+      );
+      expect(result).toEqual({
+        variants: [
+          {
+            id: 'v1',
+            name: 'Familiar',
+            base_price: 50,
+            branch_prices: [{ id: 'bp1', branch_id: 'b1', price: 55, branches: { id: 'b1', name: 'Centro' } }],
+          },
+        ],
+        branches: [{ id: 'b1', name: 'Centro' }],
+      });
+    });
+  });
+
+  describe('upsertBranchPrice', () => {
+    it('actualiza el precio si ya existe la combinación variante/sucursal', async () => {
+      prisma.branchPrice.findFirst.mockResolvedValue({ id: 'bp1' });
+
+      await service.upsertBranchPrice({ variant_id: 'v1', branch_id: 'b1', price: 60 });
+
+      expect(prisma.branchPrice.update).toHaveBeenCalledWith({ where: { id: 'bp1' }, data: { price: 60 } });
+      expect(prisma.branchPrice.create).not.toHaveBeenCalled();
+    });
+
+    it('crea el precio si no existe la combinación', async () => {
+      prisma.branchPrice.findFirst.mockResolvedValue(null);
+
+      await service.upsertBranchPrice({ variant_id: 'v1', branch_id: 'b1', price: 60 });
+
+      expect(prisma.branchPrice.create).toHaveBeenCalledWith({
+        data: { variantId: 'v1', branchId: 'b1', price: 60 },
+      });
     });
   });
 
