@@ -16,6 +16,7 @@ import { UsersModule } from './users/users.module';
 import { SettingsModule } from './settings/settings.module';
 import { OrdersModule } from './orders/orders.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     SettingsModule,
     NotificationsModule,
     OrdersModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

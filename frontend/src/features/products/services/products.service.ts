@@ -158,14 +158,17 @@ export const ProductsService = {
   async uploadImage(file: File, token: string): Promise<{ url?: string; error?: string }> {
     const formData = new FormData();
     formData.append("file", file);
-    const res = await fetch("/api/upload", {
+    // No Content-Type header here on purpose — the browser sets multipart/form-data
+    // with the correct boundary itself when the body is a FormData instance.
+    const url = USE_NEST ? `${NEST_API_URL}/storage/upload` : "/api/upload";
+    const res = await fetch(url, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
     if (res.ok) {
-      const { url } = await res.json();
-      return { url };
+      const { url: imageUrl } = await res.json();
+      return { url: imageUrl };
     }
     const { error } = await res.json();
     return { error };
