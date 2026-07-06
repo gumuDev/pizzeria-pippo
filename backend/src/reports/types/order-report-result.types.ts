@@ -1,0 +1,22 @@
+export interface OrderReportItemResult {
+  qty: number;
+  unit_price: number;
+  discount_applied: number;
+  promo_label: string | null;
+  product_variants: { name: string; products: { name: string; category: string } | null } | null;
+}
+
+export interface OrderReportResult {
+  id: string;
+  daily_number: number;
+  total: number;
+  created_at: string;
+  branch_id: string;
+  cashier_name: string;
+  payment_method: string | null;
+  order_type: string;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
+  branches: { name: string } | null;
+  order_items: OrderReportItemResult[];
+}

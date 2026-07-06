@@ -3,7 +3,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { dateRangeFrom, dateRangeTo, toBoliviaDate } from '../common/utils/timezone';
 import type { ReportQueryDto } from './dto/report-query.dto';
 import type { CashierReportQueryDto } from './dto/cashier-report-query.dto';
+import type { OrdersReportQueryDto } from './dto/orders-report-query.dto';
 import type { CashierReportResult, TopProductResult } from './types/report-result.types';
+import type { OrderReportResult } from './types/order-report-result.types';
 
 @Injectable()
 export class ReportsService {
@@ -146,5 +148,87 @@ export class ReportsService {
     }
 
     return Object.values(cashierMap).sort((a, b) => b.total - a.total);
+  }
+
+  async getOrders(query: OrdersReportQueryDto): Promise<{ data: OrderReportResult[]; total: number }> {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const where = this.buildOrdersHistoryWhere(query);
+
+    const [orders, total] = await this.prisma.$transaction([
+      this.prisma.order.findMany({
+        where,
+        include: {
+          branch: true,
+          cashier: true,
+          items: { include: { variant: { include: { product: true } } } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return { data: orders.map((order) => this.mapOrderToReportResult(order)), total };
+  }
+
+  // Unlike buildWhere (used by the aggregate reports), the order history
+  // shows cancelled orders too — the UI displays their cancel reason instead
+  // of hiding them.
+  private buildOrdersHistoryWhere(query: OrdersReportQueryDto) {
+    return {
+      ...(query.branchId && { branchId: query.branchId }),
+      ...((query.from || query.to) && {
+        createdAt: {
+          ...(query.from && { gte: new Date(dateRangeFrom(query.from)) }),
+          ...(query.to && { lte: new Date(dateRangeTo(query.to)) }),
+        },
+      }),
+    };
+  }
+
+  private mapOrderToReportResult(order: {
+    id: string;
+    dailyNumber: number;
+    total: { toNumber(): number };
+    createdAt: Date;
+    branchId: string;
+    paymentMethod: string | null;
+    orderType: string;
+    cancelledAt: Date | null;
+    cancelReason: string | null;
+    branch: { name: string } | null;
+    cashier: { fullName: string | null } | null;
+    items: {
+      qty: number;
+      unitPrice: { toNumber(): number };
+      discountApplied: { toNumber(): number };
+      promoLabel: string | null;
+      variant: { name: string; product: { name: string; category: string } } | null;
+    }[];
+  }): OrderReportResult {
+    return {
+      id: order.id,
+      daily_number: order.dailyNumber,
+      total: order.total.toNumber(),
+      created_at: order.createdAt.toISOString(),
+      branch_id: order.branchId,
+      cashier_name: order.cashier?.fullName ?? '—',
+      payment_method: order.paymentMethod,
+      order_type: order.orderType,
+      cancelled_at: order.cancelledAt?.toISOString() ?? null,
+      cancel_reason: order.cancelReason,
+      branches: order.branch ? { name: order.branch.name } : null,
+      order_items: order.items.map((item) => ({
+        qty: item.qty,
+        unit_price: item.unitPrice.toNumber(),
+        discount_applied: item.discountApplied.toNumber(),
+        promo_label: item.promoLabel,
+        product_variants: item.variant
+          ? { name: item.variant.name, products: { name: item.variant.product.name, category: item.variant.product.category } }
+          : null,
+      })),
+    };
   }
 }

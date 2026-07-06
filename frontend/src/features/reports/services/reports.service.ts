@@ -1,6 +1,10 @@
-import { supabase } from "@/lib/supabase";
 import { getToken } from "@/lib/auth";
+import { BranchesService } from "@/features/branches/services/branches.service";
 import type { Branch, SalesSummary, TopProduct, DailyData, StockAlert, CashierReport, Order } from "../types/reports.types";
+
+const USE_NEST = process.env.NEXT_PUBLIC_USE_NEST_REPORTS === "true";
+const USE_NEST_STOCK = process.env.NEXT_PUBLIC_USE_NEST_STOCK === "true";
+const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
 
 export const ReportsService = {
   async getToken(): Promise<string> {
@@ -8,8 +12,7 @@ export const ReportsService = {
   },
 
   async getBranches(): Promise<Branch[]> {
-    const { data } = await supabase.from("branches").select("*").order("name");
-    return data ?? [];
+    return BranchesService.getBranches();
   },
 
   buildParams(selectedBranch: string, from: string, to: string): string {
@@ -28,12 +31,14 @@ export const ReportsService = {
   }> {
     const headers = { Authorization: `Bearer ${token}` };
     const alertParams = selectedBranch !== "all" ? `?branchId=${selectedBranch}` : "";
+    const reportsBase = USE_NEST ? `${NEST_API_URL}/reports` : "/api/reports";
+    const stockAlertsUrl = USE_NEST_STOCK ? `${NEST_API_URL}/stock/alerts${alertParams}` : `/api/stock/alerts${alertParams}`;
 
     const [salesRes, topRes, dailyRes, alertsRes] = await Promise.all([
-      fetch(`/api/reports/sales?${params}`, { headers }),
-      fetch(`/api/reports/top-products?${params}`, { headers }),
-      fetch(`/api/reports/daily?${params}`, { headers }),
-      fetch(`/api/stock/alerts${alertParams}`, { headers }),
+      fetch(`${reportsBase}/sales?${params}`, { headers }),
+      fetch(`${reportsBase}/top-products?${params}`, { headers }),
+      fetch(`${reportsBase}/daily?${params}`, { headers }),
+      fetch(stockAlertsUrl, { headers }),
     ]);
 
     const [salesData, topData, dailyRaw, alertsData] = await Promise.all([
@@ -49,7 +54,8 @@ export const ReportsService = {
   },
 
   async fetchCashierReports(params: string, token: string): Promise<CashierReport[]> {
-    const res = await fetch(`/api/reports/cashiers?${params}`, {
+    const url = USE_NEST ? `${NEST_API_URL}/reports/cashiers?${params}` : `/api/reports/cashiers?${params}`;
+    const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
@@ -57,7 +63,8 @@ export const ReportsService = {
   },
 
   async fetchOrders(params: string, page: number, pageSize: number, token: string): Promise<{ data: Order[]; total: number }> {
-    const res = await fetch(`/api/reports/orders?${params}&page=${page}&pageSize=${pageSize}`, {
+    const base = USE_NEST ? `${NEST_API_URL}/reports/orders` : "/api/reports/orders";
+    const res = await fetch(`${base}?${params}&page=${page}&pageSize=${pageSize}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
@@ -77,7 +84,8 @@ export const ReportsService = {
   },
 
   async fetchAllOrdersForExport(params: string, token: string): Promise<Order[]> {
-    const res = await fetch(`/api/reports/orders?${params}&page=1&pageSize=9999`, {
+    const base = USE_NEST ? `${NEST_API_URL}/reports/orders` : "/api/reports/orders";
+    const res = await fetch(`${base}?${params}&page=1&pageSize=9999`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();

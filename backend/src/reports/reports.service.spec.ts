@@ -7,14 +7,16 @@ const decimal = (value: number) => ({ toNumber: () => value }) as never;
 describe('ReportsService', () => {
   let service: ReportsService;
   let prisma: {
-    order: { findMany: jest.Mock };
+    order: { findMany: jest.Mock; count: jest.Mock };
     orderItem: { findMany: jest.Mock };
+    $transaction: jest.Mock;
   };
 
   beforeEach(async () => {
     prisma = {
-      order: { findMany: jest.fn() },
+      order: { findMany: jest.fn(), count: jest.fn() },
       orderItem: { findMany: jest.fn() },
+      $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -110,6 +112,90 @@ describe('ReportsService', () => {
           items: [{ variant_id: 'v1', product_name: 'Napolitana', variant_name: 'Familiar', category: 'pizza', qty: 2, revenue: 100 }],
         },
       ]);
+    });
+  });
+
+  describe('getOrders', () => {
+    it('pagina el historial de órdenes y mapea el shape esperado por el frontend, incluyendo canceladas', async () => {
+      prisma.order.findMany.mockResolvedValue([
+        {
+          id: 'o1',
+          dailyNumber: 5,
+          total: decimal(70),
+          createdAt: new Date('2026-07-01T12:00:00.000Z'),
+          branchId: 'b1',
+          paymentMethod: 'efectivo',
+          orderType: 'dine_in',
+          cancelledAt: new Date('2026-07-01T12:05:00.000Z'),
+          cancelReason: 'cliente se arrepintió',
+          branch: { name: 'Centro' },
+          cashier: { fullName: 'Ana' },
+          items: [
+            {
+              qty: 1,
+              unitPrice: decimal(70),
+              discountApplied: decimal(0),
+              promoLabel: null,
+              variant: { name: 'Familiar', product: { name: 'Napolitana', category: 'pizza' } },
+            },
+          ],
+        },
+      ]);
+      prisma.order.count.mockResolvedValue(1);
+
+      const result = await service.getOrders({ page: 1, pageSize: 20 });
+
+      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(result.total).toBe(1);
+      expect(result.data).toEqual([
+        {
+          id: 'o1',
+          daily_number: 5,
+          total: 70,
+          created_at: '2026-07-01T12:00:00.000Z',
+          branch_id: 'b1',
+          cashier_name: 'Ana',
+          payment_method: 'efectivo',
+          order_type: 'dine_in',
+          cancelled_at: '2026-07-01T12:05:00.000Z',
+          cancel_reason: 'cliente se arrepintió',
+          branches: { name: 'Centro' },
+          order_items: [
+            {
+              qty: 1,
+              unit_price: 70,
+              discount_applied: 0,
+              promo_label: null,
+              product_variants: { name: 'Familiar', products: { name: 'Napolitana', category: 'pizza' } },
+            },
+          ],
+        },
+      ]);
+    });
+
+    it('usa "—" cuando no hay cajero asociado', async () => {
+      prisma.order.findMany.mockResolvedValue([
+        {
+          id: 'o2',
+          dailyNumber: 1,
+          total: decimal(10),
+          createdAt: new Date('2026-07-01T12:00:00.000Z'),
+          branchId: 'b1',
+          paymentMethod: null,
+          orderType: 'takeaway',
+          cancelledAt: null,
+          cancelReason: null,
+          branch: null,
+          cashier: null,
+          items: [],
+        },
+      ]);
+      prisma.order.count.mockResolvedValue(1);
+
+      const result = await service.getOrders({});
+
+      expect(result.data[0].cashier_name).toBe('—');
+      expect(result.data[0].branches).toBeNull();
     });
   });
 });

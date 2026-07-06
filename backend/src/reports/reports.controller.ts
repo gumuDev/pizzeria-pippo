@@ -3,6 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ReportsService } from './reports.service';
 import { ReportQueryDto } from './dto/report-query.dto';
 import { CashierReportQueryDto } from './dto/cashier-report-query.dto';
+import { OrdersReportQueryDto } from './dto/orders-report-query.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('reports')
@@ -27,5 +28,10 @@ export class ReportsController {
   @Get('cashiers')
   getCashiers(@Query() query: CashierReportQueryDto) {
     return this.reportsService.getCashiers(query);
+  }
+
+  @Get('orders')
+  getOrders(@Query() query: OrdersReportQueryDto) {
+    return this.reportsService.getOrders(query);
   }
 }
