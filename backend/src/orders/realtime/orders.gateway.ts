@@ -48,6 +48,13 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(this.branchRoom(branchId)).emit('order:updated', payload);
   }
 
+  emitPaymentMatched(
+    branchId: string,
+    payload: { requestId: string; notificationId: string; amount: number; payerName: string; rawText: string },
+  ): void {
+    this.server.to(this.branchRoom(branchId)).emit('payment:matched', payload);
+  }
+
   private branchRoom(branchId: string): string {
     return `branch:${branchId}`;
   }

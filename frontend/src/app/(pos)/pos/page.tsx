@@ -18,6 +18,8 @@ import { PosCart } from "@/features/pos/components/PosCart";
 import { VariantSelectorModal } from "@/features/pos/components/VariantSelectorModal";
 import { PaymentModal } from "@/features/pos/components/PaymentModal";
 import { ConfirmSaleModal } from "@/features/pos/components/ConfirmSaleModal";
+import { PaymentValidationModal } from "@/features/pos/components/PaymentValidationModal";
+import { usePaymentValidation } from "@/features/pos/hooks/usePaymentValidation";
 import { TicketModal } from "@/features/pos/components/TicketModal";
 import { BranchSelector } from "@/features/pos/components/BranchSelector";
 import { CancelOrderModal } from "@/features/pos/components/CancelOrderModal";
@@ -46,6 +48,8 @@ export default function PosPage() {
   const printer = usePrinter();
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
+  const paymentValidation = usePaymentValidation(effectiveBranchId ?? undefined);
+  const [validationModalOpen, setValidationModalOpen] = useState(false);
 
   if (!identity) {
     return (
@@ -138,6 +142,22 @@ export default function PosPage() {
       clearTimeout(timeout);
       setConfirmLoading(false);
     }
+  };
+
+  const handleValidatePayment = () => {
+    setValidationModalOpen(true);
+    paymentValidation.start(cart.total);
+  };
+
+  const handleValidationConfirm = () => {
+    paymentValidation.cancel();
+    setValidationModalOpen(false);
+    handleConfirmSale();
+  };
+
+  const handleValidationCancel = () => {
+    paymentValidation.cancel();
+    setValidationModalOpen(false);
   };
 
   const cartPanel = (
@@ -245,7 +265,14 @@ export default function PosPage() {
 
       <VariantSelectorModal product={variantModal} branchId={branchId} allProducts={products} getVariantPrice={getVariantPrice} getPromoLabel={getPromoLabel} onSelect={handleVariantSelect} onClose={() => setVariantModal(null)} />
       <PaymentModal open={paymentModal} total={cart.total} onClose={() => { setPaymentModal(false); setPaymentMethod(null); }} onConfirm={handlePaymentConfirm} />
-      <ConfirmSaleModal open={confirmModal} discountedCart={cart.discountedCart} total={cart.total} totalDiscount={cart.totalDiscount} paymentMethod={paymentMethod} orderType={cart.orderType} loading={confirmLoading} onConfirm={handleConfirmSale} onCancel={() => { setConfirmModal(false); setPaymentMethod(null); }} />
+      <ConfirmSaleModal open={confirmModal} discountedCart={cart.discountedCart} total={cart.total} totalDiscount={cart.totalDiscount} paymentMethod={paymentMethod} orderType={cart.orderType} loading={confirmLoading} onConfirm={handleConfirmSale} onCancel={() => { setConfirmModal(false); setPaymentMethod(null); }} onValidatePayment={handleValidatePayment} />
+      <PaymentValidationModal
+        open={validationModalOpen}
+        state={paymentValidation.state}
+        onConfirm={handleValidationConfirm}
+        onReject={paymentValidation.rejectMatch}
+        onCancel={handleValidationCancel}
+      />
       <TicketModal
         ticket={ticket}
         onClose={() => setTicket(null)}

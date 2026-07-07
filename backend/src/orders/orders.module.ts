@@ -10,5 +10,6 @@ import { OrdersGateway } from './realtime/orders.gateway';
   imports: [AuthModule, PromotionsModule, NotificationsModule],
   controllers: [OrdersController],
   providers: [OrdersService, OrdersGateway],
+  exports: [OrdersGateway],
 })
 export class OrdersModule {}

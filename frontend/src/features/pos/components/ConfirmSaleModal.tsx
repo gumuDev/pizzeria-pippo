@@ -18,9 +18,10 @@ interface Props {
   loading: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  onValidatePayment?: () => void;
 }
 
-export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, paymentMethod, orderType, loading, onConfirm, onCancel }: Props) {
+export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, paymentMethod, orderType, loading, onConfirm, onCancel, onValidatePayment }: Props) {
   return (
     <Modal
       title={
@@ -33,26 +34,33 @@ export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, p
       onCancel={onCancel}
       width={400}
       footer={
-        <div className="flex gap-2">
-          <Button
-            size="large"
-            icon={<ArrowLeftOutlined />}
-            onClick={onCancel}
-            disabled={loading}
-            style={{ flex: 1, height: 48 }}
-          >
-            Volver
-          </Button>
-          <Button
-            type="primary"
-            size="large"
-            icon={<CheckOutlined />}
-            loading={loading}
-            onClick={onConfirm}
-            style={{ flex: 2, height: 48, background: "#ea580c", borderColor: "#ea580c" }}
-          >
-            Confirmar y cobrar
-          </Button>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Button
+              size="large"
+              icon={<ArrowLeftOutlined />}
+              onClick={onCancel}
+              disabled={loading}
+              style={{ flex: 1, height: 48 }}
+            >
+              Volver
+            </Button>
+            <Button
+              type="primary"
+              size="large"
+              icon={<CheckOutlined />}
+              loading={loading}
+              onClick={onConfirm}
+              style={{ flex: 2, height: 48, background: "#ea580c", borderColor: "#ea580c" }}
+            >
+              Confirmar y cobrar
+            </Button>
+          </div>
+          {paymentMethod === "qr" && onValidatePayment && (
+            <Button block disabled={loading} onClick={onValidatePayment}>
+              Validar pago automáticamente
+            </Button>
+          )}
         </div>
       }
     >

@@ -59,3 +59,11 @@ docs/database/local-dumps/
 
 # local docker volumes (postgres data dir, etc.) — never version raw DB files
 docker/volumes/
+
+# mobile (Android/Gradle) — build artifacts and machine-specific SDK path
+mobile/**/.gradle/
+mobile/**/.kotlin/
+mobile/**/build/
+mobile/**/local.properties
+mobile/**/.idea/
+mobile/**/*.iml

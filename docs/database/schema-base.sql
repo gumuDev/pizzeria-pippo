@@ -11,6 +11,7 @@
 -- `profiles.business_id` puntualmente por la migración 034, y
 -- `profiles.email`/`password_hash`/`is_banned` + drop de FKs a `auth.users`
 -- por las migraciones 035-037 (Fase 7, NestJS ahora es dueño de Auth),
+-- y `devices` por la migración 038 (validación automática de pago QR),
 -- sin resincronizar el resto del archivo)
 -- ============================================================
 
@@ -21,6 +22,18 @@ CREATE TABLE public.branches (
   created_at timestamp with time zone DEFAULT now(),
   is_active boolean DEFAULT true,
   CONSTRAINT branches_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE public.devices (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  branch_id uuid NOT NULL,
+  name text NOT NULL,
+  api_key_hash text NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  last_seen_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT devices_pkey PRIMARY KEY (id),
+  CONSTRAINT devices_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id)
 );
 
 CREATE TABLE public.businesses (

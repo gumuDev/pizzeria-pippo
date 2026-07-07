@@ -17,6 +17,8 @@ import { SettingsModule } from './settings/settings.module';
 import { OrdersModule } from './orders/orders.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { StorageModule } from './storage/storage.module';
+import { DevicesModule } from './devices/devices.module';
+import { PaymentValidationModule } from './payment-validation/payment-validation.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { StorageModule } from './storage/storage.module';
     NotificationsModule,
     OrdersModule,
     StorageModule,
+    DevicesModule,
+    PaymentValidationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
