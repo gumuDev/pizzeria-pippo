@@ -1,19 +1,5 @@
-import { getToken } from "@/lib/auth";
+import { nestFetch } from "@/lib/nestFetch";
 import type { Branch } from "../types/branch.types";
-
-const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
-
-async function nestFetch(path: string, init?: RequestInit): Promise<Response> {
-  const token = await getToken();
-  return fetch(`${NEST_API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...init?.headers,
-    },
-  });
-}
 
 export const BranchesService = {
   async getBranches(showInactive = false): Promise<Branch[]> {

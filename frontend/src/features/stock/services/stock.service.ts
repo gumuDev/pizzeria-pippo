@@ -1,10 +1,8 @@
-import { getToken } from "@/lib/auth";
+import { nestFetch } from "@/lib/nestFetch";
 import { ok, fail, type ServiceResult } from "@/lib/errors";
 import { IngredientsService } from "@/features/ingredients/services/ingredients.service";
 import { BranchesService } from "@/features/branches/services/branches.service";
 import type { StockRow, Movement, Ingredient, Branch, ProductStockRow, ProductMovement } from "../types/stock.types";
-
-const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
 
 interface ListParams {
   branchId: string;
@@ -15,18 +13,6 @@ interface ListParams {
 interface ListResult<T> {
   data: T[];
   total: number;
-}
-
-async function nestFetch(path: string, init?: RequestInit): Promise<Response> {
-  const token = await getToken();
-  return fetch(`${NEST_API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...init?.headers,
-    },
-  });
 }
 
 export const StockService = {

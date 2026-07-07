@@ -1,10 +1,8 @@
-import { getToken } from "@/lib/auth";
+import { nestFetch } from "@/lib/nestFetch";
 import { IngredientsService } from "@/features/ingredients/services/ingredients.service";
 import { BranchesService } from "@/features/branches/services/branches.service";
 import type { WarehouseRow } from "../types/warehouse.types";
 import type { IngredientMovement, ProductMovement } from "../types/warehouse-movements.types";
-
-const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
 
 interface WarehouseStockParams {
   page: number;
@@ -19,18 +17,6 @@ interface MovementFilters {
   branchId?: string;
   from?: string;
   to?: string;
-}
-
-async function nestFetch(path: string, init?: RequestInit): Promise<Response> {
-  const token = await getToken();
-  return fetch(`${NEST_API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...init?.headers,
-    },
-  });
 }
 
 export async function getIngredients(): Promise<{ id: string; name: string; unit: string }[]> {
