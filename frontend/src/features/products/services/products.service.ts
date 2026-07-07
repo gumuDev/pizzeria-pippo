@@ -4,7 +4,7 @@ import { ok, fail, type ServiceResult } from "@/lib/errors";
 import { IngredientsService } from "@/features/ingredients/services/ingredients.service";
 import { BranchesService } from "@/features/branches/services/branches.service";
 import type { ProductVariant } from "@pippo/shared";
-import type { Product, Ingredient, Branch, Variant, Step1Data } from "../types/product.types";
+import type { Product, Ingredient, Branch, Variant, Step1Data, VariantWithPrices } from "../types/product.types";
 
 // Used only by uploadImage() below, which needs a raw fetch (FormData body,
 // no Content-Type) instead of the shared nestFetch.
@@ -83,6 +83,22 @@ export const ProductsService = {
     if (res.ok) return { ok: true };
     const { error } = await res.json();
     return { ok: false, error };
+  },
+
+  async getBranchPrices(productId: string): Promise<{ variants: VariantWithPrices[]; branches: Branch[] }> {
+    const res = await nestFetch(API_ENDPOINTS.products.branchPrices(productId));
+    if (!res.ok) return { variants: [], branches: [] };
+    return res.json();
+  },
+
+  async saveBranchPrice(productId: string, variantId: string, branchId: string, price: number): Promise<ServiceResult> {
+    const res = await nestFetch(API_ENDPOINTS.products.branchPrices(productId), {
+      method: "POST",
+      body: JSON.stringify({ variant_id: variantId, branch_id: branchId, price }),
+    });
+    if (res.ok) return ok(undefined);
+    const data = await res.json().catch(() => ({}));
+    return fail(data.error ?? "Error al guardar");
   },
 
   async uploadImage(file: File, token: string): Promise<{ url?: string; error?: string }> {
