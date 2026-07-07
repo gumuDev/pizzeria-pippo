@@ -1,24 +1,20 @@
 import { getToken } from "@/lib/auth";
+import { nestFetch } from "@/lib/nestFetch";
 import { AuthorizedChat, ChatFormValues } from "@/features/telegram-bot/types";
-
-const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
 
 async function getAuthHeader(): Promise<HeadersInit> {
   return { Authorization: `Bearer ${await getToken()}` };
 }
 
 export async function getBotSettings(keys: string[]): Promise<Record<string, string>> {
-  const headers = await getAuthHeader();
-  const res = await fetch(`${NEST_API_URL}/settings/raw?keys=${keys.join(",")}`, { headers });
+  const res = await nestFetch(`/settings/raw?keys=${keys.join(",")}`);
   if (!res.ok) return {};
   return res.json();
 }
 
 export async function saveBotSettings(updates: { key: string; value: string; updated_at: string }[]): Promise<void> {
-  const headers = await getAuthHeader();
-  const res = await fetch(`${NEST_API_URL}/settings/raw`, {
+  const res = await nestFetch("/settings/raw", {
     method: "PUT",
-    headers: { ...headers, "Content-Type": "application/json" },
     body: JSON.stringify({ updates: updates.map(({ key, value }) => ({ key, value })) }),
   });
   if (!res.ok) throw new Error("Error al guardar la configuración");

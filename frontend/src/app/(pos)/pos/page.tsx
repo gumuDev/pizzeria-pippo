@@ -121,8 +121,7 @@ export default function PosPage() {
     const timeout = setTimeout(() => controller.abort(), 15000);
     setConfirmLoading(true);
     try {
-      const token = await PosService.getToken();
-      const result = await PosService.confirmSale(branchId, cart.discountedCart, cart.total, paymentMethod, cart.orderType, token, controller.signal, idempotencyKey ?? undefined);
+      const result = await PosService.confirmSale(branchId, cart.discountedCart, cart.total, paymentMethod, cart.orderType, controller.signal, idempotencyKey ?? undefined);
 
       if (result.ok) {
         broadcast("ORDER_COMPLETE");

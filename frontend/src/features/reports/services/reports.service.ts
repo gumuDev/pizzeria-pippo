@@ -1,14 +1,8 @@
-import { getToken } from "@/lib/auth";
+import { nestFetch } from "@/lib/nestFetch";
 import { BranchesService } from "@/features/branches/services/branches.service";
 import type { Branch, SalesSummary, TopProduct, DailyData, StockAlert, CashierReport, Order } from "../types/reports.types";
 
-const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
-
 export const ReportsService = {
-  async getToken(): Promise<string> {
-    return getToken();
-  },
-
   async getBranches(): Promise<Branch[]> {
     return BranchesService.getBranches();
   },
@@ -21,22 +15,19 @@ export const ReportsService = {
     return params.toString();
   },
 
-  async fetchSalesReports(params: string, selectedBranch: string, token: string): Promise<{
+  async fetchSalesReports(params: string, selectedBranch: string): Promise<{
     summary: SalesSummary | null;
     topProducts: TopProduct[];
     dailyData: DailyData[];
     stockAlerts: StockAlert[];
   }> {
-    const headers = { Authorization: `Bearer ${token}` };
     const alertParams = selectedBranch !== "all" ? `?branchId=${selectedBranch}` : "";
-    const reportsBase = `${NEST_API_URL}/reports`;
-    const stockAlertsUrl = `${NEST_API_URL}/stock/alerts${alertParams}`;
 
     const [salesRes, topRes, dailyRes, alertsRes] = await Promise.all([
-      fetch(`${reportsBase}/sales?${params}`, { headers }),
-      fetch(`${reportsBase}/top-products?${params}`, { headers }),
-      fetch(`${reportsBase}/daily?${params}`, { headers }),
-      fetch(stockAlertsUrl, { headers }),
+      nestFetch(`/reports/sales?${params}`),
+      nestFetch(`/reports/top-products?${params}`),
+      nestFetch(`/reports/daily?${params}`),
+      nestFetch(`/stock/alerts${alertParams}`),
     ]);
 
     const [salesData, topData, dailyRaw, alertsData] = await Promise.all([
@@ -51,38 +42,28 @@ export const ReportsService = {
     };
   },
 
-  async fetchCashierReports(params: string, token: string): Promise<CashierReport[]> {
-    const res = await fetch(`${NEST_API_URL}/reports/cashiers?${params}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  async fetchCashierReports(params: string): Promise<CashierReport[]> {
+    const res = await nestFetch(`/reports/cashiers?${params}`);
     const data = await res.json();
     return Array.isArray(data) ? data : [];
   },
 
-  async fetchOrders(params: string, page: number, pageSize: number, token: string): Promise<{ data: Order[]; total: number }> {
-    const res = await fetch(`${NEST_API_URL}/reports/orders?${params}&page=${page}&pageSize=${pageSize}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  async fetchOrders(params: string, page: number, pageSize: number): Promise<{ data: Order[]; total: number }> {
+    const res = await nestFetch(`/reports/orders?${params}&page=${page}&pageSize=${pageSize}`);
     const data = await res.json();
     if (data && !data.error) return { data: data.data ?? [], total: data.total ?? 0 };
     return { data: [], total: 0 };
   },
 
-  async cancelOrder(orderId: string, reason: string, token: string): Promise<{ ok: boolean; error?: string }> {
-    const res = await fetch(`${NEST_API_URL}/orders/${orderId}/cancel`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ reason }),
-    });
+  async cancelOrder(orderId: string, reason: string): Promise<{ ok: boolean; error?: string }> {
+    const res = await nestFetch(`/orders/${orderId}/cancel`, { method: "POST", body: JSON.stringify({ reason }) });
     if (res.ok) return { ok: true };
     const data = await res.json().catch(() => ({}));
     return { ok: false, error: data.error ?? "Error al anular la orden" };
   },
 
-  async fetchAllOrdersForExport(params: string, token: string): Promise<Order[]> {
-    const res = await fetch(`${NEST_API_URL}/reports/orders?${params}&page=1&pageSize=9999`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  async fetchAllOrdersForExport(params: string): Promise<Order[]> {
+    const res = await nestFetch(`/reports/orders?${params}&page=1&pageSize=9999`);
     const data = await res.json();
     if (data && !data.error) return data.data ?? [];
     return [];

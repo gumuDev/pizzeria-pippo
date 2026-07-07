@@ -10,8 +10,7 @@ export function useCashierReport() {
 
   const fetch = useCallback(async (params: string) => {
     setLoading(true);
-    const token = await ReportsService.getToken();
-    const data = await ReportsService.fetchCashierReports(params, token);
+    const data = await ReportsService.fetchCashierReports(params);
     setCashierReports(data);
     setLoading(false);
   }, []);

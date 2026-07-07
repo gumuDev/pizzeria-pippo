@@ -45,8 +45,7 @@ export function useDayOrders(branchId: string | undefined, showOrders: boolean) 
 
   const handleCancelOrder = async (orderId: string, reason: string) => {
     setCancelling(true);
-    const token = await PosService.getToken();
-    const result = await PosService.cancelOrder(orderId, reason, token);
+    const result = await PosService.cancelOrder(orderId, reason);
     setCancelling(false);
     if (result.ok) {
       setDayOrders((prev) =>

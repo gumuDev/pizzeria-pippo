@@ -1,5 +1,6 @@
 import { io, type Socket } from "socket.io-client";
 import { getToken as _getToken, getUserProfile, signOut } from "@/lib/auth";
+import { nestFetch } from "@/lib/nestFetch";
 import { todayInBolivia } from "@/lib/timezone";
 import { BranchesService } from "@/features/branches/services/branches.service";
 import type { Identity, Product, DayOrder, OrderType } from "../types/pos.types";
@@ -36,14 +37,11 @@ export const PosService = {
     };
   },
 
-  async getProductsAndPromotions(branchId: string, token: string): Promise<{ products: Product[]; promotions: Promotion[] }> {
+  async getProductsAndPromotions(branchId: string): Promise<{ products: Product[]; promotions: Promotion[] }> {
     const today = todayInBolivia();
-    const headers = { Authorization: `Bearer ${token}` };
-    const promoUrl = `${NEST_API_URL}/promotions?branchId=${branchId}&date=${today}`;
-    const productsUrl = `${NEST_API_URL}/products/pos-catalog?branchId=${branchId}`;
     const [productsRes, promoRes] = await Promise.all([
-      fetch(productsUrl, { headers }),
-      fetch(promoUrl, { headers }),
+      nestFetch(`/products/pos-catalog?branchId=${branchId}`),
+      nestFetch(`/promotions?branchId=${branchId}&date=${today}`),
     ]);
     const [productsData, promoData] = await Promise.all([productsRes.json(), promoRes.json()]);
     return {
@@ -53,10 +51,7 @@ export const PosService = {
   },
 
   async getDayOrders(branchId: string): Promise<DayOrder[]> {
-    const token = await PosService.getToken();
-    const res = await fetch(`${NEST_API_URL}/orders?branchId=${branchId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await nestFetch(`/orders?branchId=${branchId}`);
     const data = await res.json();
     return Array.isArray(data) ? data : [];
   },
@@ -67,14 +62,12 @@ export const PosService = {
     total: number,
     paymentMethod: "efectivo" | "qr" | null,
     orderType: OrderType,
-    token: string,
     signal?: AbortSignal,
     idempotencyKey?: string
   ): Promise<{ ok: boolean; order_id?: string; daily_number?: number; error?: string }> {
     try {
-      const res = await fetch(`${NEST_API_URL}/orders`, {
+      const res = await nestFetch("/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         signal,
         body: JSON.stringify({
           branch_id: branchId,
@@ -106,11 +99,7 @@ export const PosService = {
   },
 
   async markOrderReady(orderId: string): Promise<void> {
-    const token = await PosService.getToken();
-    await fetch(`${NEST_API_URL}/orders/${orderId}/ready`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await nestFetch(`/orders/${orderId}/ready`, { method: "POST" });
   },
 
   subscribeToKitchenStatus(
@@ -132,12 +121,8 @@ export const PosService = {
     subscription.socket.disconnect();
   },
 
-  async cancelOrder(orderId: string, reason: string, token: string): Promise<{ ok: boolean; error?: string }> {
-    const res = await fetch(`${NEST_API_URL}/orders/${orderId}/cancel`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ reason }),
-    });
+  async cancelOrder(orderId: string, reason: string): Promise<{ ok: boolean; error?: string }> {
+    const res = await nestFetch(`/orders/${orderId}/cancel`, { method: "POST", body: JSON.stringify({ reason }) });
     if (res.ok) return { ok: true };
     const data = await res.json().catch(() => ({}));
     return { ok: false, error: data.error ?? "Error al anular la orden" };

@@ -1,5 +1,6 @@
 import { io, type Socket } from "socket.io-client";
 import { getToken } from "@/lib/auth";
+import { nestFetch } from "@/lib/nestFetch";
 import { BranchesService } from "@/features/branches/services/branches.service";
 import type { KitchenOrder } from "../types/kitchen.types";
 
@@ -11,10 +12,7 @@ type OrdersSubscription = { socket: Socket };
 
 export const KitchenService = {
   async getLateThresholdMinutes(): Promise<number | null> {
-    const token = await getToken();
-    const res = await fetch(`${NEST_API_URL}/settings/kitchen-threshold`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await nestFetch("/settings/kitchen-threshold");
     if (!res.ok) return null;
     const data = await res.json();
     return data.kitchen_late_threshold_minutes ?? null;
@@ -26,20 +24,13 @@ export const KitchenService = {
   },
 
   async getPendingOrders(branchId: string): Promise<KitchenOrder[]> {
-    const token = await getToken();
-    const res = await fetch(`${NEST_API_URL}/orders/kitchen?branchId=${branchId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await nestFetch(`/orders/kitchen?branchId=${branchId}`);
     if (!res.ok) return [];
     return res.json();
   },
 
   async markOrderReady(orderId: string): Promise<void> {
-    const token = await getToken();
-    await fetch(`${NEST_API_URL}/orders/${orderId}/ready`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await nestFetch(`/orders/${orderId}/ready`, { method: "POST" });
   },
 
   subscribeToOrders(

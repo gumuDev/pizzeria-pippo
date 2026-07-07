@@ -56,8 +56,7 @@ export function usePosProducts(branchId: string | undefined) {
     } else {
       setLoading(true);
     }
-    const token = await PosService.getToken();
-    const result = await PosService.getProductsAndPromotions(id, token);
+    const result = await PosService.getProductsAndPromotions(id);
     setProducts(result.products);
     setPromotions(result.promotions);
     setCache(id, result.products, result.promotions);

@@ -16,8 +16,7 @@ export function useOrdersReport() {
 
   const fetch = useCallback(async (params: string, page = 1, pageSize = 10) => {
     setLoading(true);
-    const token = await ReportsService.getToken();
-    const result = await ReportsService.fetchOrders(params, page, pageSize, token);
+    const result = await ReportsService.fetchOrders(params, page, pageSize);
     setOrders(result.data);
     setOrdersTotal(result.total);
     setLoading(false);
@@ -25,8 +24,7 @@ export function useOrdersReport() {
 
   const exportToExcel = useCallback(async (params: string) => {
     setExporting(true);
-    const token = await ReportsService.getToken();
-    const allOrders = await ReportsService.fetchAllOrdersForExport(params, token);
+    const allOrders = await ReportsService.fetchAllOrdersForExport(params);
     setExporting(false);
 
     const rows = allOrders.flatMap((order) =>

@@ -14,8 +14,7 @@ export function useOrderCancellation(onSuccess: () => void) {
 
   const handleCancel = async (orderId: string, reason: string) => {
     setCancelling(true);
-    const token = await ReportsService.getToken();
-    const result = await ReportsService.cancelOrder(orderId, reason, token);
+    const result = await ReportsService.cancelOrder(orderId, reason);
     setCancelling(false);
     if (result.ok) {
       setCancelModal(null);

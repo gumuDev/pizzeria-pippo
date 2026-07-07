@@ -13,8 +13,7 @@ export function useSalesReport() {
 
   const fetch = useCallback(async (params: string, selectedBranch: string) => {
     setLoading(true);
-    const token = await ReportsService.getToken();
-    const result = await ReportsService.fetchSalesReports(params, selectedBranch, token);
+    const result = await ReportsService.fetchSalesReports(params, selectedBranch);
     setSummary(result.summary);
     setTopProducts(result.topProducts);
     setDailyData(result.dailyData);

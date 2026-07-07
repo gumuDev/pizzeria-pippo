@@ -1,6 +1,5 @@
 import dayjs from "dayjs";
-
-const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
+import { nestFetch } from "@/lib/nestFetch";
 
 export interface SalesSummary { total: number; count: number; avg: number; }
 export interface TopProduct {
@@ -36,21 +35,16 @@ export interface DashboardData {
 }
 
 export const DashboardService = {
-  async getDashboardData(token: string): Promise<DashboardData> {
-    const headers = { Authorization: `Bearer ${token}` };
+  async getDashboardData(): Promise<DashboardData> {
     const today = dayjs().format("YYYY-MM-DD");
     const weekStart = dayjs().subtract(6, "day").format("YYYY-MM-DD");
 
-    const reportsBase = `${NEST_API_URL}/reports`;
-    const stockAlertsUrl = `${NEST_API_URL}/stock/alerts`;
-    const warehouseStockUrl = `${NEST_API_URL}/warehouse/stock?status=low&pageSize=9999`;
-
     const [salesRes, topRes, dailyRes, alertsRes, warehouseStockRes] = await Promise.all([
-      fetch(`${reportsBase}/sales?from=${today}&to=${today}`, { headers }),
-      fetch(`${reportsBase}/top-products?from=${today}&to=${today}`, { headers }),
-      fetch(`${reportsBase}/daily?from=${weekStart}&to=${today}`, { headers }),
-      fetch(stockAlertsUrl, { headers }),
-      fetch(warehouseStockUrl, { headers }),
+      nestFetch(`/reports/sales?from=${today}&to=${today}`),
+      nestFetch(`/reports/top-products?from=${today}&to=${today}`),
+      nestFetch(`/reports/daily?from=${weekStart}&to=${today}`),
+      nestFetch("/stock/alerts"),
+      nestFetch("/warehouse/stock?status=low&pageSize=9999"),
     ]);
 
     const [salesData, topData, dailyRaw, alertsData, warehouseJson] = await Promise.all([
