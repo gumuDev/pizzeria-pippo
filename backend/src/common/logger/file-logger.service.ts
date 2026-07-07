@@ -1,11 +1,18 @@
 import { ConsoleLogger } from '@nestjs/common';
 import { appendFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { todayInBolivia } from '../utils/timezone';
 
 const LOG_DIR = join(process.cwd(), 'logs');
-const LOG_FILE = join(LOG_DIR, 'app.log');
 
 mkdirSync(LOG_DIR, { recursive: true });
+
+// One file per business day (Bolivia time) so `logs/` doesn't grow into a single
+// unbounded file — computed on every write, so it rotates naturally past midnight
+// without needing to restart the process.
+function getLogFilePath(): string {
+  return join(LOG_DIR, `app-${todayInBolivia()}.log`);
+}
 
 function stripAnsi(text: string): string {
   // eslint-disable-next-line no-control-regex
@@ -16,7 +23,7 @@ function writeToFile(level: string, message: unknown, context?: string) {
   const timestamp = new Date().toISOString();
   const text = typeof message === 'string' ? message : JSON.stringify(message, null, 2);
   const line = `[${timestamp}] [${level}]${context ? ` [${context}]` : ''} ${stripAnsi(text)}\n`;
-  appendFileSync(LOG_FILE, line);
+  appendFileSync(getLogFilePath(), line);
 }
 
 export class FileLogger extends ConsoleLogger {
