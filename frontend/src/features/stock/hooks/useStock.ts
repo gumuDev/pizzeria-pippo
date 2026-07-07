@@ -1,16 +1,41 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import useSWR from "swr";
 import { Form, message } from "antd";
 import { StockService } from "../services/stock.service";
-import type {
-  Branch, Ingredient, StockRow, Movement, ProductStockRow,
-  ProductVariantOption, ProductMovement, UnifiedMovement,
-} from "../types/stock.types";
+import { useIngredientStockData } from "./useIngredientStockData";
+import { useProductStockData } from "./useProductStockData";
+import type { Branch, Ingredient, StockRow, ProductStockRow, UnifiedMovement } from "../types/stock.types";
 
 const PAGE_SIZE = 10;
-const REVALIDATE_INTERVAL = 60 * 1000;
+
+function buildUnifiedMovements(
+  ingredientMovements: ReturnType<typeof useIngredientStockData>["movements"],
+  productMovements: ReturnType<typeof useProductStockData>["movements"],
+): UnifiedMovement[] {
+  return [
+    ...ingredientMovements.map((m): UnifiedMovement => ({
+      id: m.id,
+      created_at: m.created_at,
+      detail: m.ingredients?.name ?? m.ingredient_id,
+      quantity: m.quantity,
+      type: m.type,
+      notes: m.notes,
+      origin: "insumo",
+    })),
+    ...productMovements.map((m): UnifiedMovement => ({
+      id: m.id,
+      created_at: m.created_at,
+      detail: m.product_variants?.products?.name
+        ? `${m.product_variants.products.name}${m.product_variants.name !== "Unidad" ? ` — ${m.product_variants.name}` : ""}`
+        : m.variant_id,
+      quantity: m.quantity,
+      type: m.type,
+      notes: m.notes,
+      origin: "reventa",
+    })),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
 
 export function useStock() {
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -40,89 +65,15 @@ export function useStock() {
     });
   }, []);
 
-  const swrOpts = { revalidateOnFocus: false, dedupingInterval: REVALIDATE_INTERVAL, keepPreviousData: true };
-  const swrFresh = { ...swrOpts, keepPreviousData: false, dedupingInterval: REVALIDATE_INTERVAL };
+  const ing = useIngredientStockData(selectedBranch, pageStock, pageHistory, PAGE_SIZE);
+  const prod = useProductStockData(selectedBranch, pageHistory, PAGE_SIZE);
 
-  const { data: stockData, isLoading: loadingStock, mutate: mutateStock } = useSWR(
-    selectedBranch ? (["stock", selectedBranch, pageStock] as const) : null,
-    ([, branchId, page]) => StockService.getStock({ branchId, page, pageSize: PAGE_SIZE }),
-    swrOpts,
-  );
+  const { stock, totalStock, alerts, loadingStock } = ing;
+  const { productStock, loadingProductStock, productVariants } = prod;
 
-  const { data: alertsData, mutate: mutateAlerts } = useSWR(
-    selectedBranch ? (["stock-alerts", selectedBranch] as const) : null,
-    ([, branchId]) => StockService.getAlerts(branchId).then((data) => ({ data, total: data.length })),
-    swrOpts,
-  );
-
-  const { data: ingredientMovementsData, isLoading: loadingIngredientMovements, mutate: mutateIngredientMovements } = useSWR(
-    selectedBranch ? (["stock-movements", selectedBranch, pageHistory] as const) : null,
-    ([, branchId, page]) => StockService.getMovements({ branchId, page, pageSize: PAGE_SIZE }),
-    swrOpts,
-  );
-
-  const { data: productMovementsData, isLoading: loadingProductMovements, mutate: mutateProductMovements } = useSWR(
-    selectedBranch ? (["stock-product-movements", selectedBranch, pageHistory] as const) : null,
-    ([, branchId, page]) => StockService.getProductMovements({ branchId, page, pageSize: PAGE_SIZE }),
-    swrOpts,
-  );
-
-  const { data: productStockData, isLoading: loadingProductStock, mutate: mutateProductStock } = useSWR(
-    selectedBranch ? (["stock-product-stock", selectedBranch] as const) : null,
-    ([, branchId]) => StockService.getProductStock(branchId).then((data) => ({ data, total: data.length })),
-    swrFresh,
-  );
-
-  const { data: resaleVariantsData } = useSWR(
-    "stock-resale-variants",
-    () => StockService.getResaleVariants().then((data) => ({ data, total: data.length })),
-    swrOpts,
-  );
-
-  const stock = stockData?.data ?? [];
-  const totalStock = stockData?.total ?? 0;
-  const alerts = alertsData?.data ?? [];
-  const productStock = loadingProductStock ? [] : (productStockData?.data ?? []);
-
-  const ingredientMovements = ingredientMovementsData?.data ?? [];
-  const productMovements = productMovementsData?.data ?? [];
-
-  const unifiedMovements: UnifiedMovement[] = [
-    ...ingredientMovements.map((m): UnifiedMovement => ({
-      id: m.id,
-      created_at: m.created_at,
-      detail: m.ingredients?.name ?? m.ingredient_id,
-      quantity: m.quantity,
-      type: m.type,
-      notes: m.notes,
-      origin: "insumo",
-    })),
-    ...productMovements.map((m): UnifiedMovement => ({
-      id: m.id,
-      created_at: m.created_at,
-      detail: m.product_variants?.products?.name
-        ? `${m.product_variants.products.name}${m.product_variants.name !== "Unidad" ? ` — ${m.product_variants.name}` : ""}`
-        : m.variant_id,
-      quantity: m.quantity,
-      type: m.type,
-      notes: m.notes,
-      origin: "reventa",
-    })),
-  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-  const totalHistory = (ingredientMovementsData?.total ?? 0) + (productMovementsData?.total ?? 0);
-  const loadingHistory = loadingIngredientMovements || loadingProductMovements;
-
-  const productVariants: ProductVariantOption[] = (resaleVariantsData?.data ?? []).map((r) => ({
-    variantId: r.id,
-    productName: (r.products as { name: string } | null)?.name ?? "—",
-    variantName: r.name,
-  }));
-
-  const refreshIngredientStock = () => { mutateStock(); mutateAlerts(); };
-  const refreshIngredientHistory = () => { mutateIngredientMovements(); };
-  const refreshProductStock = () => { mutateProductStock(); };
-  const refreshProductHistory = () => { mutateProductMovements(); };
+  const unifiedMovements = buildUnifiedMovements(ing.movements, prod.movements);
+  const totalHistory = ing.totalMovements + prod.totalMovements;
+  const loadingHistory = ing.loadingMovements || prod.loadingMovements;
 
   const handleBranchChange = (branchId: string) => {
     setSelectedBranch(branchId);
@@ -148,25 +99,25 @@ export function useStock() {
 
   const handlePurchase = async (values: { ingredient_id: string; quantity: number; min_quantity?: number }) => {
     const result = await StockService.purchase({ branch_id: selectedBranch, ...values });
-    if (result.ok) { purchaseForm.resetFields(); setPurchaseIngredientIsNew(false); resetStockPage(); refreshIngredientStock(); refreshIngredientHistory(); }
+    if (result.ok) { purchaseForm.resetFields(); setPurchaseIngredientIsNew(false); resetStockPage(); ing.refreshStock(); ing.refreshMovements(); }
     else message.error(result.error);
   };
 
   const handleAdjust = async (values: { ingredient_id: string; real_quantity: number; notes?: string }) => {
     const result = await StockService.adjust({ branch_id: selectedBranch, ...values });
-    if (result.ok) { adjustForm.resetFields(); resetStockPage(); refreshIngredientStock(); refreshIngredientHistory(); }
+    if (result.ok) { adjustForm.resetFields(); resetStockPage(); ing.refreshStock(); ing.refreshMovements(); }
     else message.error(result.error);
   };
 
   const handleProductPurchase = async (values: { variant_id: string; quantity: number; min_quantity?: number }) => {
     const result = await StockService.productPurchase({ branch_id: selectedBranch, ...values });
-    if (result.ok) { productPurchaseForm.resetFields(); setPurchaseVariantIsNew(false); refreshProductStock(); refreshProductHistory(); }
+    if (result.ok) { productPurchaseForm.resetFields(); setPurchaseVariantIsNew(false); prod.refreshProductStock(); prod.refreshMovements(); }
     else message.error(result.error);
   };
 
   const handleProductAdjust = async (values: { variant_id: string; real_quantity: number; notes?: string }) => {
     const result = await StockService.productAdjust({ branch_id: selectedBranch, ...values });
-    if (result.ok) { productAdjustForm.resetFields(); refreshProductStock(); refreshProductHistory(); }
+    if (result.ok) { productAdjustForm.resetFields(); prod.refreshProductStock(); prod.refreshMovements(); }
     else message.error(result.error);
   };
 
@@ -179,7 +130,7 @@ export function useStock() {
   const handleMinQty = async (values: { min_quantity: number }) => {
     if (!editingStock) return;
     const ok = await StockService.updateMinQuantity(editingStock.id, values.min_quantity);
-    if (ok) { setMinQtyOpen(false); resetStockPage(); refreshIngredientStock(); }
+    if (ok) { setMinQtyOpen(false); resetStockPage(); ing.refreshStock(); }
   };
 
   const openProductMinQty = (record: ProductStockRow) => {
@@ -191,7 +142,7 @@ export function useStock() {
   const handleProductMinQty = async (values: { min_quantity: number }) => {
     if (!editingProductStock) return;
     const ok = await StockService.updateProductMinQuantity(editingProductStock.id, values.min_quantity);
-    if (ok) { setProductMinQtyOpen(false); refreshProductStock(); }
+    if (ok) { setProductMinQtyOpen(false); prod.refreshProductStock(); }
   };
 
   return {

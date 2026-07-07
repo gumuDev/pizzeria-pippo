@@ -3,14 +3,8 @@
 import { useState, useEffect } from "react";
 import { Form } from "antd";
 import { mutate } from "swr";
-import {
-  getIngredients,
-  getResaleVariants,
-  fetchWarehouseStock,
-  getWarehouseProductStock,
-  purchaseWarehouseStock,
-  purchaseWarehouseProductStock,
-} from "../services/warehouse-stock.service";
+import { getIngredients, fetchWarehouseStock, purchaseWarehouseStock } from "../services/warehouse-ingredient-stock.service";
+import { getResaleVariants, getWarehouseProductStock, purchaseWarehouseProductStock } from "../services/warehouse-product-stock.service";
 import type { PurchaseType } from "../types/warehouse.types";
 
 interface Ingredient { id: string; name: string; unit: string; }

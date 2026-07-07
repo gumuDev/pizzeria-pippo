@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Form, message } from "antd";
-import { getWarehouseProductStock, adjustWarehouseProductStock } from "../services/warehouse-stock.service";
+import { getWarehouseProductStock, adjustWarehouseProductStock } from "../services/warehouse-product-stock.service";
 import type { ProductStockRow } from "../types/warehouse.types";
 
 export function useWarehouseProductTable() {

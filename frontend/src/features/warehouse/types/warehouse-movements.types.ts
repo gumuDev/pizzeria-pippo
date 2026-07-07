@@ -1,3 +1,12 @@
+export interface MovementFilters {
+  type?: string;
+  ingredientId?: string;
+  variantId?: string;
+  branchId?: string;
+  from?: string;
+  to?: string;
+}
+
 export interface WMovIngredient { id: string; name: string; unit: string; }
 export interface WMovBranch { id: string; name: string; }
 export interface WMovProductVariant { id: string; name: string; products: { name: string } | null; }

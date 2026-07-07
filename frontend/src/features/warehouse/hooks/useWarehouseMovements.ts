@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getIngredients, getBranches, getWarehouseMovements, getWarehouseProductMovements } from "../services/warehouse-stock.service";
+import { getIngredients, getBranches, getWarehouseMovements } from "../services/warehouse-ingredient-stock.service";
+import { getWarehouseProductMovements } from "../services/warehouse-product-stock.service";
 import dayjs from "dayjs";
 import type {
   IngredientMovement, ProductMovement, UnifiedMovement,

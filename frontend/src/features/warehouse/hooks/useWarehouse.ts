@@ -9,7 +9,7 @@ import {
   deleteWarehouseStock,
   adjustWarehouseStock,
   updateMinQuantity,
-} from "../services/warehouse-stock.service";
+} from "../services/warehouse-ingredient-stock.service";
 import type { WarehouseRow } from "../types/warehouse.types";
 
 const PAGE_SIZE = 10;

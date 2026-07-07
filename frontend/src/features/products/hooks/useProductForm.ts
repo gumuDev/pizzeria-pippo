@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Form, notification } from "antd";
 import { mutate } from "swr";
 import { getToken } from "@/lib/auth";
 import { ProductsService } from "../services/products.service";
 import { VariantTypesService } from "@/features/variant-types/services/variant-types.service";
-import type { Product, Variant, Step1Data, RecipeItem, VariantTypeOption } from "../types/product.types";
+import { useProductVariants } from "./useProductVariants";
+import type { Product, Step1Data, VariantTypeOption } from "../types/product.types";
 
 export function useProductForm(onSuccess: () => void) {
   const [currentStep, setCurrentStep] = useState(0);
@@ -15,11 +16,9 @@ export function useProductForm(onSuccess: () => void) {
   const [imageUrl, setImageUrl] = useState<string>("");
   const [step1Data, setStep1Data] = useState<Step1Data>({ name: "", category: "", description: "", product_type: "made" });
   const [variantTypeOptions, setVariantTypeOptions] = useState<VariantTypeOption[]>([]);
-  const [variants, setVariants] = useState<Variant[]>([]);
-  const [hasRecipe, setHasRecipe] = useState(true);
-  const [hasVariants, setHasVariants] = useState(false);
-  const savedVariantsRef = useRef<Variant[]>([]);
   const [formStep1] = Form.useForm();
+
+  const productVariants = useProductVariants(variantTypeOptions);
 
   useEffect(() => {
     const loadVariantTypes = async () => {
@@ -31,44 +30,12 @@ export function useProductForm(onSuccess: () => void) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const toggleHasRecipe = (val: boolean) => {
-    setHasRecipe(val);
-    if (!val) {
-      setVariants((prev) => prev.map((v) => ({ ...v, recipes: [] })));
-    }
-  };
-
-  const toggleHasVariants = (val: boolean) => {
-    setHasVariants(val);
-    if (!val) {
-      setVariants((prev) => {
-        savedVariantsRef.current = prev;
-        const first = prev[0] ?? { name: "Unidad", base_price: 0, branch_prices: [], recipes: [] };
-        return [{ ...first, name: "Unidad" }];
-      });
-    } else {
-      const saved = savedVariantsRef.current;
-      if (saved.length > 0 && !(saved.length === 1 && saved[0].name === "Unidad")) {
-        setVariants(saved);
-      } else {
-        setVariants((prev) =>
-          prev.map((v, i) => i === 0 && v.name === "Unidad" && variantTypeOptions.length > 0
-            ? { ...v, name: variantTypeOptions[0].value }
-            : v
-          )
-        );
-      }
-    }
-  };
-
   const resetForm = () => {
     setCurrentStep(0);
     setImageUrl("");
     setStep1Data({ name: "", category: "", description: "", product_type: "made" });
-    setHasRecipe(true);
-    setHasVariants(false);
     formStep1.resetFields();
-    setVariants([{ name: "Unidad", base_price: 0, branch_prices: [], recipes: [] }]);
+    productVariants.resetVariants();
   };
 
   const loadForEdit = async (record: Product) => {
@@ -92,7 +59,6 @@ export function useProductForm(onSuccess: () => void) {
     const anyHasRecipe = activeVariants.some((v) => v.recipes.length > 0);
     const productType: "made" | "resale" = record.product_type ?? (anyHasRecipe ? "made" : "resale");
     const isSimple = activeVariants.length === 1 && activeVariants[0].name === "Unidad";
-    savedVariantsRef.current = [];
 
     formStep1.setFieldsValue({
       name: record.name,
@@ -108,9 +74,7 @@ export function useProductForm(onSuccess: () => void) {
       product_type: productType,
     });
 
-    setVariants(loadedVariants);
-    setHasRecipe(anyHasRecipe);
-    setHasVariants(!isSimple);
+    productVariants.loadVariants(loadedVariants, anyHasRecipe, isSimple);
   };
 
   const handleImageUpload = async (file: File) => {
@@ -128,7 +92,7 @@ export function useProductForm(onSuccess: () => void) {
 
   const handleSave = async (editing: Product | null) => {
     setSaving(true);
-    const payload = ProductsService.buildPayload(step1Data, imageUrl, variants);
+    const payload = ProductsService.buildPayload(step1Data, imageUrl, productVariants.variants);
     const result = editing
       ? await ProductsService.updateProduct(editing.id, payload)
       : await ProductsService.createProduct(payload);
@@ -146,45 +110,7 @@ export function useProductForm(onSuccess: () => void) {
 
   const handleSetStep1Data = (data: Step1Data) => {
     setStep1Data(data);
-    setHasRecipe(data.product_type === "made");
-  };
-
-  const updateVariant = (index: number, field: keyof Variant, value: unknown) => {
-    setVariants((prev) => prev.map((v, i) => i === index ? { ...v, [field]: value } : v));
-  };
-
-  const addVariant = () => {
-    const used = variants.map((v) => v.name);
-    const next = variantTypeOptions.find((o) => !used.includes(o.value));
-    if (next) {
-      setVariants((prev) => [...prev, { name: next.value, base_price: 0, branch_prices: [], recipes: [], is_active: true }]);
-    }
-  };
-
-  const reactivateVariant = (index: number) => {
-    setVariants((prev) => prev.map((v, i) => i === index ? { ...v, is_active: true } : v));
-  };
-
-  const removeVariant = (index: number) => {
-    setVariants((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const addRecipeItem = (variantIndex: number, ingredientId = "") => {
-    updateVariant(variantIndex, "recipes", [
-      ...variants[variantIndex].recipes,
-      { ingredient_id: ingredientId, quantity: 0, apply_condition: "always" as const },
-    ]);
-  };
-
-  const updateRecipeItem = (variantIndex: number, recipeIndex: number, field: keyof RecipeItem, value: string | number) => {
-    const updated = variants[variantIndex].recipes.map((r, i) =>
-      i === recipeIndex ? { ...r, [field]: value } : r
-    );
-    updateVariant(variantIndex, "recipes", updated);
-  };
-
-  const removeRecipeItem = (variantIndex: number, recipeIndex: number) => {
-    updateVariant(variantIndex, "recipes", variants[variantIndex].recipes.filter((_, i) => i !== recipeIndex));
+    productVariants.setHasRecipeSilently(data.product_type === "made");
   };
 
   return {
@@ -192,13 +118,18 @@ export function useProductForm(onSuccess: () => void) {
     uploading, saving,
     imageUrl,
     step1Data, setStep1Data: handleSetStep1Data,
-    variants, variantTypeOptions,
-    hasRecipe, setHasRecipe: toggleHasRecipe,
-    hasVariants, setHasVariants: toggleHasVariants,
+    variants: productVariants.variants, variantTypeOptions,
+    hasRecipe: productVariants.hasRecipe, setHasRecipe: productVariants.setHasRecipe,
+    hasVariants: productVariants.hasVariants, setHasVariants: productVariants.setHasVariants,
     formStep1,
     resetForm, loadForEdit,
     handleImageUpload, handleSave,
-    updateVariant, addVariant, removeVariant, reactivateVariant,
-    addRecipeItem, updateRecipeItem, removeRecipeItem,
+    updateVariant: productVariants.updateVariant,
+    addVariant: productVariants.addVariant,
+    removeVariant: productVariants.removeVariant,
+    reactivateVariant: productVariants.reactivateVariant,
+    addRecipeItem: productVariants.addRecipeItem,
+    updateRecipeItem: productVariants.updateRecipeItem,
+    removeRecipeItem: productVariants.removeRecipeItem,
   };
 }
