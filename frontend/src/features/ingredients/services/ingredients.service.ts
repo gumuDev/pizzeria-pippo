@@ -1,4 +1,5 @@
 import { nestFetch } from "@/lib/nestFetch";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import type { Ingredient } from "../types/ingredient.types";
 
 interface ListIngredientsParams {
@@ -20,13 +21,13 @@ export const IngredientsService = {
     const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (showInactive) qs.set("showInactive", "true");
     if (search) qs.set("search", search);
-    const res = await nestFetch(`/ingredients?${qs.toString()}`);
+    const res = await nestFetch(API_ENDPOINTS.ingredients.list(qs.toString()));
     if (!res.ok) return { data: [], total: 0 };
     return res.json();
   },
 
   async createIngredient(values: { name: string; unit: string }): Promise<{ ok: boolean; error?: string }> {
-    const res = await nestFetch("/ingredients", { method: "POST", body: JSON.stringify(values) });
+    const res = await nestFetch(API_ENDPOINTS.ingredients.base, { method: "POST", body: JSON.stringify(values) });
     if (!res.ok) {
       const data = await res.json();
       return { ok: false, error: data.error };
@@ -35,7 +36,7 @@ export const IngredientsService = {
   },
 
   async updateIngredient(id: string, values: { name: string; unit: string }): Promise<{ ok: boolean; error?: string }> {
-    const res = await nestFetch(`/ingredients/${id}`, { method: "PATCH", body: JSON.stringify(values) });
+    const res = await nestFetch(API_ENDPOINTS.ingredients.byId(id), { method: "PATCH", body: JSON.stringify(values) });
     if (!res.ok) {
       const data = await res.json();
       return { ok: false, error: data.error };
@@ -44,7 +45,7 @@ export const IngredientsService = {
   },
 
   async toggleActive(id: string, is_active: boolean): Promise<{ ok: boolean; error?: string }> {
-    const res = await nestFetch(`/ingredients/${id}`, { method: "PATCH", body: JSON.stringify({ is_active }) });
+    const res = await nestFetch(API_ENDPOINTS.ingredients.byId(id), { method: "PATCH", body: JSON.stringify({ is_active }) });
     if (!res.ok) {
       const data = await res.json();
       return { ok: false, error: data.error };

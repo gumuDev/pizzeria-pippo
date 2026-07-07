@@ -1,4 +1,5 @@
 import { nestFetch } from "@/lib/nestFetch";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { ok, fail, type ServiceResult } from "@/lib/errors";
 import { IngredientsService } from "@/features/ingredients/services/ingredients.service";
 import { BranchesService } from "@/features/branches/services/branches.service";
@@ -30,7 +31,7 @@ export const ProductsService = {
     if (showInactive) qs.set("showInactive", "true");
     if (search) qs.set("search", search);
     if (category) qs.set("category", category);
-    const res = await nestFetch(`/products?${qs.toString()}`);
+    const res = await nestFetch(API_ENDPOINTS.products.list(qs.toString()));
     if (!res.ok) return { data: [], total: 0 };
     return res.json();
   },
@@ -52,33 +53,33 @@ export const ProductsService = {
   // Shape rica (con branches/ingredients denormalizados) — la usa la vista de detalle;
   // la vista de edición solo toma el subset básico (Product) via `as`.
   async getProductDetail(id: string) {
-    const res = await nestFetch(`/products/${id}`);
+    const res = await nestFetch(API_ENDPOINTS.products.byId(id));
     if (!res.ok) return null;
     return res.json();
   },
 
   async getVariantsWithDetails(productId: string): Promise<ProductVariant[]> {
-    const res = await nestFetch(`/products/${productId}/variants`);
+    const res = await nestFetch(API_ENDPOINTS.products.variants(productId));
     if (!res.ok) return [];
     return res.json();
   },
 
   async createProduct(payload: unknown): Promise<ServiceResult> {
-    const res = await nestFetch("/products", { method: "POST", body: JSON.stringify(payload) });
+    const res = await nestFetch(API_ENDPOINTS.products.base, { method: "POST", body: JSON.stringify(payload) });
     if (res.ok) return ok(undefined);
     const data = await res.json().catch(() => ({}));
     return fail(data.error ?? "Error al crear el producto");
   },
 
   async updateProduct(id: string, payload: unknown): Promise<ServiceResult> {
-    const res = await nestFetch(`/products/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+    const res = await nestFetch(API_ENDPOINTS.products.byId(id), { method: "PUT", body: JSON.stringify(payload) });
     if (res.ok) return ok(undefined);
     const data = await res.json().catch(() => ({}));
     return fail(data.error ?? "Error al actualizar el producto");
   },
 
   async patchProduct(id: string, payload: unknown): Promise<{ ok: boolean; error?: string }> {
-    const res = await nestFetch(`/products/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+    const res = await nestFetch(API_ENDPOINTS.products.byId(id), { method: "PATCH", body: JSON.stringify(payload) });
     if (res.ok) return { ok: true };
     const { error } = await res.json();
     return { ok: false, error };
@@ -89,7 +90,7 @@ export const ProductsService = {
     formData.append("file", file);
     // No Content-Type header here on purpose — the browser sets multipart/form-data
     // with the correct boundary itself when the body is a FormData instance.
-    const res = await fetch(`${NEST_API_URL}/storage/upload`, {
+    const res = await fetch(`${NEST_API_URL}${API_ENDPOINTS.storage.upload}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,

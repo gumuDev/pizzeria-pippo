@@ -1,5 +1,6 @@
 import { getToken } from "@/lib/auth";
 import { nestFetch } from "@/lib/nestFetch";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { AuthorizedChat, ChatFormValues } from "@/features/telegram-bot/types";
 
 async function getAuthHeader(): Promise<HeadersInit> {
@@ -7,13 +8,13 @@ async function getAuthHeader(): Promise<HeadersInit> {
 }
 
 export async function getBotSettings(keys: string[]): Promise<Record<string, string>> {
-  const res = await nestFetch(`/settings/raw?keys=${keys.join(",")}`);
+  const res = await nestFetch(API_ENDPOINTS.settings.rawByKeys(keys));
   if (!res.ok) return {};
   return res.json();
 }
 
 export async function saveBotSettings(updates: { key: string; value: string; updated_at: string }[]): Promise<void> {
-  const res = await nestFetch("/settings/raw", {
+  const res = await nestFetch(API_ENDPOINTS.settings.raw, {
     method: "PUT",
     body: JSON.stringify({ updates: updates.map(({ key, value }) => ({ key, value })) }),
   });

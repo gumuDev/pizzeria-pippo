@@ -1,6 +1,7 @@
 import { io, type Socket } from "socket.io-client";
 import { getToken } from "@/lib/auth";
 import { nestFetch } from "@/lib/nestFetch";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import type { PaymentMatchedPayload } from "../types/payment-validation.types";
 
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
@@ -9,7 +10,7 @@ type MatchSubscription = { socket: Socket };
 
 export const PaymentValidationService = {
   async start(branchId: string, amount: number): Promise<{ requestId: string }> {
-    const res = await nestFetch("/payment-validation/start", {
+    const res = await nestFetch(API_ENDPOINTS.paymentValidation.start, {
       method: "POST",
       body: JSON.stringify({ branch_id: branchId, amount }),
     });
@@ -17,14 +18,14 @@ export const PaymentValidationService = {
   },
 
   async reject(requestId: string, notificationId: string): Promise<void> {
-    await nestFetch("/payment-validation/reject", {
+    await nestFetch(API_ENDPOINTS.paymentValidation.reject, {
       method: "POST",
       body: JSON.stringify({ request_id: requestId, notification_id: notificationId }),
     });
   },
 
   async cancel(requestId: string): Promise<void> {
-    await nestFetch("/payment-validation/cancel", {
+    await nestFetch(API_ENDPOINTS.paymentValidation.cancel, {
       method: "POST",
       body: JSON.stringify({ request_id: requestId }),
     });

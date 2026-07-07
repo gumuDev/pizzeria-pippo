@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { nestFetch } from "@/lib/nestFetch";
+import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import type { WarehouseAlert, DashboardData } from "../types/dashboard.types";
 
 export const DashboardService = {
@@ -8,11 +9,11 @@ export const DashboardService = {
     const weekStart = dayjs().subtract(6, "day").format("YYYY-MM-DD");
 
     const [salesRes, topRes, dailyRes, alertsRes, warehouseStockRes] = await Promise.all([
-      nestFetch(`/reports/sales?from=${today}&to=${today}`),
-      nestFetch(`/reports/top-products?from=${today}&to=${today}`),
-      nestFetch(`/reports/daily?from=${weekStart}&to=${today}`),
-      nestFetch("/stock/alerts"),
-      nestFetch("/warehouse/stock?status=low&pageSize=9999"),
+      nestFetch(API_ENDPOINTS.reports.sales(`from=${today}&to=${today}`)),
+      nestFetch(API_ENDPOINTS.reports.topProducts(`from=${today}&to=${today}`)),
+      nestFetch(API_ENDPOINTS.reports.daily(`from=${weekStart}&to=${today}`)),
+      nestFetch(API_ENDPOINTS.stock.alerts()),
+      nestFetch(API_ENDPOINTS.warehouse.stockLow()),
     ]);
 
     const [salesData, topData, dailyRaw, alertsData, warehouseJson] = await Promise.all([
