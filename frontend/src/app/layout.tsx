@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -32,6 +33,7 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body>
+        <NextTopLoader color="#c0392b" showSpinner={false} />
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>
