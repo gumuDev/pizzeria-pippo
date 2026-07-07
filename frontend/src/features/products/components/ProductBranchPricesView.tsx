@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Table, Tabs, Button, InputNumber, Space, Typography, Tag, Skeleton } from "antd";
 import { EditOutlined, PlusOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import { useIsMobile } from "@/lib/useIsMobile";
-import type { VariantWithPrices, Branch } from "../hooks/useProductBranchPrices";
+import type { VariantWithPrices, Branch } from "../types/product.types";
 
 const { Text } = Typography;
 

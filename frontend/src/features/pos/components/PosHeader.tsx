@@ -6,11 +6,9 @@ import { Button, Tag, Typography } from "antd";
 import { LogoutOutlined, ShoppingCartOutlined, UnorderedListOutlined, BarChartOutlined, GiftOutlined } from "@ant-design/icons";
 import { formatTimeBolivia } from "@/lib/timezone";
 import { useIsMobile } from "@/lib/useIsMobile";
-import type { Branch, Identity } from "../types/pos.types";
+import type { Branch, Identity, PosTab } from "../types/pos.types";
 
 const { Text } = Typography;
-
-export type PosTab = "sale" | "promos" | "orders" | "summary";
 
 interface Props {
   identity: Identity;

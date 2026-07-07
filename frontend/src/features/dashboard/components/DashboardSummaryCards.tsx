@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Row, Col, Card, Statistic } from "antd";
-import type { SalesSummary } from "../services/dashboard.service";
+import type { SalesSummary } from "../types/dashboard.types";
 
 const IconDollar = () => (
   <svg className="inline w-4 h-4" style={{ color: "#f97316" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

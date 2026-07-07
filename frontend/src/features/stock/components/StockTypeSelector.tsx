@@ -1,8 +1,7 @@
 "use client";
 
 import { Radio } from "antd";
-
-export type StockType = "ingredient" | "product";
+import type { StockType } from "../types/stock.types";
 
 interface Props {
   value: StockType;

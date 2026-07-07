@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { DashboardService } from "../services/dashboard.service";
-import type { SalesSummary, TopProduct, DailyData, StockAlert, WarehouseAlert } from "../services/dashboard.service";
+import type { SalesSummary, TopProduct, DailyData, StockAlert, WarehouseAlert } from "../types/dashboard.types";
 
 export function useDashboard() {
   const [summary, setSummary] = useState<SalesSummary | null>(null);

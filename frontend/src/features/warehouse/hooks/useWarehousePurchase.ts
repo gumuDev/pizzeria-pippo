@@ -11,8 +11,7 @@ import {
   purchaseWarehouseStock,
   purchaseWarehouseProductStock,
 } from "../services/warehouse-stock.service";
-
-export type PurchaseType = "ingredient" | "product";
+import type { PurchaseType } from "../types/warehouse.types";
 
 interface Ingredient { id: string; name: string; unit: string; }
 interface ProductVariant { id: string; name: string; products: { name: string } | null; }

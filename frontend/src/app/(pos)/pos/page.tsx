@@ -9,7 +9,7 @@ import { usePosCart } from "@/features/pos/hooks/usePosCart";
 import { usePosBroadcast } from "@/features/pos/hooks/usePosBroadcast";
 import { useDayOrders } from "@/features/pos/hooks/useDayOrders";
 import { PosHeader } from "@/features/pos/components/PosHeader";
-import type { PosTab } from "@/features/pos/components/PosHeader";
+import type { PosTab } from "@/features/pos/types/pos.types";
 import { DayOrdersPanel } from "@/features/pos/components/DayOrdersPanel";
 import { DaySummaryPanel } from "@/features/pos/components/DaySummaryPanel";
 import { PromoTab } from "@/features/pos/components/PromoTab";

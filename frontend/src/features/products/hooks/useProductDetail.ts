@@ -2,39 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ProductsService } from "../services/products.service";
-import type { Ingredient } from "../types/product.types";
-
-interface RecipeItem {
-  ingredient_id: string;
-  quantity: number;
-  apply_condition?: string;
-  ingredients: { name: string; unit: string };
-}
-
-interface BranchPrice {
-  branch_id: string;
-  price: number;
-  branches?: { name: string };
-}
-
-interface Variant {
-  id: string;
-  name: string;
-  base_price: number;
-  is_active: boolean;
-  branch_prices: BranchPrice[];
-  recipes: RecipeItem[];
-}
-
-export interface ProductDetail {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  image_url: string;
-  is_active: boolean;
-  product_variants: Variant[];
-}
+import type { Ingredient, ProductDetail } from "../types/product.types";
 
 export function useProductDetail(id: string) {
   const [product, setProduct] = useState<ProductDetail | null>(null);

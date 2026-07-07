@@ -7,7 +7,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from "recharts";
-import type { TopProduct, DailyData } from "../services/dashboard.service";
+import type { TopProduct, DailyData } from "../types/dashboard.types";
 
 const { Text } = Typography;
 

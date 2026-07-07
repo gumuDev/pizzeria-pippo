@@ -1,6 +1,8 @@
 export interface Branch { id: string; name: string; }
 export interface Ingredient { id: string; name: string; unit: string; }
 
+export type StockType = "ingredient" | "product";
+
 export interface StockRow {
   id: string;
   branch_id: string;

@@ -34,6 +34,8 @@ export interface Branch {
 
 export type OrderType = "dine_in" | "takeaway";
 
+export type PosTab = "sale" | "promos" | "orders" | "summary";
+
 export interface DayOrder {
   id: string;
   daily_number: number;

@@ -12,8 +12,7 @@ import {
   transferWarehouseStock,
   transferWarehouseProductStock,
 } from "../services/warehouse-stock.service";
-
-export type TransferType = "ingredient" | "product";
+import type { TransferType } from "../types/warehouse.types";
 
 interface Ingredient { id: string; name: string; unit: string; }
 interface Branch { id: string; name: string; }

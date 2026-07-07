@@ -3,18 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Form, message } from "antd";
 import { getWarehouseProductStock, adjustWarehouseProductStock } from "../services/warehouse-stock.service";
-
-export interface ProductStockRow {
-  id: string;
-  variant_id: string;
-  quantity: number;
-  min_quantity: number;
-  product_variants: {
-    id: string;
-    name: string;
-    products: { id: string; name: string; is_active: boolean } | null;
-  } | null;
-}
+import type { ProductStockRow } from "../types/warehouse.types";
 
 export function useWarehouseProductTable() {
   const [rows, setRows] = useState<ProductStockRow[]>([]);

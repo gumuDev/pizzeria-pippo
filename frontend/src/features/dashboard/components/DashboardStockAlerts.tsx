@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Row, Col, Card, Space, Typography, Tag, Badge } from "antd";
-import type { StockAlert, WarehouseAlert } from "../services/dashboard.service";
+import type { StockAlert, WarehouseAlert } from "../types/dashboard.types";
 
 const { Text } = Typography;
 

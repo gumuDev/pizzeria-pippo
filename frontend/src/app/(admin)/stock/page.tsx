@@ -10,7 +10,7 @@ import { StockMinQtyModal } from "@/features/stock/components/StockMinQtyModal";
 import { ProductStockTable } from "@/features/stock/components/ProductStockTable";
 import { StockTypeSelector } from "@/features/stock/components/StockTypeSelector";
 import { StockHistoryTable } from "@/features/stock/components/StockHistoryTable";
-import type { StockType } from "@/features/stock/components/StockTypeSelector";
+import type { StockType } from "@/features/stock/types/stock.types";
 
 const StockAdjustForm = dynamic(
   () => import("@/features/stock/components/StockAdjustForm").then((m) => m.StockAdjustForm),

@@ -4,27 +4,9 @@ import { useState } from "react";
 import useSWR from "swr";
 import { message } from "antd";
 import { getToken } from "@/lib/auth";
+import type { Branch, VariantWithPrices } from "../types/product.types";
 
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
-
-export interface BranchPriceRow {
-  id: string;
-  branch_id: string;
-  price: number;
-  branches: { id: string; name: string } | null;
-}
-
-export interface VariantWithPrices {
-  id: string;
-  name: string;
-  base_price: number;
-  branch_prices: BranchPriceRow[];
-}
-
-export interface Branch {
-  id: string;
-  name: string;
-}
 
 async function fetcher(url: string) {
   const token = await getToken();
