@@ -25,6 +25,7 @@ object PaymentNotificationSender {
         if (backendUrl.isEmpty() || apiKey.isEmpty()) {
             val message = "Falta configurar la URL del backend o el API key"
             Log.w(TAG, message)
+            FileLogger.log(context, TAG, "ERROR: $message")
             onResult?.invoke(false, message)
             return
         }
@@ -44,12 +45,14 @@ object PaymentNotificationSender {
         httpClient.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e(TAG, "Error de red enviando notificación: ${e.message}")
+                FileLogger.log(context, TAG, "ERROR DE RED: ${e.message}")
                 onResult?.invoke(false, "Error de red: ${e.message}")
             }
 
             override fun onResponse(call: Call, response: Response) {
                 val responseBody = response.body?.string()
                 Log.i(TAG, "Notificación enviada (${response.code}): $responseBody")
+                FileLogger.log(context, TAG, "Respuesta del backend (${response.code}): $responseBody")
                 onResult?.invoke(response.isSuccessful, "Respuesta (${response.code}): $responseBody")
             }
         })

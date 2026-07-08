@@ -1,11 +1,18 @@
 package com.pippo.yapelistener
 
+import android.Manifest
+import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
+import android.service.notification.NotificationListenerService
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationManagerCompat
 
@@ -15,22 +22,34 @@ class MainActivity : AppCompatActivity() {
     private lateinit var apiKeyInput: EditText
     private lateinit var statusText: TextView
     private lateinit var permissionStatusText: TextView
+    private lateinit var batteryStatusText: TextView
+
+    // No-op result handler: the foreground service still starts either way,
+    // this only affects whether its status notification is visible to the user.
+    private val requestNotificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
         backendUrlInput = findViewById(R.id.backendUrlInput)
         apiKeyInput = findViewById(R.id.apiKeyInput)
         statusText = findViewById(R.id.statusText)
         permissionStatusText = findViewById(R.id.permissionStatusText)
+        batteryStatusText = findViewById(R.id.batteryStatusText)
 
         loadSavedConfig()
+        RebindAlarmReceiver.schedule(this)
 
         findViewById<Button>(R.id.saveConfigButton).setOnClickListener { saveConfig() }
         findViewById<Button>(R.id.openNotificationSettingsButton).setOnClickListener {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
+        findViewById<Button>(R.id.disableBatteryOptimizationButton).setOnClickListener { requestIgnoreBatteryOptimizations() }
         findViewById<Button>(R.id.sendEventButton).setOnClickListener { sendRawTestEvent() }
         findViewById<Button>(R.id.simulateYapeButton).setOnClickListener { simulateRealYapeNotification() }
     }
@@ -38,6 +57,17 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updatePermissionStatus()
+        updateBatteryStatus()
+
+        // Cheap safety net against the Android platform bug where the
+        // NotificationListenerService binding silently drops: every time the
+        // user opens the app, ask the system to rebind it. If it's already
+        // connected this is a harmless no-op.
+        if (NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)) {
+            NotificationListenerService.requestRebind(
+                ComponentName(this, YapeNotificationListenerService::class.java)
+            )
+        }
     }
 
     private fun loadSavedConfig() {
@@ -59,6 +89,32 @@ class MainActivity : AppCompatActivity() {
         } else {
             "Acceso a notificaciones: NO concedido"
         }
+    }
+
+    // Some OEMs (Xiaomi, Huawei/HONOR, Samsung) aggressively kill background
+    // services to save battery, which silently breaks the notification
+    // listener even with permission still granted. Exempting the app is safe
+    // here — it only listens for one package's notifications and does an
+    // occasional tiny HTTP POST, negligible real battery impact.
+    private fun updateBatteryStatus() {
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        val ignoring = powerManager.isIgnoringBatteryOptimizations(packageName)
+        batteryStatusText.text = if (ignoring) {
+            "Optimización de batería: desactivada (OK)"
+        } else {
+            "Optimización de batería: ACTIVA (puede matar el servicio en segundo plano)"
+        }
+    }
+
+    private fun requestIgnoreBatteryOptimizations() {
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        if (powerManager.isIgnoringBatteryOptimizations(packageName)) {
+            statusText.text = "Ya está fuera de la optimización de batería."
+            return
+        }
+        startActivity(
+            Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))
+        )
     }
 
     private fun sendRawTestEvent() {

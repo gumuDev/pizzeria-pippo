@@ -49,6 +49,20 @@
         android:text="Activar acceso a notificaciones"
         android:layout_marginTop="8dp" />
 
+    <TextView
+        android:id="@+id/batteryStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="" />
+
+    <Button
+        android:id="@+id/disableBatteryOptimizationButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Desactivar optimización de batería"
+        android:layout_marginTop="8dp" />
+
     <Button
         android:id="@+id/sendEventButton"
         android:layout_width="wrap_content"
