@@ -38,6 +38,7 @@ export function TopProductsChart({ topProducts }: Props) {
               dataKey="value"
               label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
               labelLine={false}
+              isAnimationActive={false}
             >
               {categoryData.map((entry) => (
                 <Cell key={entry.name} fill={CATEGORY_COLORS[entry.name] ?? "#94a3b8"} />

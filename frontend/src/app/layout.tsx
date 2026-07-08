@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import NextTopLoader from "nextjs-toploader";
+import Script from "next/script";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -33,6 +34,12 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body>
+        {process.env.NODE_ENV === "development" && (
+          <>
+            <Script src="/react-scan.js" strategy="beforeInteractive" />
+            <Script src="/react-scan-reporter.js" strategy="afterInteractive" />
+          </>
+        )}
         <NextTopLoader color="#c0392b" showSpinner={false} />
         <NextIntlClientProvider messages={messages}>
           {children}

@@ -20,6 +20,9 @@ frontend/coverage
 frontend/.next/
 frontend/out/
 
+# react-scan (copiado por predev desde node_modules, no versionar)
+frontend/public/react-scan.js
+
 # production
 frontend/build
 

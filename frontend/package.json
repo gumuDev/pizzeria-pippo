@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node -e \"require('fs').copyFileSync(require.resolve('react-scan/dist/auto.global.js'), 'public/react-scan.js')\"",
     "dev": "next dev",
     "dev:prod": "dotenv -e .env.production -- next dev",
     "build": "next build",
@@ -50,6 +51,7 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "postcss": "^8",
+    "react-scan": "^0.5.7",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
     "vitest": "^4.1.8"

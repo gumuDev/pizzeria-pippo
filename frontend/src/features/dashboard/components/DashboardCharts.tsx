@@ -98,6 +98,7 @@ export function DashboardCharts({ dailyData, topProducts, loading }: Props) {
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   activeDot={{ r: 5 }}
+                  isAnimationActive={false}
                 />
               </LineChart>
             </ResponsiveContainer>
