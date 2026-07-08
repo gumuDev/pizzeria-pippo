@@ -104,10 +104,10 @@ export function useWarehouseTransfer(preselectedIngredient: string | null, prese
       if (result.available != null) setAvailable(result.available);
       return;
     }
-    // Invalida el caché de SWR de /stock (useStock.ts) y de la tabla de bodega
-    // central (useWarehouse.ts) — la transferencia modifica branch_stock/
-    // branch_product_stock Y warehouse_stock/warehouse_product_stock, y ninguna
-    // de esas páginas se entera sola.
+    // Invalidates the SWR cache for /stock (useStock.ts) and the central
+    // warehouse table (useWarehouse.ts) — the transfer modifies branch_stock/
+    // branch_product_stock AND warehouse_stock/warehouse_product_stock, and
+    // neither of those pages finds out on its own.
     mutate(isRelevantCacheKey);
 
     setSuccess(true);

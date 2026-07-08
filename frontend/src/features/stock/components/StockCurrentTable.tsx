@@ -26,7 +26,7 @@ export function StockCurrentTable({ stock, loading, onEditMinQty, page, total, p
 
   const hasMore = mobileRows.length < total;
 
-  // Acumula rows en móvil
+  // Accumulates rows on mobile
   useEffect(() => {
     if (!isMobile) return;
     if (page === 1) {
@@ -40,12 +40,12 @@ export function StockCurrentTable({ stock, loading, onEditMinQty, page, total, p
     setLoadingMore(false);
   }, [stock, page, isMobile]);
 
-  // Resetea cards al cambiar sucursal (page vuelve a 1 desde el hook)
+  // Resets cards when the branch changes (page goes back to 1 from the hook)
   useEffect(() => {
     if (isMobile && page === 1) setMobileRows(stock);
   }, [page, isMobile]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // IntersectionObserver para infinite scroll
+  // IntersectionObserver for infinite scroll
   const handleSentinel = useCallback((node: HTMLDivElement | null) => {
     sentinelRef.current = node;
   }, []);

@@ -21,9 +21,9 @@ describe('PasswordHasherService', () => {
   });
 
   it('verifica un hash bcrypt real generado por GoTrue (Supabase Auth)', async () => {
-    // Hash real, sacado de auth.users.encrypted_password de la instancia local
-    // de Supabase para el usuario admin@pippo.local (password: admin1234).
-    // Prueba directa de compatibilidad bcryptjs <-> golang.org/x/crypto/bcrypt.
+    // Real hash, taken from auth.users.encrypted_password on the local
+    // Supabase instance for admin@pippo.local (password: admin1234).
+    // Direct test of bcryptjs <-> golang.org/x/crypto/bcrypt compatibility.
     const gotrueHash = '$2a$06$5cxZ7OALdZ3DecJvcJqrbekdjCIuQEnvyypOEAp2Wef7iaEkc/QEa';
 
     await expect(service.compare('admin1234', gotrueHash)).resolves.toBe(true);

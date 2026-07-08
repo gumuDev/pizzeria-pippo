@@ -87,7 +87,7 @@ describe('PromotionsService', () => {
     });
 
     it('respeta days_of_week al filtrar por fecha', async () => {
-      // 2026-07-03 es viernes (day 5)
+      // 2026-07-03 is a Friday (day 5)
       prisma.promotion.findMany.mockResolvedValue([
         baseRow({ id: 'p1', daysOfWeek: [1, 2, 3], startDate: new Date('2026-01-01'), endDate: new Date('2026-12-31') }),
         baseRow({ id: 'p2', daysOfWeek: [5], startDate: new Date('2026-01-01'), endDate: new Date('2026-12-31') }),

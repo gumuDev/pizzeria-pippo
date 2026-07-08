@@ -16,7 +16,7 @@ export class BranchesService {
 
     const where = {
       ...(showInactive ? {} : { isActive: true }),
-      // Réplica de la RLS real: admin ve todas, el resto solo su propia sucursal
+      // Replicates the real RLS: admin sees all, everyone else only their own branch
       ...(user.role === 'admin' ? {} : { id: user.branch_id ?? '' }),
     };
 

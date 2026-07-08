@@ -27,8 +27,8 @@ export interface PromotionRule {
   get_qty: number | null;
   discount_percent: number | null;
   combo_price: number | null;
-  category: string | null;      // "pizza" | "bebida" | "otro" | null — solo para combos flexibles
-  variant_size: string | null;  // "Personal" | "Mediana" | "Familiar" | null — solo para combos flexibles
+  category: string | null;      // "pizza" | "bebida" | "otro" | null — only for flexible combos
+  variant_size: string | null;  // "Personal" | "Mediana" | "Familiar" | null — only for flexible combos
 }
 
 export interface Promotion {
@@ -184,7 +184,7 @@ function applyCombo(items: DiscountedItem[], promo: Promotion): DiscountedItem[]
       found = true;
       break;
     }
-    if (!found) return items; // combo incompleto
+    if (!found) return items; // incomplete combo
   }
 
   // Step 2 — calculate total discount

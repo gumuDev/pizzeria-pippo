@@ -27,9 +27,9 @@ function isTokenValid(token: string): boolean {
   return exp !== null && exp * 1000 > Date.now();
 }
 
-// Nunca rechaza: si no hay token o expiró, resuelve a "" — muchos services
-// dependen de este contrato para armar el header Authorization sin manejar
-// un catch en cada call site.
+// Never rejects: if there's no token or it expired, resolves to "" — many
+// services rely on this contract to build the Authorization header without
+// handling a catch at every call site.
 export async function getToken(): Promise<string> {
   if (typeof window === "undefined") return "";
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);

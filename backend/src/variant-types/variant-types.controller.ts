@@ -8,8 +8,8 @@ import { CreateVariantTypeDto } from './dto/create-variant-type.dto';
 import { UpdateVariantTypeDto } from './dto/update-variant-type.dto';
 import { PatchVariantTypeDto } from './dto/patch-variant-type.dto';
 
-// RLS real (confirmada contra la DB): SELECT es público para cualquier autenticado
-// (variant_types_select_all), INSERT/UPDATE/DELETE solo admin.
+// Real RLS (confirmed against the DB): SELECT is public for any authenticated user
+// (variant_types_select_all), INSERT/UPDATE/DELETE admin-only.
 @UseGuards(JwtAuthGuard)
 @Controller('variant-types')
 export class VariantTypesController {

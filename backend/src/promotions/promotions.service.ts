@@ -87,7 +87,7 @@ export class PromotionsService {
       },
     });
 
-    // Reglas: config reemplazable, se borra y recrea
+    // Rules: replaceable config, delete and recreate
     await this.prisma.promotionRule.deleteMany({ where: { promotionId: id } });
 
     if (dto.rules?.length) {
@@ -107,7 +107,7 @@ export class PromotionsService {
   }
 
   async patch(id: string, dto: PatchPromotionDto): Promise<void> {
-    // Acepta is_active (soft-delete) y/o active (toggle POS) — nunca un update completo
+    // Accepts is_active (soft-delete) and/or active (POS toggle) — never a full update
     await this.prisma.promotion.update({
       where: { id },
       data: {

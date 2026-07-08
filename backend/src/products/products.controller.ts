@@ -20,13 +20,13 @@ export class ProductsController {
     return this.productsService.list(query);
   }
 
-  // Antes de ':id' a propósito: si no, ':id' intercepta esta ruta literal.
+  // Before ':id' on purpose: otherwise ':id' would intercept this literal route.
   @Get('pos-catalog')
   getPosCatalog(@Query() query: PosCatalogQueryDto) {
     return this.productsService.getPosCatalog(query.branchId);
   }
 
-  // También antes de ':id' por la misma razón.
+  // Also before ':id' for the same reason.
   @Get('all-variants')
   listAllVariants() {
     return this.productsService.listAllVariants();
@@ -42,8 +42,8 @@ export class ProductsController {
     return this.productsService.getVariantsWithDetails(id);
   }
 
-  // La ruta vieja de Next.js no restringía por rol — se corrige acá, mismo
-  // criterio que el resto de las escrituras de este controller.
+  // The old Next.js route didn't restrict by role — fixed here, same
+  // criteria as the rest of the writes in this controller.
   @UseGuards(RolesGuard)
   @Roles('admin')
   @Get(':id/branch-prices')

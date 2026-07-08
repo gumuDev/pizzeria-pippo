@@ -7,9 +7,9 @@ export interface Rule {
   get_qty: number | null;
   discount_percent: number | null;
   combo_price: number | null;
-  category: string | null;      // "pizza" | "bebida" | "otro" | null — solo para combos flexibles
-  variant_size: string | null;  // "Personal" | "Mediana" | "Familiar" | null — solo para combos flexibles
-  slot_type?: "specific" | "flexible"; // estado del toggle UI, no se persiste en BD
+  category: string | null;      // "pizza" | "bebida" | "otro" | null — only for flexible combos
+  variant_size: string | null;  // "Personal" | "Mediana" | "Familiar" | null — only for flexible combos
+  slot_type?: "specific" | "flexible"; // UI toggle state, not persisted in the DB
 }
 
 export interface Promotion {

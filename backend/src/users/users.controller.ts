@@ -7,9 +7,9 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ToggleBanUserDto } from './dto/toggle-ban-user.dto';
 
-// Corrige un gap de seguridad de las rutas viejas de Next.js: ahí solo se
-// verificaba "está autenticado", no que fuera admin. Acá RolesGuard('admin')
-// aplica en todos los endpoints, sin excepción.
+// Fixes a security gap from the old Next.js routes: there it only checked
+// "is authenticated", not that it was an admin. Here RolesGuard('admin')
+// applies to every endpoint, no exceptions.
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
 @Controller('users')

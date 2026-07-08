@@ -8,9 +8,9 @@ import { CreatePromotionDto } from './dto/create-promotion.dto';
 import { UpdatePromotionDto } from './dto/update-promotion.dto';
 import { PatchPromotionDto } from './dto/patch-promotion.dto';
 
-// RLS real (confirmada contra la DB): SELECT es "cualquier autenticado" (USING true)
-// en promotions y promotion_rules — el POS necesita leer promos activas sin ser admin.
-// INSERT/UPDATE/DELETE son admin-only.
+// Real RLS (confirmed against the DB): SELECT is "any authenticated user" (USING true)
+// on promotions and promotion_rules — the POS needs to read active promos without being admin.
+// INSERT/UPDATE/DELETE are admin-only.
 @UseGuards(JwtAuthGuard)
 @Controller('promotions')
 export class PromotionsController {

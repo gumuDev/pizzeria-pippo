@@ -18,8 +18,8 @@ export function usePosIdentity() {
       }
       setIdentity(result);
 
-      // Se carga siempre: además de armar el selector para admin sin sucursal
-      // fija, alimenta el nombre de sucursal mostrado en el header (PosHeader)
+      // Always loaded: besides building the selector for an admin with no
+      // fixed branch, it feeds the branch name shown in the header (PosHeader)
       const data = await PosService.getBranches();
       setBranches(data);
     };
@@ -31,7 +31,7 @@ export function usePosIdentity() {
     window.location.href = "/login";
   };
 
-  // Para admin: sucursal efectiva es la del perfil (si tiene) o la seleccionada manualmente
+  // For admin: effective branch is the profile's (if it has one) or the manually selected one
   const effectiveBranchId = identity?.branch_id ?? selectedBranchId;
 
   const isAdminChoosingBranch =

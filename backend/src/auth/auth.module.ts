@@ -11,11 +11,11 @@ import { PasswordModule } from './password/password.module';
   imports: [
     PassportModule,
     PasswordModule,
-    // Sin opciones acá a propósito: JwtModule.register() se evalúa al
-    // importar este archivo, antes de que ConfigModule cargue el .env, así
-    // que leer process.env.JWT_SECRET en este punto daría undefined. El
-    // secret/expiresIn se pasan en cada llamada a sign()/verify() en
-    // AuthService, que corre en tiempo de ejecución real.
+    // No options here on purpose: JwtModule.register() is evaluated when
+    // this file is imported, before ConfigModule loads the .env, so reading
+    // process.env.JWT_SECRET at this point would be undefined. The
+    // secret/expiresIn are passed on every sign()/verify() call in
+    // AuthService instead, which runs at real runtime.
     JwtModule.register({}),
   ],
   controllers: [AuthController],

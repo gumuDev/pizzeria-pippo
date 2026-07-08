@@ -50,8 +50,8 @@ export const ProductsService = {
     return product?.name ?? null;
   },
 
-  // Shape rica (con branches/ingredients denormalizados) — la usa la vista de detalle;
-  // la vista de edición solo toma el subset básico (Product) via `as`.
+  // Rich shape (with denormalized branches/ingredients) — used by the detail view;
+  // the edit view only takes the basic subset (Product) via `as`.
   async getProductDetail(id: string) {
     const res = await nestFetch(API_ENDPOINTS.products.byId(id));
     if (!res.ok) return null;

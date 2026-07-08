@@ -68,9 +68,9 @@ export class SettingsService {
     return width === 80 ? 80 : 58;
   }
 
-  // Sin RolesGuard en el controller — cualquier autenticado puede leer esto.
-  // Fix del bug documentado: antes la RLS de app_settings era admin-only y
-  // el rol cocinero nunca podía leer el umbral configurado.
+  // No RolesGuard in the controller — any authenticated user can read this.
+  // Fix for the documented bug: previously app_settings' RLS was admin-only and
+  // the cocinero role could never read the configured threshold.
   async getKitchenLateThresholdMinutes(user: CurrentUserPayload): Promise<number> {
     const businessId = this.resolveBusinessId(user);
     const row = await this.prisma.appSetting.findUnique({
@@ -79,9 +79,9 @@ export class SettingsService {
     return parseInt(row?.value ?? '10', 10);
   }
 
-  // Store genérico de key-value para configuración que no encaja en el shape
-  // fijo de SettingsResult (ej. la config del bot de IA de Telegram: proveedor,
-  // modelo, límites por plan — un conjunto de keys distinto y más grande).
+  // Generic key-value store for config that doesn't fit SettingsResult's
+  // fixed shape (e.g. the Telegram AI bot config: provider, model,
+  // per-plan limits — a different, larger set of keys).
   async getRawSettings(user: CurrentUserPayload, keys: string[]): Promise<Record<string, string>> {
     const businessId = this.resolveBusinessId(user);
     const rows = await this.prisma.appSetting.findMany({ where: { businessId, key: { in: keys } } });

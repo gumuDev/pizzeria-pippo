@@ -115,7 +115,7 @@ describe('PaymentValidationService', () => {
   it('una notificación fuera de la ventana de tiempo ya no matchea (expiró)', () => {
     service.start('b1', 'cashier1', 45);
 
-    now += 6 * 60 * 1000; // 6 min > ventana default de 5 min
+    now += 6 * 60 * 1000; // 6 min > 5 min default window
     service.reportNotification('b1', 45, 'Juan Perez', 'texto');
 
     expect(ordersGateway.emitPaymentMatched).not.toHaveBeenCalled();

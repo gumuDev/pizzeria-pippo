@@ -29,7 +29,7 @@ export class SettingsController {
     return this.settingsService.updateSettings(user, dto);
   }
 
-  // Sin RolesGuard: cualquier autenticado (POS/cajero) puede leer el ancho de papel.
+  // No RolesGuard: any authenticated user (POS/cashier) can read the paper width.
   @Get('printer')
   getPrinterSettings(@CurrentUser() user: CurrentUserPayload) {
     return this.settingsService
@@ -37,7 +37,7 @@ export class SettingsController {
       .then((printer_paper_width) => ({ printer_paper_width }));
   }
 
-  // Sin RolesGuard: fix del bug de RLS — cocinero necesita leer esto (ver plan Fase 3).
+  // No RolesGuard: fix for the RLS bug — cocinero needs to read this (see Fase 3 plan).
   @Get('kitchen-threshold')
   getKitchenThreshold(@CurrentUser() user: CurrentUserPayload) {
     return this.settingsService
@@ -52,8 +52,8 @@ export class SettingsController {
     return this.settingsService.testTelegramConnection(dto);
   }
 
-  // Config del bot de IA de Telegram (proveedor, modelo, límites por plan) —
-  // no encaja en el shape fijo de GET/PUT /settings, usa el store genérico.
+  // Telegram AI bot config (provider, model, per-plan limits) — doesn't
+  // fit GET/PUT /settings' fixed shape, uses the generic store instead.
   @UseGuards(RolesGuard)
   @Roles('admin')
   @Get('raw')

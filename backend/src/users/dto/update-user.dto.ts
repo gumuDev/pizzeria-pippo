@@ -11,9 +11,9 @@ export class UpdateUserDto {
   @IsUUID()
   branch_id?: string;
 
-  // Opcional: permite a un admin resetear la contraseña de un usuario.
-  // Sin esto no habría forma de recuperar el acceso de un usuario que
-  // olvidó su contraseña, ya que no existe un flujo de "olvidé mi clave".
+  // Optional: lets an admin reset a user's password.
+  // Without this there'd be no way to recover access for a user who
+  // forgot their password, since there's no "forgot my password" flow.
   @IsOptional()
   @IsString()
   @MinLength(6)

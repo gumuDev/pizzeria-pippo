@@ -77,9 +77,9 @@ export function useWarehousePurchase() {
     setLoading(false);
     if (!result.ok) { setError(result.error ?? "Error al registrar compra"); return; }
 
-    // Invalida el caché de SWR de la tabla de bodega central (useWarehouse.ts) —
-    // la compra modifica warehouse_stock/warehouse_product_stock pero esa página
-    // no se entera sola.
+    // Invalidates the SWR cache for the central warehouse table (useWarehouse.ts) —
+    // the purchase modifies warehouse_stock/warehouse_product_stock but that page
+    // doesn't find out on its own.
     mutate(isWarehouseCacheKey);
 
     setSuccess(true);

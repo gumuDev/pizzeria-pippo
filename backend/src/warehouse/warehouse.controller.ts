@@ -17,10 +17,10 @@ import { PurchaseWarehouseProductStockDto } from './dto/purchase-warehouse-produ
 import { AdjustWarehouseProductStockDto } from './dto/adjust-warehouse-product-stock.dto';
 import { TransferWarehouseProductStockDto } from './dto/transfer-warehouse-product-stock.dto';
 
-// Bodega central de insumos (warehouse_stock/warehouse_movements): RLS real es
-// admin-only para TODO (select incluido) — ver docker exec pippo_db psql.
-// Bodega de reventa (warehouse_product_stock/warehouse_product_movements): RLS
-// real es "cualquier autenticado" sin restricción, igual que branch_product_stock.
+// Central ingredient warehouse (warehouse_stock/warehouse_movements): real RLS is
+// admin-only for EVERYTHING (select included) — see docker exec pippo_db psql.
+// Resale warehouse (warehouse_product_stock/warehouse_product_movements): real RLS
+// is "any authenticated user" with no restriction, same as branch_product_stock.
 @UseGuards(JwtAuthGuard)
 @Controller('warehouse')
 export class WarehouseController {

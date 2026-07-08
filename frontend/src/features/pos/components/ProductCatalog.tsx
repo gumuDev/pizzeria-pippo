@@ -57,7 +57,7 @@ export function ProductCatalog({ products, loading, branchId, getVariantPrice, g
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#f5f5f5" }}>
-      {/* Filtros */}
+      {/* Filters */}
       <div style={{ display: "flex", gap: 8, padding: "12px 16px", background: "#fff", borderBottom: "1px solid #f0f0f0" }}>
         {CATEGORY_OPTIONS.map((c) => (
           <Button
@@ -116,7 +116,7 @@ export function ProductCatalog({ products, loading, branchId, getVariantPrice, g
                     (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
                   }}
                 >
-                  {/* Imagen */}
+                  {/* Image */}
                   <div style={{ position: "relative" }}>
                     {product.image_url ? (
                       <NextImage src={product.image_url} alt={product.name} width={300} height={130} style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }} />

@@ -92,7 +92,7 @@ export function PaymentModal({ open, total, onClose, onConfirm }: Props) {
           <Text strong className="!text-orange-700 text-2xl">Bs {total.toFixed(2)}</Text>
         </div>
 
-        {/* Tipo de pedido — obligatorio */}
+        {/* Order type — required */}
         <div>
           <Text strong className="block mb-2">¿Cómo va el pedido? <Text type="danger">*</Text></Text>
           <div className="flex gap-3">
@@ -116,7 +116,7 @@ export function PaymentModal({ open, total, onClose, onConfirm }: Props) {
           )}
         </div>
 
-        {/* Método de pago — opcional */}
+        {/* Payment method — optional */}
         <div>
           <Text strong className="block mb-2">¿Cómo pagó el cliente? <Text type="secondary" className="font-normal">(opcional)</Text></Text>
           <div className="flex gap-3">

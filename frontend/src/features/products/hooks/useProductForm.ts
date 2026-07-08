@@ -98,9 +98,9 @@ export function useProductForm(onSuccess: () => void) {
       : await ProductsService.createProduct(payload);
     setSaving(false);
     if (result.ok) {
-      // Invalida cualquier página/filtro cacheado de la lista de productos
-      // (la navegación de vuelta a /products remonta el hook con el mismo swrKey,
-      // y SWR sirve el caché sin refetch si no pasó el dedupingInterval).
+      // Invalidates any cached page/filter of the products list
+      // (navigating back to /products remounts the hook with the same swrKey,
+      // and SWR serves the cache without refetching if dedupingInterval hasn't passed).
       mutate((key) => Array.isArray(key) && key[0] === "products");
       onSuccess();
     } else {

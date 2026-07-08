@@ -65,9 +65,9 @@ export class StockController {
     return this.stockService.updateMinQuantity(id, dto.min_quantity);
   }
 
-  // Stock de reventa (branch_product_stock / product_stock_movements) — RLS real es
-  // "cualquier autenticado" sin restricción de rol ni sucursal, ver 2026-07-02-nestjs-fase2-rls-guards.
-  // Por eso estos endpoints solo llevan JwtAuthGuard, sin RolesGuard ni OwnBranchOrAdminGuard.
+  // Resale stock (branch_product_stock / product_stock_movements) — real RLS is
+  // "any authenticated user" with no role/branch restriction, see 2026-07-02-nestjs-fase2-rls-guards.
+  // That's why these endpoints only carry JwtAuthGuard, no RolesGuard or OwnBranchOrAdminGuard.
   @Get('products')
   listProductStock(@Query() query: ListProductStockQueryDto) {
     return this.productStockService.list(query);

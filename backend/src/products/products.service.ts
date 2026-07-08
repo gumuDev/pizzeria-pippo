@@ -40,8 +40,8 @@ export class ProductsService {
     return { data: rows.map((row) => this.mapProduct(row)), total, page, pageSize };
   }
 
-  // Shape rica (con nombre de sucursal e insumo denormalizados) — la usa la vista de detalle
-  // del producto; la vista de edición solo toma el subset básico, vía el `list()`/mapProduct().
+  // Rich shape (with denormalized branch/ingredient names) — used by the product
+  // detail view; the edit view only needs the basic subset, via `list()`/mapProduct().
   async getDetail(id: string): Promise<ProductDetailResult | null> {
     const row = await this.prisma.product.findUnique({
       where: { id },
@@ -88,10 +88,10 @@ export class ProductsService {
     };
   }
 
-  // Catálogo del POS: solo variantes con precio de sucursal para productos
-  // "made" (los de reventa no necesitan branch_price), + stock_quantity
-  // embebido para variantes de reventa. Réplica exacta de la ruta vieja
-  // /api/products?branchId= (rama isPOS), que es distinta del list() de arriba.
+  // POS catalog: only variants with a branch price for "made" products
+  // (resale ones don't need a branch_price), + stock_quantity embedded
+  // for resale variants. Exact replica of the old /api/products?branchId=
+  // route (isPOS branch), which is different from the list() above.
   async getPosCatalog(branchId: string): Promise<PosCatalogProduct[]> {
     const rows = await this.prisma.product.findMany({
       where: { isActive: true },
@@ -156,9 +156,9 @@ export class ProductsService {
     return filtered;
   }
 
-  // Lista plana de variantes de todos los productos (nombre + producto),
-  // usada por el combo builder de promociones para elegir a qué variante
-  // aplica cada regla — no necesita precios ni recetas, solo id/nombre.
+  // Flat list of variants across all products (name + product), used by the
+  // promotions combo builder to pick which variant each rule applies to —
+  // doesn't need prices or recipes, just id/name.
   async listAllVariants(): Promise<VariantOption[]> {
     const variants = await this.prisma.productVariant.findMany({
       orderBy: { name: 'asc' },
@@ -172,8 +172,8 @@ export class ProductsService {
     }));
   }
 
-  // Réplica de la vieja ruta /api/products/[id]/branch-prices — página de
-  // edición de precios por sucursal en el admin.
+  // Replica of the old /api/products/[id]/branch-prices route — the
+  // per-branch price editing page in the admin.
   async getBranchPrices(productId: string): Promise<BranchPricesResult> {
     const [variants, branches] = await Promise.all([
       this.prisma.productVariant.findMany({

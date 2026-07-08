@@ -10,8 +10,8 @@ import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
 import { PatchBranchDto } from './dto/patch-branch.dto';
 
-// RLS real (confirmada contra la DB): SELECT es admin ve todas, no-admin solo su
-// propia sucursal (id = get_user_branch_id()) — replicado en el service, no en un guard.
+// Real RLS (confirmed against the DB): SELECT lets admin see all, non-admin only
+// their own branch (id = get_user_branch_id()) — replicated in the service, not a guard.
 @UseGuards(JwtAuthGuard)
 @Controller('branches')
 export class BranchesController {
