@@ -92,4 +92,8 @@ export const API_ENDPOINTS = {
   storage: {
     upload: "/storage/upload",
   },
+  devices: {
+    base: "/devices",
+    byId: (id: string) => `/devices/${id}`,
+  },
 };

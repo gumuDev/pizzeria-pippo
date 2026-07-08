@@ -1,7 +1,7 @@
 "use client";
 
 import { Tabs } from "antd";
-import { BellOutlined, RobotOutlined, FireOutlined, PrinterOutlined } from "@ant-design/icons";
+import { BellOutlined, RobotOutlined, FireOutlined, PrinterOutlined, MobileOutlined } from "@ant-design/icons";
 import { TelegramSettingsForm } from "@/features/settings/components/TelegramSettingsForm";
 import { KitchenSettingsForm } from "@/features/settings/components/KitchenSettingsForm";
 import { PrinterSettingsForm } from "@/features/settings/components/PrinterSettingsForm";
@@ -9,6 +9,10 @@ import { BotSettingsForm } from "@/features/telegram-bot/components/BotSettingsF
 import { AuthorizedChatsTable } from "@/features/telegram-bot/components/AuthorizedChatsTable";
 import { ChatModal } from "@/features/telegram-bot/components/ChatModal";
 import { useTelegramChats } from "@/features/telegram-bot/hooks/useTelegramChats";
+import { DevicesTable } from "@/features/devices/components/DevicesTable";
+import { DeviceModal } from "@/features/devices/components/DeviceModal";
+import { DeviceApiKeyModal } from "@/features/devices/components/DeviceApiKeyModal";
+import { useDevices } from "@/features/devices/hooks/useDevices";
 
 function BotTab() {
   const { chats, loading, modalOpen, editing, openCreate, openEdit, closeModal, handleSave, handleToggleActive, handleDelete } = useTelegramChats();
@@ -24,6 +28,35 @@ function BotTab() {
         onDelete={handleDelete}
       />
       <ChatModal open={modalOpen} editing={editing} onClose={closeModal} onSave={handleSave} />
+    </div>
+  );
+}
+
+function DevicesTab() {
+  const {
+    devices, branches, loading, saving, modalOpen, editing, newApiKey,
+    openCreate, openEdit, closeModal, closeApiKeyModal, handleSubmit, handleToggleActive, handleDelete,
+  } = useDevices();
+  return (
+    <div>
+      <DevicesTable
+        devices={devices}
+        branches={branches}
+        loading={loading}
+        onCreate={openCreate}
+        onEdit={openEdit}
+        onToggleActive={handleToggleActive}
+        onDelete={handleDelete}
+      />
+      <DeviceModal
+        open={modalOpen}
+        editing={editing}
+        branches={branches}
+        saving={saving}
+        onClose={closeModal}
+        onSubmit={handleSubmit}
+      />
+      <DeviceApiKeyModal apiKey={newApiKey} onClose={closeApiKeyModal} />
     </div>
   );
 }
@@ -52,6 +85,11 @@ export default function SettingsPage() {
             key: "printer",
             label: <span><PrinterOutlined /> Impresora</span>,
             children: <PrinterSettingsForm />,
+          },
+          {
+            key: "devices",
+            label: <span><MobileOutlined /> Dispositivos</span>,
+            children: <DevicesTab />,
           },
         ]}
       />
