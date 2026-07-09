@@ -1,6 +1,6 @@
 "use client";
 
-import { Table, Button, Tag, Space, Typography } from "antd";
+import { Table, Button, Tag, Space, Typography, Tooltip } from "antd";
 import { PlusOutlined, EditOutlined, StopOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { useIsMobile } from "@/lib/useIsMobile";
 import type { VariantType } from "../types/variant-type.types";
@@ -31,13 +31,20 @@ export function VariantTypesTable({ variantTypes, loading, onCreate, onEdit, onT
     {
       title: "Acciones",
       key: "actions",
-      width: 160,
+      width: 120,
       render: (_: unknown, record: VariantType) => (
         <Space>
-          <Button size="small" onClick={() => onEdit(record)}>Editar</Button>
-          <Button size="small" danger={record.is_active} onClick={() => onToggle(record)}>
-            {record.is_active ? "Desactivar" : "Activar"}
-          </Button>
+          <Tooltip title="Editar">
+            <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} />
+          </Tooltip>
+          <Tooltip title={record.is_active ? "Desactivar" : "Activar"}>
+            <Button
+              icon={record.is_active ? <StopOutlined /> : <CheckCircleOutlined />}
+              size="small"
+              danger={record.is_active}
+              onClick={() => onToggle(record)}
+            />
+          </Tooltip>
         </Space>
       ),
     },
