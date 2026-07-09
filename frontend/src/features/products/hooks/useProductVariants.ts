@@ -7,16 +7,8 @@ const EMPTY_VARIANT: Variant = { name: "Unidad", base_price: 0, branch_prices: [
 
 export function useProductVariants(variantTypeOptions: VariantTypeOption[]) {
   const [variants, setVariants] = useState<Variant[]>([EMPTY_VARIANT]);
-  const [hasRecipe, setHasRecipeState] = useState(true);
   const [hasVariants, setHasVariantsState] = useState(false);
   const savedVariantsRef = useRef<Variant[]>([]);
-
-  const toggleHasRecipe = (val: boolean) => {
-    setHasRecipeState(val);
-    if (!val) {
-      setVariants((prev) => prev.map((v) => ({ ...v, recipes: [] })));
-    }
-  };
 
   const toggleHasVariants = (val: boolean) => {
     setHasVariantsState(val);
@@ -42,20 +34,29 @@ export function useProductVariants(variantTypeOptions: VariantTypeOption[]) {
   };
 
   const resetVariants = () => {
-    setHasRecipeState(true);
     setHasVariantsState(false);
     setVariants([EMPTY_VARIANT]);
   };
 
-  const loadVariants = (loaded: Variant[], anyHasRecipe: boolean, isSimple: boolean) => {
+  const loadVariants = (loaded: Variant[], isSimple: boolean) => {
     savedVariantsRef.current = [];
     setVariants(loaded);
-    setHasRecipeState(anyHasRecipe);
     setHasVariantsState(!isSimple);
   };
 
   const updateVariant = (index: number, field: keyof Variant, value: unknown) => {
     setVariants((prev) => prev.map((v, i) => i === index ? { ...v, [field]: value } : v));
+  };
+
+  const updateVariantBranchPrice = (variantIndex: number, branchId: string, price: number) => {
+    setVariants((prev) => prev.map((v, i) => {
+      if (i !== variantIndex) return v;
+      const exists = v.branch_prices.some((bp) => bp.branch_id === branchId);
+      const branch_prices = exists
+        ? v.branch_prices.map((bp) => (bp.branch_id === branchId ? { ...bp, price } : bp))
+        : [...v.branch_prices, { branch_id: branchId, price }];
+      return { ...v, branch_prices };
+    }));
   };
 
   const addVariant = () => {
@@ -93,13 +94,10 @@ export function useProductVariants(variantTypeOptions: VariantTypeOption[]) {
   };
 
   return {
-    variants, hasRecipe, hasVariants,
-    setHasRecipe: toggleHasRecipe, setHasVariants: toggleHasVariants,
-    // Raw setter with no side effect (clearing recipes) — used when hasRecipe
-    // is derived automatically from step1Data.product_type, not from the UI switch.
-    setHasRecipeSilently: setHasRecipeState,
+    variants, hasVariants,
+    setHasVariants: toggleHasVariants,
     resetVariants, loadVariants,
-    updateVariant, addVariant, removeVariant, reactivateVariant,
+    updateVariant, updateVariantBranchPrice, addVariant, removeVariant, reactivateVariant,
     addRecipeItem, updateRecipeItem, removeRecipeItem,
   };
 }

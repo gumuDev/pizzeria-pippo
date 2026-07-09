@@ -1,17 +1,27 @@
 "use client";
 
 import { Button, Select, InputNumber, Typography, Switch } from "antd";
+import type { FocusEvent } from "react";
 import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
-import type { Variant, VariantTypeOption } from "../types/product.types";
+import { VariantBranchPrices } from "./VariantBranchPrices";
+import type { Variant, VariantTypeOption, Branch } from "../types/product.types";
+
+// Selecciona todo el texto al enfocar: sin esto, escribir sobre un campo en 0
+// inserta el dígito antes del 0 (ej. tipear "5" deja "05") en vez de reemplazarlo.
+function selectOnFocus(e: FocusEvent<HTMLInputElement>) {
+  e.target.select();
+}
 
 const { Text } = Typography;
 
 interface Props {
   variants: Variant[];
   variantTypeOptions: VariantTypeOption[];
+  branches: Branch[];
   hasVariants: boolean;
   onToggleVariants: (val: boolean) => void;
   onUpdateVariant: (index: number, field: keyof Variant, value: unknown) => void;
+  onUpdateVariantBranchPrice: (index: number, branchId: string, price: number) => void;
   onAddVariant: () => void;
   onRemoveVariant: (index: number) => void;
   onReactivateVariant: (index: number) => void;
@@ -22,9 +32,9 @@ interface Props {
 }
 
 export function ProductStepVariants({
-  variants, variantTypeOptions,
+  variants, variantTypeOptions, branches,
   hasVariants, onToggleVariants,
-  onUpdateVariant,
+  onUpdateVariant, onUpdateVariantBranchPrice,
   onAddVariant, onRemoveVariant, onReactivateVariant,
   onPrev, onNext, nextLabel, saving,
 }: Props) {
@@ -43,14 +53,23 @@ export function ProductStepVariants({
       </div>
 
       {!hasVariants && simpleVariant && (
-        <div style={{ padding: "16px 20px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 16 }}>
-          <Text type="secondary" style={{ whiteSpace: "nowrap" }}>Precio base</Text>
-          <InputNumber
-            prefix="Bs"
-            value={simpleVariant.base_price}
-            onChange={(val) => onUpdateVariant(0, "base_price", val ?? 0)}
-            style={{ width: 160 }}
-            min={0}
+        <div style={{ padding: "16px 20px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <Text type="secondary" style={{ whiteSpace: "nowrap" }}>Precio base</Text>
+            <InputNumber
+              prefix="Bs"
+              value={simpleVariant.base_price}
+              onChange={(val) => onUpdateVariant(0, "base_price", val ?? 0)}
+              onFocus={selectOnFocus}
+              style={{ width: 160 }}
+              min={0}
+            />
+          </div>
+          <VariantBranchPrices
+            branches={branches}
+            basePrice={simpleVariant.base_price}
+            branchPrices={simpleVariant.branch_prices}
+            onChange={(branchId, price) => onUpdateVariantBranchPrice(0, branchId, price)}
           />
         </div>
       )}
@@ -64,7 +83,7 @@ export function ProductStepVariants({
           ) : (
             <>
               {/* Variants as horizontal cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12, marginBottom: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12, marginBottom: 12 }}>
                 {variants.map((variant, vi) => {
                   const inactive = variant.is_active === false;
                   const activeCount = variants.filter((v) => v.is_active !== false).length;
@@ -105,10 +124,19 @@ export function ProductStepVariants({
                         prefix="Bs"
                         value={variant.base_price}
                         onChange={(val) => onUpdateVariant(vi, "base_price", val ?? 0)}
+                        onFocus={selectOnFocus}
                         style={{ width: "100%", marginTop: 4 }}
                         min={0}
                         disabled={inactive}
                       />
+                      {!inactive && (
+                        <VariantBranchPrices
+                          branches={branches}
+                          basePrice={variant.base_price}
+                          branchPrices={variant.branch_prices}
+                          onChange={(branchId, price) => onUpdateVariantBranchPrice(vi, branchId, price)}
+                        />
+                      )}
                     </div>
                   );
                 })}

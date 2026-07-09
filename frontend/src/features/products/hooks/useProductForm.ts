@@ -7,7 +7,7 @@ import { getToken } from "@/lib/auth";
 import { ProductsService } from "../services/products.service";
 import { VariantTypesService } from "@/features/variant-types/services/variant-types.service";
 import { useProductVariants } from "./useProductVariants";
-import type { Product, Step1Data, VariantTypeOption } from "../types/product.types";
+import type { Product, Step1Data, VariantTypeOption, Branch, Variant } from "../types/product.types";
 
 export function useProductForm(onSuccess: () => void) {
   const [currentStep, setCurrentStep] = useState(0);
@@ -16,6 +16,7 @@ export function useProductForm(onSuccess: () => void) {
   const [imageUrl, setImageUrl] = useState<string>("");
   const [step1Data, setStep1Data] = useState<Step1Data>({ name: "", category: "", description: "", product_type: "made" });
   const [variantTypeOptions, setVariantTypeOptions] = useState<VariantTypeOption[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [formStep1] = Form.useForm();
 
   const productVariants = useProductVariants(variantTypeOptions);
@@ -27,6 +28,7 @@ export function useProductForm(onSuccess: () => void) {
       setVariantTypeOptions(options);
     };
     loadVariantTypes();
+    ProductsService.getBranches().then(setBranches);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -74,7 +76,7 @@ export function useProductForm(onSuccess: () => void) {
       product_type: productType,
     });
 
-    productVariants.loadVariants(loadedVariants, anyHasRecipe, isSimple);
+    productVariants.loadVariants(loadedVariants, isSimple);
   };
 
   const handleImageUpload = async (file: File) => {
@@ -90,9 +92,20 @@ export function useProductForm(onSuccess: () => void) {
     return false as const;
   };
 
+  // Cualquier sucursal activa sin precio propio todavía usa el precio base como
+  // default — evita que un producto "made" recién creado quede invisible en el
+  // POS de una sucursal solo porque nadie visitó /products/[id]/prices.
+  const fillMissingBranchPrices = (variants: Variant[]): Variant[] =>
+    variants.map((v) => {
+      const covered = new Set(v.branch_prices.map((bp) => bp.branch_id));
+      const missing = branches.filter((b) => !covered.has(b.id)).map((b) => ({ branch_id: b.id, price: v.base_price }));
+      return missing.length ? { ...v, branch_prices: [...v.branch_prices, ...missing] } : v;
+    });
+
   const handleSave = async (editing: Product | null) => {
     setSaving(true);
-    const payload = ProductsService.buildPayload(step1Data, imageUrl, productVariants.variants);
+    const variantsWithPrices = fillMissingBranchPrices(productVariants.variants);
+    const payload = ProductsService.buildPayload(step1Data, imageUrl, variantsWithPrices);
     const result = editing
       ? await ProductsService.updateProduct(editing.id, payload)
       : await ProductsService.createProduct(payload);
@@ -108,23 +121,19 @@ export function useProductForm(onSuccess: () => void) {
     }
   };
 
-  const handleSetStep1Data = (data: Step1Data) => {
-    setStep1Data(data);
-    productVariants.setHasRecipeSilently(data.product_type === "made");
-  };
-
   return {
     currentStep, setCurrentStep,
     uploading, saving,
     imageUrl,
-    step1Data, setStep1Data: handleSetStep1Data,
+    step1Data, setStep1Data,
     variants: productVariants.variants, variantTypeOptions,
-    hasRecipe: productVariants.hasRecipe, setHasRecipe: productVariants.setHasRecipe,
+    branches,
     hasVariants: productVariants.hasVariants, setHasVariants: productVariants.setHasVariants,
     formStep1,
     resetForm, loadForEdit,
     handleImageUpload, handleSave,
     updateVariant: productVariants.updateVariant,
+    updateVariantBranchPrice: productVariants.updateVariantBranchPrice,
     addVariant: productVariants.addVariant,
     removeVariant: productVariants.removeVariant,
     reactivateVariant: productVariants.reactivateVariant,

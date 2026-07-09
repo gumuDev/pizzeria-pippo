@@ -76,9 +76,11 @@ export function ProductFormPage({ editing, ingredients }: Props) {
         <ProductStepVariants
           variants={form.variants}
           variantTypeOptions={form.variantTypeOptions}
+          branches={form.branches}
           hasVariants={form.hasVariants}
           onToggleVariants={form.setHasVariants}
           onUpdateVariant={form.updateVariant}
+          onUpdateVariantBranchPrice={form.updateVariantBranchPrice}
           onAddVariant={form.addVariant}
           onRemoveVariant={form.removeVariant}
           onReactivateVariant={form.reactivateVariant}
@@ -95,8 +97,6 @@ export function ProductFormPage({ editing, ingredients }: Props) {
           ingredients={ingredients}
           saving={form.saving}
           editing={!!editing}
-          hasRecipe={form.hasRecipe}
-          onToggleRecipe={form.setHasRecipe}
           onAddRecipeItem={form.addRecipeItem}
           onUpdateRecipeItem={form.updateRecipeItem}
           onRemoveRecipeItem={form.removeRecipeItem}

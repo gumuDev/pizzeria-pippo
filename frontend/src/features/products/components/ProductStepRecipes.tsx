@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Select, InputNumber, Switch, Typography, Alert } from "antd";
+import { Button, Select, InputNumber, Typography } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { Ingredient, Variant, RecipeItem } from "../types/product.types";
 
@@ -17,8 +17,6 @@ interface Props {
   ingredients: Ingredient[];
   saving: boolean;
   editing: boolean;
-  hasRecipe: boolean;
-  onToggleRecipe: (val: boolean) => void;
   onAddRecipeItem: (variantIndex: number, ingredientId?: string) => void;
   onUpdateRecipeItem: (variantIndex: number, recipeIndex: number, field: keyof RecipeItem, value: string | number) => void;
   onRemoveRecipeItem: (variantIndex: number, recipeIndex: number) => void;
@@ -26,50 +24,29 @@ interface Props {
   onSave: () => void;
 }
 
+// Este paso solo se muestra cuando el producto es "elaboración propia"
+// (ver ProductFormPage: isMade && currentStep === 2) — no hace falta
+// preguntar de nuevo si usa ingredientes, ya se eligió en el paso 1.
 export function ProductStepRecipes({
   variants, ingredients, saving, editing,
-  hasRecipe, onToggleRecipe,
   onAddRecipeItem, onUpdateRecipeItem, onRemoveRecipeItem,
   onPrev, onSave,
 }: Props) {
   return (
     <div>
-      {/* Toggle */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, padding: "12px 16px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb" }}>
-        <Switch checked={hasRecipe} onChange={onToggleRecipe} />
-        <div>
-          <Text strong style={{ fontSize: 14 }}>Este producto usa ingredientes para elaborarse</Text>
-          <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
-            {hasRecipe ? "Se descontarán ingredientes del stock al vender" : "Se descontarán unidades del stock al vender (reventa)"}
-          </Text>
-        </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12, marginBottom: 12 }}>
+        {variants.map((variant, vi) => (
+          <VariantRecipeCard
+            key={vi}
+            variant={variant}
+            variantIndex={vi}
+            ingredients={ingredients}
+            onAddRecipeItem={onAddRecipeItem}
+            onUpdateRecipeItem={onUpdateRecipeItem}
+            onRemoveRecipeItem={onRemoveRecipeItem}
+          />
+        ))}
       </div>
-
-      {!hasRecipe && (
-        <Alert
-          type="info"
-          showIcon
-          message="Producto de reventa"
-          description="Este producto se vende por unidades. Cargá el stock desde Stock → Reventa al registrar una compra."
-          style={{ marginBottom: 16 }}
-        />
-      )}
-
-      {hasRecipe && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12, marginBottom: 12 }}>
-          {variants.map((variant, vi) => (
-            <VariantRecipeCard
-              key={vi}
-              variant={variant}
-              variantIndex={vi}
-              ingredients={ingredients}
-              onAddRecipeItem={onAddRecipeItem}
-              onUpdateRecipeItem={onUpdateRecipeItem}
-              onRemoveRecipeItem={onRemoveRecipeItem}
-            />
-          ))}
-        </div>
-      )}
 
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24 }}>
         <Button onClick={onPrev}>Anterior</Button>

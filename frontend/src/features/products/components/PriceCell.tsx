@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import type { FocusEvent } from "react";
 import { Button, InputNumber, Space, Typography } from "antd";
 import { EditOutlined, PlusOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
+
+// Selecciona todo el texto al enfocar: sin esto, escribir sobre un campo en 0
+// inserta el dígito antes del 0 (ej. tipear "5" deja "05") en vez de reemplazarlo.
+function selectOnFocus(e: FocusEvent<HTMLInputElement>) {
+  e.target.select();
+}
 
 interface Props {
   variantId: string;
@@ -35,6 +42,7 @@ export function PriceCell({ variantId, branchId, price, saving, onSave }: Props)
           prefix="Bs"
           value={value}
           onChange={(v) => setValue(v ?? 0)}
+          onFocus={selectOnFocus}
           min={0}
           style={{ width: 110 }}
           autoFocus
