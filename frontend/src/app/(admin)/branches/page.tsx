@@ -10,7 +10,7 @@ export default function BranchesPage() {
     branches, loading, saving, showInactive, setShowInactive,
     modalOpen, editing, blockModal, form,
     openCreate, openEdit, closeModal, closeBlockModal,
-    handleSubmit, handleToggleActive,
+    handleSubmit, handleToggleActive, handleDelete,
   } = useBranches();
 
   return (
@@ -23,6 +23,7 @@ export default function BranchesPage() {
         onCreate={openCreate}
         onEdit={openEdit}
         onToggleActive={handleToggleActive}
+        onDelete={handleDelete}
       />
       <BranchModal
         open={modalOpen}

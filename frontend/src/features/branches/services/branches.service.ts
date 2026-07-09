@@ -35,4 +35,13 @@ export const BranchesService = {
     }
     return { ok: true };
   },
+
+  async deleteBranch(id: string): Promise<{ ok: boolean; error?: string }> {
+    const res = await nestFetch(API_ENDPOINTS.branches.byId(id), { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json();
+      return { ok: false, error: data.error };
+    }
+    return { ok: true };
+  },
 };

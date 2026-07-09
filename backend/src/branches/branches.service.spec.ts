@@ -1,14 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BranchesService } from './branches.service';
 import { BranchHasCashiersException } from '../common/exceptions/branch-has-cashiers.exception';
+import { BranchHasDependenciesException } from '../common/exceptions/branch-has-dependencies.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CurrentUserPayload } from '../auth/types/jwt.types';
 
 describe('BranchesService', () => {
   let service: BranchesService;
   let prisma: {
-    branch: { findMany: jest.Mock; create: jest.Mock; update: jest.Mock };
-    profile: { findMany: jest.Mock };
+    branch: { findMany: jest.Mock; create: jest.Mock; update: jest.Mock; delete: jest.Mock };
+    profile: { findMany: jest.Mock; findFirst: jest.Mock };
+    order: { findFirst: jest.Mock };
+    branchPrice: { findFirst: jest.Mock };
+    branchStock: { findFirst: jest.Mock };
+    stockMovement: { findFirst: jest.Mock };
+    branchProductStock: { findFirst: jest.Mock };
+    productStockMovement: { findFirst: jest.Mock };
+    promotion: { findFirst: jest.Mock };
+    device: { findFirst: jest.Mock };
   };
 
   const admin: CurrentUserPayload = { id: 'u1', email: 'admin@pippo.local', role: 'admin', branch_id: null, full_name: 'Admin', business_id: null };
@@ -16,8 +25,16 @@ describe('BranchesService', () => {
 
   beforeEach(async () => {
     prisma = {
-      branch: { findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
-      profile: { findMany: jest.fn() },
+      branch: { findMany: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+      profile: { findMany: jest.fn(), findFirst: jest.fn().mockResolvedValue(null) },
+      order: { findFirst: jest.fn().mockResolvedValue(null) },
+      branchPrice: { findFirst: jest.fn().mockResolvedValue(null) },
+      branchStock: { findFirst: jest.fn().mockResolvedValue(null) },
+      stockMovement: { findFirst: jest.fn().mockResolvedValue(null) },
+      branchProductStock: { findFirst: jest.fn().mockResolvedValue(null) },
+      productStockMovement: { findFirst: jest.fn().mockResolvedValue(null) },
+      promotion: { findFirst: jest.fn().mockResolvedValue(null) },
+      device: { findFirst: jest.fn().mockResolvedValue(null) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -73,10 +90,41 @@ describe('BranchesService', () => {
       expect(prisma.branch.update).toHaveBeenCalledWith({ where: { id: 'b1' }, data: { isActive: false } });
     });
 
-    it('remove hace soft-delete y respeta el mismo chequeo de cajeros', async () => {
-      prisma.profile.findMany.mockResolvedValue([{ id: 'c1', fullName: 'Juan' }]);
+  });
 
-      await expect(service.remove('b1')).rejects.toThrow(BranchHasCashiersException);
+  describe('remove (hard delete)', () => {
+    it('borra la sucursal si no tiene ningún dato asociado', async () => {
+      await service.remove('b1');
+
+      expect(prisma.branch.delete).toHaveBeenCalledWith({ where: { id: 'b1' } });
+    });
+
+    it('bloquea el borrado si tiene órdenes asociadas', async () => {
+      prisma.order.findFirst.mockResolvedValue({ id: 'o1' });
+
+      await expect(service.remove('b1')).rejects.toThrow(BranchHasDependenciesException);
+      expect(prisma.branch.delete).not.toHaveBeenCalled();
+    });
+
+    it('bloquea el borrado si tiene usuarios asignados (cualquier rol, no solo cajero)', async () => {
+      prisma.profile.findFirst.mockResolvedValue({ id: 'p1' });
+
+      await expect(service.remove('b1')).rejects.toThrow(BranchHasDependenciesException);
+      expect(prisma.branch.delete).not.toHaveBeenCalled();
+    });
+
+    it('no expone conteos ni categorías en el error, solo un mensaje genérico', async () => {
+      prisma.order.findFirst.mockResolvedValue({ id: 'o1' });
+
+      try {
+        await service.remove('b1');
+        fail('esperaba que remove() lanzara una excepción');
+      } catch (err) {
+        expect(err).toBeInstanceOf(BranchHasDependenciesException);
+        const response = (err as BranchHasDependenciesException).getResponse() as Record<string, unknown>;
+        expect(response).not.toHaveProperty('dependencies');
+        expect(typeof response.message).toBe('string');
+      }
     });
   });
 });

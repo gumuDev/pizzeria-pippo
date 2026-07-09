@@ -68,6 +68,16 @@ export function useBranches() {
     }
   };
 
+  const handleDelete = async (branch: Branch) => {
+    const result = await BranchesService.deleteBranch(branch.id);
+    if (result.ok) {
+      fetchBranches();
+      notification.success({ message: "Sucursal eliminada" });
+    } else {
+      notification.error({ message: result.error ?? "Error al eliminar" });
+    }
+  };
+
   return {
     branches,
     loading,
@@ -84,5 +94,6 @@ export function useBranches() {
     closeBlockModal,
     handleSubmit,
     handleToggleActive,
+    handleDelete,
   };
 }

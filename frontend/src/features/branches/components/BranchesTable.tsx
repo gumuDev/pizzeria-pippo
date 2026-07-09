@@ -1,9 +1,9 @@
 "use client";
 
-import { Table, Button, Space, Tag, Typography, Tooltip, Switch } from "antd";
+import { Table, Button, Space, Tag, Typography, Tooltip, Switch, Popconfirm } from "antd";
 import {
   PlusOutlined, EditOutlined, StopOutlined,
-  CheckCircleOutlined, EyeOutlined,
+  CheckCircleOutlined, EyeOutlined, DeleteOutlined,
 } from "@ant-design/icons";
 import { useIsMobile } from "@/lib/useIsMobile";
 import type { Branch } from "../types/branch.types";
@@ -18,9 +18,10 @@ interface Props {
   onCreate: () => void;
   onEdit: (branch: Branch) => void;
   onToggleActive: (branch: Branch) => void;
+  onDelete: (branch: Branch) => void;
 }
 
-export function BranchesTable({ branches, loading, showInactive, onToggleInactive, onCreate, onEdit, onToggleActive }: Props) {
+export function BranchesTable({ branches, loading, showInactive, onToggleInactive, onCreate, onEdit, onToggleActive, onDelete }: Props) {
   const isMobile = useIsMobile();
 
   const columns = [
@@ -58,7 +59,7 @@ export function BranchesTable({ branches, loading, showInactive, onToggleInactiv
     {
       title: "Acciones",
       key: "actions",
-      width: 120,
+      width: 160,
       render: (_: unknown, record: Branch) => (
         <Space>
           <Tooltip title="Editar">
@@ -72,6 +73,18 @@ export function BranchesTable({ branches, loading, showInactive, onToggleInactiv
               onClick={() => onToggleActive(record)}
             />
           </Tooltip>
+          <Popconfirm
+            title="¿Eliminar esta sucursal?"
+            description="Solo se puede si no tiene ventas, stock, precios ni usuarios asociados. No se puede deshacer."
+            onConfirm={() => onDelete(record)}
+            okText="Eliminar"
+            cancelText="Cancelar"
+            okButtonProps={{ danger: true }}
+          >
+            <Tooltip title="Eliminar">
+              <Button icon={<DeleteOutlined />} size="small" danger />
+            </Tooltip>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -135,6 +148,16 @@ export function BranchesTable({ branches, loading, showInactive, onToggleInactiv
                       danger={branch.is_active}
                       onClick={() => onToggleActive(branch)}
                     />
+                    <Popconfirm
+                      title="¿Eliminar esta sucursal?"
+                      description="Solo si no tiene ventas, stock, precios ni usuarios asociados."
+                      onConfirm={() => onDelete(branch)}
+                      okText="Eliminar"
+                      cancelText="Cancelar"
+                      okButtonProps={{ danger: true }}
+                    >
+                      <Button icon={<DeleteOutlined />} size="small" danger />
+                    </Popconfirm>
                   </Space>
                 </div>
               </div>
