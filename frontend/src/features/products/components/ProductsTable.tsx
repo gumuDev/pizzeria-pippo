@@ -21,13 +21,15 @@ interface Props {
   total: number;
   onPageChange: (p: number) => void;
   onToggleActive: (record: Product) => void;
+  onDelete: (record: Product) => void;
+  onDuplicate: (record: Product) => void;
 }
 
 export function ProductsTable({
   products, loading, showInactive, onToggleInactive,
   filterCategory, onFilterCategory,
   search, onSearch, page, pageSize, total, onPageChange,
-  onToggleActive,
+  onToggleActive, onDelete, onDuplicate,
 }: Props) {
   const isMobile = useIsMobile();
 
@@ -44,6 +46,8 @@ export function ProductsTable({
           pageSize={pageSize}
           onPageChange={onPageChange}
           onToggleActive={onToggleActive}
+          onDelete={onDelete}
+          onDuplicate={onDuplicate}
         />
       ) : (
         <ProductsDesktopTable
@@ -54,6 +58,8 @@ export function ProductsTable({
           total={total}
           onPageChange={onPageChange}
           onToggleActive={onToggleActive}
+          onDelete={onDelete}
+          onDuplicate={onDuplicate}
         />
       )}
     </>

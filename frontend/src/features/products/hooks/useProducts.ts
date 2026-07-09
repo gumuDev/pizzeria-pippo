@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { notification } from "antd";
 import { ProductsService } from "../services/products.service";
@@ -10,6 +11,7 @@ const PAGE_SIZE = 10;
 const DEDUP_INTERVAL = 60 * 1000;
 
 export function useProducts() {
+  const router = useRouter();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
@@ -52,6 +54,26 @@ export function useProducts() {
     }
   };
 
+  const handleDelete = async (product: Product) => {
+    const { ok, error } = await ProductsService.deleteProduct(product.id);
+    if (ok) {
+      mutate();
+      notification.success({ message: "Producto eliminado" });
+    } else {
+      notification.error({ message: error ?? "Error al eliminar" });
+    }
+  };
+
+  const handleDuplicate = async (product: Product) => {
+    const { ok, id, error } = await ProductsService.duplicateProduct(product.id);
+    if (ok && id) {
+      notification.success({ message: "Producto duplicado, ajustá la copia antes de activarla" });
+      router.push(`/products/${id}/edit`);
+    } else {
+      notification.error({ message: error ?? "Error al duplicar" });
+    }
+  };
+
   const handleShowInactive = (val: boolean) => { setShowInactive(val); setPage(1); };
   const handleCategoryFilter = (val: string | null) => { setFilterCategory(val); setPage(1); };
 
@@ -70,6 +92,8 @@ export function useProducts() {
     search,
     setSearch,
     handleToggleActive,
+    handleDelete,
+    handleDuplicate,
     mutate,
   };
 }

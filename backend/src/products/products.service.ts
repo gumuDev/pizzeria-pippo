@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ProductHasSalesException } from '../common/exceptions/product-has-sales.exception';
 import type { Product, ProductVariant } from '@pippo/shared';
 import type { ListProductsQueryDto } from './dto/list-products-query.dto';
 import type { CreateProductDto } from './dto/create-product.dto';
@@ -261,6 +262,53 @@ export class ProductsService {
     return { id: product.id };
   }
 
+  // Copia el producto completo (variantes, recetas, precios por sucursal)
+  // como borrador inactivo, para que el admin lo revise y active a mano.
+  async duplicate(id: string): Promise<{ id: string }> {
+    const original = await this.prisma.product.findUnique({
+      where: { id },
+      include: { variants: { include: { branchPrices: true, recipes: true } } },
+    });
+    if (!original) throw new NotFoundException('Producto no encontrado');
+
+    return this.prisma.$transaction(async (tx) => {
+      const copy = await tx.product.create({
+        data: {
+          name: `${original.name} (copia)`,
+          category: original.category,
+          description: original.description,
+          imageUrl: original.imageUrl,
+          productType: original.productType,
+          isActive: false,
+        },
+      });
+
+      for (const variant of original.variants) {
+        const newVariant = await tx.productVariant.create({
+          data: { productId: copy.id, name: variant.name, basePrice: variant.basePrice, isActive: variant.isActive },
+        });
+
+        if (variant.branchPrices.length) {
+          await tx.branchPrice.createMany({
+            data: variant.branchPrices.map((bp) => ({ branchId: bp.branchId, variantId: newVariant.id, price: bp.price })),
+          });
+        }
+        if (variant.recipes.length) {
+          await tx.recipe.createMany({
+            data: variant.recipes.map((r) => ({
+              variantId: newVariant.id,
+              ingredientId: r.ingredientId,
+              quantity: r.quantity,
+              applyCondition: r.applyCondition,
+            })),
+          });
+        }
+      }
+
+      return { id: copy.id };
+    });
+  }
+
   async update(id: string, dto: UpdateProductDto): Promise<void> {
     await this.prisma.product.update({
       where: { id },
@@ -311,8 +359,45 @@ export class ProductsService {
     await this.prisma.product.update({ where: { id }, data: { isActive } });
   }
 
-  async softDelete(id: string): Promise<void> {
-    await this.setActive(id, false);
+  // Hard delete real: a diferencia de setActive(id, false), esto borra
+  // producto y variantes. Solo se permite si ninguna variante fue vendida
+  // o está referenciada por una regla de promoción — lo demás
+  // (branch_prices, recipes, stock) es config desechable, igual que en
+  // replaceVariantExtras().
+  async remove(id: string): Promise<void> {
+    const variants = await this.prisma.productVariant.findMany({ where: { productId: id }, select: { id: true } });
+    const variantIds = variants.map((v) => v.id);
+
+    await this.assertNoSalesOrPromoLinks(variantIds);
+
+    await this.prisma.$transaction(async (tx) => {
+      if (variantIds.length > 0) {
+        await tx.branchPrice.deleteMany({ where: { variantId: { in: variantIds } } });
+        await tx.recipe.deleteMany({ where: { variantId: { in: variantIds } } });
+        await tx.branchProductStock.deleteMany({ where: { variantId: { in: variantIds } } });
+        await tx.productStockMovement.deleteMany({ where: { variantId: { in: variantIds } } });
+        await tx.warehouseProductStock.deleteMany({ where: { variantId: { in: variantIds } } });
+        await tx.warehouseProductMovement.deleteMany({ where: { variantId: { in: variantIds } } });
+        await tx.productVariant.deleteMany({ where: { id: { in: variantIds } } });
+      }
+      await tx.product.delete({ where: { id } });
+    });
+  }
+
+  private async assertNoSalesOrPromoLinks(variantIds: string[]): Promise<void> {
+    if (variantIds.length === 0) return;
+
+    const [orderItem, orderItemFlavor, promotionRule] = await Promise.all([
+      this.prisma.orderItem.findFirst({ where: { variantId: { in: variantIds } }, select: { id: true } }),
+      this.prisma.orderItemFlavor.findFirst({ where: { variantId: { in: variantIds } }, select: { id: true } }),
+      this.prisma.promotionRule.findFirst({ where: { variantId: { in: variantIds } }, select: { id: true } }),
+    ]);
+
+    if (orderItem || orderItemFlavor || promotionRule) {
+      throw new ProductHasSalesException(
+        'No se puede eliminar el producto: tiene ventas o promociones asociadas. Desactívalo en su lugar.',
+      );
+    }
   }
 
   private async replaceVariantExtras(

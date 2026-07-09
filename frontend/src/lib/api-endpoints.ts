@@ -18,6 +18,7 @@ export const API_ENDPOINTS = {
     allVariants: "/products/all-variants",
     posCatalog: (branchId: string) => `/products/pos-catalog?branchId=${branchId}`,
     branchPrices: (productId: string) => `/products/${productId}/branch-prices`,
+    duplicate: (id: string) => `/products/${id}/duplicate`,
   },
   promotions: {
     list: (qs: string) => `/promotions${qs}`,

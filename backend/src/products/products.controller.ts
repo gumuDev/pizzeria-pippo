@@ -67,6 +67,13 @@ export class ProductsController {
 
   @UseGuards(RolesGuard)
   @Roles('admin')
+  @Post(':id/duplicate')
+  duplicate(@Param('id') id: string) {
+    return this.productsService.duplicate(id);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('admin')
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
     return this.productsService.update(id, dto);
@@ -83,6 +90,6 @@ export class ProductsController {
   @Roles('admin')
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.productsService.softDelete(id);
+    return this.productsService.remove(id);
   }
 }

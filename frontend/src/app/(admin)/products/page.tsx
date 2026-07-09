@@ -9,7 +9,7 @@ export default function ProductsPage() {
     loading, showInactive, setShowInactive,
     filterCategory, setFilterCategory,
     search, setSearch,
-    handleToggleActive,
+    handleToggleActive, handleDelete, handleDuplicate,
   } = useProducts();
 
   return (
@@ -28,6 +28,8 @@ export default function ProductsPage() {
         total={total}
         onPageChange={setPage}
         onToggleActive={handleToggleActive}
+        onDelete={handleDelete}
+        onDuplicate={handleDuplicate}
       />
     </div>
   );

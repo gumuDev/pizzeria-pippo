@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProductsService } from './products.service';
+import { ProductHasSalesException } from '../common/exceptions/product-has-sales.exception';
 import { PrismaService } from '../prisma/prisma.service';
 
 function decimal(value: number) {
@@ -9,22 +10,36 @@ function decimal(value: number) {
 describe('ProductsService', () => {
   let service: ProductsService;
   let prisma: {
-    product: { findMany: jest.Mock; count: jest.Mock; findUnique: jest.Mock; create: jest.Mock; update: jest.Mock };
-    productVariant: { findMany: jest.Mock; create: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
+    product: { findMany: jest.Mock; count: jest.Mock; findUnique: jest.Mock; create: jest.Mock; update: jest.Mock; delete: jest.Mock };
+    productVariant: { findMany: jest.Mock; create: jest.Mock; update: jest.Mock; updateMany: jest.Mock; deleteMany: jest.Mock };
     branchPrice: { createMany: jest.Mock; deleteMany: jest.Mock; findFirst: jest.Mock; create: jest.Mock; update: jest.Mock };
     recipe: { createMany: jest.Mock; deleteMany: jest.Mock };
-    branchProductStock: { findMany: jest.Mock };
+    branchProductStock: { findMany: jest.Mock; deleteMany: jest.Mock };
+    productStockMovement: { deleteMany: jest.Mock };
+    warehouseProductStock: { deleteMany: jest.Mock };
+    warehouseProductMovement: { deleteMany: jest.Mock };
+    orderItem: { findFirst: jest.Mock };
+    orderItemFlavor: { findFirst: jest.Mock };
+    promotionRule: { findFirst: jest.Mock };
     branch: { findMany: jest.Mock };
+    $transaction: jest.Mock;
   };
 
   beforeEach(async () => {
     prisma = {
-      product: { findMany: jest.fn(), count: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
-      productVariant: { findMany: jest.fn(), create: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
+      product: { findMany: jest.fn(), count: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+      productVariant: { findMany: jest.fn(), create: jest.fn(), update: jest.fn(), updateMany: jest.fn(), deleteMany: jest.fn() },
       branchPrice: { createMany: jest.fn(), deleteMany: jest.fn(), findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
       recipe: { createMany: jest.fn(), deleteMany: jest.fn() },
-      branchProductStock: { findMany: jest.fn() },
+      branchProductStock: { findMany: jest.fn(), deleteMany: jest.fn() },
+      productStockMovement: { deleteMany: jest.fn() },
+      warehouseProductStock: { deleteMany: jest.fn() },
+      warehouseProductMovement: { deleteMany: jest.fn() },
+      orderItem: { findFirst: jest.fn().mockResolvedValue(null) },
+      orderItemFlavor: { findFirst: jest.fn().mockResolvedValue(null) },
+      promotionRule: { findFirst: jest.fn().mockResolvedValue(null) },
       branch: { findMany: jest.fn() },
+      $transaction: jest.fn(async (cb: (tx: unknown) => Promise<void>) => cb(prisma)),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -159,6 +174,63 @@ describe('ProductsService', () => {
     });
   });
 
+  describe('duplicate', () => {
+    it('lanza NotFoundException si el producto no existe', async () => {
+      prisma.product.findUnique.mockResolvedValue(null);
+
+      await expect(service.duplicate('missing')).rejects.toThrow('Producto no encontrado');
+    });
+
+    it('copia el producto como inactivo, con "(copia)" en el nombre, y sus variantes/precios/recetas', async () => {
+      const basePrice = decimal(20);
+      const branchPrice = decimal(22);
+      const quantity = decimal(1);
+      prisma.product.findUnique.mockResolvedValue({
+        id: 'p1',
+        name: 'Muzzarella',
+        category: 'pizza',
+        description: null,
+        imageUrl: null,
+        productType: 'made',
+        variants: [
+          {
+            id: 'v1',
+            name: 'Chica',
+            basePrice,
+            isActive: true,
+            branchPrices: [{ branchId: 'b1', price: branchPrice }],
+            recipes: [{ ingredientId: 'i1', quantity, applyCondition: 'always' }],
+          },
+        ],
+      });
+      prisma.product.create.mockResolvedValue({ id: 'p2' });
+      prisma.productVariant.create.mockResolvedValue({ id: 'v2' });
+
+      const result = await service.duplicate('p1');
+
+      expect(prisma.product.create).toHaveBeenCalledWith({
+        data: {
+          name: 'Muzzarella (copia)',
+          category: 'pizza',
+          description: null,
+          imageUrl: null,
+          productType: 'made',
+          isActive: false,
+        },
+      });
+      expect(prisma.productVariant.create).toHaveBeenCalledWith({
+        data: { productId: 'p2', name: 'Chica', basePrice, isActive: true },
+      });
+      expect(prisma.branchPrice.createMany).toHaveBeenCalledWith({
+        data: [{ branchId: 'b1', variantId: 'v2', price: branchPrice }],
+      });
+      expect(prisma.recipe.createMany).toHaveBeenCalledWith({
+        data: [{ variantId: 'v2', ingredientId: 'i1', quantity, applyCondition: 'always' }],
+      });
+      expect(result).toEqual({ id: 'p2' });
+    });
+  });
+
   describe('update', () => {
     it('desactiva variantes que ya no vienen en el payload', async () => {
       prisma.productVariant.findMany.mockResolvedValue([{ id: 'v1', name: 'Chica' }, { id: 'v2', name: 'Grande' }]);
@@ -218,19 +290,56 @@ describe('ProductsService', () => {
     });
   });
 
-  describe('setActive / softDelete', () => {
+  describe('setActive', () => {
     it('cascada is_active a las variantes del producto', async () => {
       await service.setActive('p1', false);
 
       expect(prisma.productVariant.updateMany).toHaveBeenCalledWith({ where: { productId: 'p1' }, data: { isActive: false } });
       expect(prisma.product.update).toHaveBeenCalledWith({ where: { id: 'p1' }, data: { isActive: false } });
     });
+  });
 
-    it('softDelete desactiva producto y variantes', async () => {
-      await service.softDelete('p1');
+  describe('remove (hard delete)', () => {
+    it('borra el producto y sus variantes si no tiene ventas ni promociones asociadas', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([{ id: 'v1' }, { id: 'v2' }]);
 
-      expect(prisma.productVariant.updateMany).toHaveBeenCalledWith({ where: { productId: 'p1' }, data: { isActive: false } });
-      expect(prisma.product.update).toHaveBeenCalledWith({ where: { id: 'p1' }, data: { isActive: false } });
+      await service.remove('p1');
+
+      expect(prisma.productVariant.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['v1', 'v2'] } } });
+      expect(prisma.product.delete).toHaveBeenCalledWith({ where: { id: 'p1' } });
+    });
+
+    it('bloquea el borrado si alguna variante tiene ventas (order_items)', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([{ id: 'v1' }]);
+      prisma.orderItem.findFirst.mockResolvedValue({ id: 'oi1' });
+
+      await expect(service.remove('p1')).rejects.toThrow(ProductHasSalesException);
+      expect(prisma.product.delete).not.toHaveBeenCalled();
+    });
+
+    it('bloquea el borrado si alguna variante aparece como sabor mixto (order_item_flavors)', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([{ id: 'v1' }]);
+      prisma.orderItemFlavor.findFirst.mockResolvedValue({ id: 'oif1' });
+
+      await expect(service.remove('p1')).rejects.toThrow(ProductHasSalesException);
+      expect(prisma.product.delete).not.toHaveBeenCalled();
+    });
+
+    it('bloquea el borrado si alguna variante está referenciada por una regla de promoción', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([{ id: 'v1' }]);
+      prisma.promotionRule.findFirst.mockResolvedValue({ id: 'pr1' });
+
+      await expect(service.remove('p1')).rejects.toThrow(ProductHasSalesException);
+      expect(prisma.product.delete).not.toHaveBeenCalled();
+    });
+
+    it('permite borrar un producto sin variantes (no hay nada que chequear)', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([]);
+
+      await service.remove('p1');
+
+      expect(prisma.productVariant.deleteMany).not.toHaveBeenCalled();
+      expect(prisma.product.delete).toHaveBeenCalledWith({ where: { id: 'p1' } });
     });
   });
 

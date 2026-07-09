@@ -1,8 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Table, Button, Space, Tag, Typography, Tooltip } from "antd";
-import { EditOutlined, StopOutlined, CheckCircleOutlined, EyeOutlined, DollarOutlined } from "@ant-design/icons";
+import type { MouseEvent } from "react";
+import { Table, Button, Space, Tag, Typography, Tooltip, Dropdown, Modal } from "antd";
+import {
+  EditOutlined, StopOutlined, CheckCircleOutlined, DollarOutlined,
+  DeleteOutlined, CopyOutlined, MoreOutlined,
+} from "@ant-design/icons";
 import { CATEGORY_OPTIONS, CATEGORY_COLORS } from "../constants/product.constants";
 import { ProductImage } from "./ProductImage";
 import type { Product } from "../types/product.types";
@@ -17,10 +21,29 @@ interface Props {
   total: number;
   onPageChange: (p: number) => void;
   onToggleActive: (record: Product) => void;
+  onDelete: (record: Product) => void;
+  onDuplicate: (record: Product) => void;
 }
 
-export function ProductsDesktopTable({ products, loading, page, pageSize, total, onPageChange, onToggleActive }: Props) {
+// Detiene la propagación para que los botones de la columna Acciones no
+// disparen también el click de la fila (que navega al detalle).
+function stopRowClick(e: MouseEvent) {
+  e.stopPropagation();
+}
+
+export function ProductsDesktopTable({ products, loading, page, pageSize, total, onPageChange, onToggleActive, onDelete, onDuplicate }: Props) {
   const router = useRouter();
+
+  const confirmDelete = (record: Product) => {
+    Modal.confirm({
+      title: "¿Eliminar este producto?",
+      content: "Solo se puede si no tiene ventas ni promociones asociadas. No se puede deshacer.",
+      okText: "Eliminar",
+      okButtonProps: { danger: true },
+      cancelText: "Cancelar",
+      onOk: () => onDelete(record),
+    });
+  };
 
   const columns = [
     {
@@ -72,24 +95,36 @@ export function ProductsDesktopTable({ products, loading, page, pageSize, total,
       key: "actions",
       width: 120,
       render: (_: unknown, record: Product) => (
-        <Space>
-          <Tooltip title="Ver detalle">
-            <Button icon={<EyeOutlined />} size="small" onClick={() => router.push(`/products/${record.id}`)} />
-          </Tooltip>
+        <Space onClick={stopRowClick}>
           <Tooltip title="Precios por sucursal">
             <Button icon={<DollarOutlined />} size="small" onClick={() => router.push(`/products/${record.id}/prices`)} />
           </Tooltip>
           <Tooltip title="Editar">
             <Button icon={<EditOutlined />} size="small" onClick={() => router.push(`/products/${record.id}/edit`)} />
           </Tooltip>
-          <Tooltip title={record.is_active ? "Desactivar" : "Reactivar"}>
-            <Button
-              icon={record.is_active ? <StopOutlined /> : <CheckCircleOutlined />}
-              size="small"
-              danger={record.is_active}
-              onClick={() => onToggleActive(record)}
-            />
-          </Tooltip>
+          <Dropdown
+            trigger={["click"]}
+            menu={{
+              items: [
+                {
+                  key: "toggle",
+                  label: record.is_active ? "Desactivar" : "Activar",
+                  icon: record.is_active ? <StopOutlined /> : <CheckCircleOutlined />,
+                },
+                { type: "divider" },
+                { key: "delete", label: "Eliminar", icon: <DeleteOutlined />, danger: true },
+              ],
+              onClick: ({ key }) => {
+                if (key === "duplicate") onDuplicate(record);
+                else if (key === "toggle") onToggleActive(record);
+                else if (key === "delete") confirmDelete(record);
+              },
+            }}
+          >
+            <Tooltip title="Más opciones">
+              <Button icon={<MoreOutlined />} size="small" />
+            </Tooltip>
+          </Dropdown>
         </Space>
       ),
     },
@@ -101,6 +136,10 @@ export function ProductsDesktopTable({ products, loading, page, pageSize, total,
       columns={columns}
       rowKey="id"
       loading={loading}
+      onRow={(record) => ({
+        onClick: () => router.push(`/products/${record.id}`),
+        style: { cursor: "pointer" },
+      })}
       pagination={{
         current: page,
         pageSize,

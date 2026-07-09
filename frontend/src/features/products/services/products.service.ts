@@ -85,6 +85,23 @@ export const ProductsService = {
     return { ok: false, error };
   },
 
+  async deleteProduct(id: string): Promise<{ ok: boolean; error?: string }> {
+    const res = await nestFetch(API_ENDPOINTS.products.byId(id), { method: "DELETE" });
+    if (res.ok) return { ok: true };
+    const { error } = await res.json();
+    return { ok: false, error };
+  },
+
+  async duplicateProduct(id: string): Promise<{ ok: boolean; id?: string; error?: string }> {
+    const res = await nestFetch(API_ENDPOINTS.products.duplicate(id), { method: "POST" });
+    if (res.ok) {
+      const { id: newId } = await res.json();
+      return { ok: true, id: newId };
+    }
+    const data = await res.json().catch(() => ({}));
+    return { ok: false, error: data.error ?? "Error al duplicar el producto" };
+  },
+
   async getBranchPrices(productId: string): Promise<{ variants: VariantWithPrices[]; branches: Branch[] }> {
     const res = await nestFetch(API_ENDPOINTS.products.branchPrices(productId));
     if (!res.ok) return { variants: [], branches: [] };
