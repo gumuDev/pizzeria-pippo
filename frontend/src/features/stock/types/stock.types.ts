@@ -68,3 +68,11 @@ export interface UnifiedMovement {
   notes: string | null;
   origin: "insumo" | "reventa";
 }
+
+// Fila común para la tabla de "Stock actual" — une insumos y productos de
+// reventa en una sola grilla, con `origin` como columna/filtro que los
+// diferencia. `source` guarda la fila original para poder abrir el modal
+// de mínimo correcto (StockRow vs ProductStockRow) sin duplicar esa lógica.
+export type UnifiedStockRow =
+  | { id: string; origin: "insumo"; name: string; secondaryName?: string; unit: string; quantity: number; min_quantity: number; source: StockRow }
+  | { id: string; origin: "reventa"; name: string; secondaryName?: string; unit: string; quantity: number; min_quantity: number; source: ProductStockRow };

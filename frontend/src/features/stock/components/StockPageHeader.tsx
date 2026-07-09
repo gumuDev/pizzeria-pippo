@@ -24,7 +24,7 @@ export function StockPageHeader({ isMobile, alertCount, branches, selectedBranch
         <h2 className="text-lg font-semibold m-0">Stock</h2>
         {alertCount > 0 && (
           <Tag color="red" icon={<IconWarning />}>
-            {alertCount} insumo{alertCount > 1 ? "s" : ""} bajo mínimo
+            {alertCount} ítem{alertCount > 1 ? "s" : ""} bajo mínimo
           </Tag>
         )}
       </div>

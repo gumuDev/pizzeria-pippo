@@ -10,15 +10,15 @@ export default function StockPage() {
   const isMobile = useIsMobile();
 
   const {
-    branches, ingredients, stock, totalStock, alerts,
-    selectedBranch, setSelectedBranch, loadingStock,
-    pageStock, setPageStock, PAGE_SIZE,
+    branches, ingredients, alertsCount,
+    unifiedStock, loadingUnifiedStock,
+    selectedBranch, setSelectedBranch,
+    PAGE_SIZE,
     minQtyOpen, setMinQtyOpen, editingStock,
     adjustForm, minQtyForm,
     productAdjustForm, handleProductAdjust,
     handleAdjust,
     openMinQty, handleMinQty,
-    productStock, loadingProductStock,
     productVariants,
     productMinQtyOpen, setProductMinQtyOpen,
     editingProductStock,
@@ -28,28 +28,24 @@ export default function StockPage() {
     pageHistory, setPageHistory,
   } = useStock();
 
+  const handleEditMinQty = (row: (typeof unifiedStock)[number]) =>
+    row.origin === "insumo" ? openMinQty(row.source) : openProductMinQty(row.source);
+
   return (
     <div style={{ padding: isMobile ? 16 : 24 }}>
       <StockPageHeader
         isMobile={isMobile}
-        alertCount={alerts.length}
+        alertCount={alertsCount}
         branches={branches}
         selectedBranch={selectedBranch}
         onSelectedBranchChange={setSelectedBranch}
       />
       <StockTabs
         isMobile={isMobile}
-        alerts={alerts}
-        stock={stock}
-        loadingStock={loadingStock}
-        onEditMinQty={openMinQty}
-        pageStock={pageStock}
-        totalStock={totalStock}
-        pageSize={PAGE_SIZE}
-        onPageStockChange={setPageStock}
-        productStock={productStock}
-        loadingProductStock={loadingProductStock}
-        onEditProductMinQty={openProductMinQty}
+        alertsCount={alertsCount}
+        unifiedStock={unifiedStock}
+        loadingUnifiedStock={loadingUnifiedStock}
+        onEditMinQty={handleEditMinQty}
         ingredients={ingredients}
         adjustForm={adjustForm}
         onAdjust={handleAdjust}
@@ -61,6 +57,7 @@ export default function StockPage() {
         loadingHistory={loadingHistory}
         pageHistory={pageHistory}
         onPageHistoryChange={setPageHistory}
+        pageSize={PAGE_SIZE}
       />
       <StockMinQtyModal
         open={minQtyOpen}

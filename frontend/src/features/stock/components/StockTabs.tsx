@@ -4,11 +4,10 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Tabs, Space, Badge } from "antd";
 import type { FormInstance } from "antd";
-import { StockCurrentTable } from "./StockCurrentTable";
-import { ProductStockTable } from "./ProductStockTable";
+import { UnifiedStockTable } from "./UnifiedStockTable";
 import { StockTypeSelector } from "./StockTypeSelector";
 import { StockHistoryTable } from "./StockHistoryTable";
-import type { StockRow, ProductStockRow, Ingredient, ProductVariantOption, UnifiedMovement, StockType } from "../types/stock.types";
+import type { Ingredient, ProductVariantOption, UnifiedMovement, UnifiedStockRow, StockType } from "../types/stock.types";
 
 const StockAdjustForm = dynamic(
   () => import("./StockAdjustForm").then((m) => m.StockAdjustForm),
@@ -21,17 +20,10 @@ const ProductStockAdjustForm = dynamic(
 
 interface Props {
   isMobile: boolean;
-  alerts: StockRow[];
-  stock: StockRow[];
-  loadingStock: boolean;
-  onEditMinQty: (row: StockRow) => void;
-  pageStock: number;
-  totalStock: number;
-  pageSize: number;
-  onPageStockChange: (page: number) => void;
-  productStock: ProductStockRow[];
-  loadingProductStock: boolean;
-  onEditProductMinQty: (row: ProductStockRow) => void;
+  alertsCount: number;
+  unifiedStock: UnifiedStockRow[];
+  loadingUnifiedStock: boolean;
+  onEditMinQty: (row: UnifiedStockRow) => void;
   ingredients: Ingredient[];
   adjustForm: FormInstance;
   onAdjust: (values: { ingredient_id: string; real_quantity: number; notes?: string }) => void;
@@ -43,48 +35,25 @@ interface Props {
   loadingHistory: boolean;
   pageHistory: number;
   onPageHistoryChange: (page: number) => void;
+  pageSize: number;
 }
 
 export function StockTabs({
-  isMobile, alerts,
-  stock, loadingStock, onEditMinQty, pageStock, totalStock, pageSize, onPageStockChange,
-  productStock, loadingProductStock, onEditProductMinQty,
+  isMobile, alertsCount,
+  unifiedStock, loadingUnifiedStock, onEditMinQty,
   ingredients, adjustForm, onAdjust,
   productVariants, productAdjustForm, onProductAdjust,
-  unifiedMovements, totalHistory, loadingHistory, pageHistory, onPageHistoryChange,
+  unifiedMovements, totalHistory, loadingHistory, pageHistory, onPageHistoryChange, pageSize,
 }: Props) {
   const [adjustType, setAdjustType] = useState<StockType>("ingredient");
-
-  const stockActualSubTabs = [
-    {
-      key: "ingredients",
-      label: "🧂 Insumos",
-      children: (
-        <StockCurrentTable
-          stock={stock}
-          loading={loadingStock}
-          onEditMinQty={onEditMinQty}
-          page={pageStock}
-          total={totalStock}
-          pageSize={pageSize}
-          onPageChange={onPageStockChange}
-        />
-      ),
-    },
-    {
-      key: "products",
-      label: "📦 Reventa",
-      children: <ProductStockTable stock={productStock} loading={loadingProductStock} onEditMinQty={onEditProductMinQty} />,
-    },
-  ];
 
   const tabItems = [
     {
       key: "stock",
       label: isMobile
-        ? <Badge count={alerts.length} size="small">📋</Badge>
-        : <Space>Stock actual{alerts.length > 0 && <Badge count={alerts.length} />}</Space>,
-      children: <Tabs items={stockActualSubTabs} size="small" />,
+        ? <Badge count={alertsCount} size="small">📋</Badge>
+        : <Space>Stock actual{alertsCount > 0 && <Badge count={alertsCount} />}</Space>,
+      children: <UnifiedStockTable stock={unifiedStock} loading={loadingUnifiedStock} onEditMinQty={onEditMinQty} />,
     },
     {
       key: "adjust",

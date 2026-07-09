@@ -5,9 +5,36 @@ import { Form, message } from "antd";
 import { StockService } from "../services/stock.service";
 import { useIngredientStockData } from "./useIngredientStockData";
 import { useProductStockData } from "./useProductStockData";
-import type { Branch, Ingredient, StockRow, ProductStockRow, UnifiedMovement } from "../types/stock.types";
+import type { Branch, Ingredient, StockRow, ProductStockRow, UnifiedMovement, UnifiedStockRow } from "../types/stock.types";
 
 const PAGE_SIZE = 10;
+
+function buildUnifiedStock(
+  stock: ReturnType<typeof useIngredientStockData>["stock"],
+  productStock: ReturnType<typeof useProductStockData>["productStock"],
+): UnifiedStockRow[] {
+  return [
+    ...stock.map((s): UnifiedStockRow => ({
+      id: `insumo-${s.id}`,
+      origin: "insumo",
+      name: s.ingredients?.name ?? s.ingredient_id,
+      unit: s.ingredients?.unit ?? "",
+      quantity: s.quantity,
+      min_quantity: s.min_quantity,
+      source: s,
+    })),
+    ...productStock.map((p): UnifiedStockRow => ({
+      id: `reventa-${p.id}`,
+      origin: "reventa",
+      name: p.product_variants?.products?.name ?? p.variant_id,
+      secondaryName: p.product_variants?.name !== "Unidad" ? p.product_variants?.name : undefined,
+      unit: "unidad",
+      quantity: p.quantity,
+      min_quantity: p.min_quantity,
+      source: p,
+    })),
+  ];
+}
 
 function buildUnifiedMovements(
   ingredientMovements: ReturnType<typeof useIngredientStockData>["movements"],
@@ -41,7 +68,6 @@ export function useStock() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<string>("");
-  const [pageStock, setPageStock] = useState(1);
   const [pageHistory, setPageHistory] = useState(1);
   const [minQtyOpen, setMinQtyOpen] = useState(false);
   const [editingStock, setEditingStock] = useState<StockRow | null>(null);
@@ -65,11 +91,15 @@ export function useStock() {
     });
   }, []);
 
-  const ing = useIngredientStockData(selectedBranch, pageStock, pageHistory, PAGE_SIZE);
+  const ing = useIngredientStockData(selectedBranch, pageHistory, PAGE_SIZE);
   const prod = useProductStockData(selectedBranch, pageHistory, PAGE_SIZE);
 
-  const { stock, totalStock, alerts, loadingStock } = ing;
+  const { stock, totalStock, loadingStock } = ing;
   const { productStock, loadingProductStock, productVariants } = prod;
+
+  const unifiedStock = buildUnifiedStock(stock, productStock);
+  const loadingUnifiedStock = loadingStock || loadingProductStock;
+  const alertsCount = unifiedStock.filter((r) => r.quantity <= r.min_quantity).length;
 
   const unifiedMovements = buildUnifiedMovements(ing.movements, prod.movements);
   const totalHistory = ing.totalMovements + prod.totalMovements;
@@ -77,13 +107,10 @@ export function useStock() {
 
   const handleBranchChange = (branchId: string) => {
     setSelectedBranch(branchId);
-    setPageStock(1);
     setPageHistory(1);
     productPurchaseForm.resetFields();
     setPurchaseVariantIsNew(false);
   };
-
-  const resetStockPage = () => setPageStock(1);
 
   const handlePurchaseIngredientChange = (ingredientId: string) => {
     const isNew = !stock.some((s) => s.ingredient_id === ingredientId);
@@ -99,13 +126,13 @@ export function useStock() {
 
   const handlePurchase = async (values: { ingredient_id: string; quantity: number; min_quantity?: number }) => {
     const result = await StockService.purchase({ branch_id: selectedBranch, ...values });
-    if (result.ok) { purchaseForm.resetFields(); setPurchaseIngredientIsNew(false); resetStockPage(); ing.refreshStock(); ing.refreshMovements(); }
+    if (result.ok) { purchaseForm.resetFields(); setPurchaseIngredientIsNew(false); ing.refreshStock(); ing.refreshMovements(); }
     else message.error(result.error);
   };
 
   const handleAdjust = async (values: { ingredient_id: string; real_quantity: number; notes?: string }) => {
     const result = await StockService.adjust({ branch_id: selectedBranch, ...values });
-    if (result.ok) { adjustForm.resetFields(); resetStockPage(); ing.refreshStock(); ing.refreshMovements(); }
+    if (result.ok) { adjustForm.resetFields(); ing.refreshStock(); ing.refreshMovements(); }
     else message.error(result.error);
   };
 
@@ -130,7 +157,7 @@ export function useStock() {
   const handleMinQty = async (values: { min_quantity: number }) => {
     if (!editingStock) return;
     const ok = await StockService.updateMinQuantity(editingStock.id, values.min_quantity);
-    if (ok) { setMinQtyOpen(false); resetStockPage(); ing.refreshStock(); }
+    if (ok) { setMinQtyOpen(false); ing.refreshStock(); }
   };
 
   const openProductMinQty = (record: ProductStockRow) => {
@@ -146,9 +173,9 @@ export function useStock() {
   };
 
   return {
-    branches, ingredients, stock, totalStock, alerts,
+    branches, ingredients, stock, totalStock,
+    unifiedStock, loadingUnifiedStock, alertsCount,
     selectedBranch, setSelectedBranch: handleBranchChange,
-    pageStock, setPageStock, resetStockPage,
     pageHistory, setPageHistory,
     PAGE_SIZE,
     loadingStock,
