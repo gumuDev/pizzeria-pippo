@@ -2,7 +2,7 @@
 
 import dayjs from "dayjs";
 import dynamic from "next/dynamic";
-import { Button } from "antd";
+import { Button, Alert } from "antd";
 import { ShoppingCartOutlined } from "@ant-design/icons";
 import { DashboardSummaryCards } from "@/features/dashboard/components/DashboardSummaryCards";
 import { DashboardStockAlerts } from "@/features/dashboard/components/DashboardStockAlerts";
@@ -14,7 +14,7 @@ const DashboardCharts = dynamic(
 );
 
 export default function DashboardPage() {
-  const { summary, topProducts, dailyData, stockAlerts, warehouseAlerts, loading } = useDashboard();
+  const { summary, topProducts, dailyData, stockAlerts, warehouseAlerts, summaryDate, showingYesterday, loading } = useDashboard();
 
   return (
     <div style={{ padding: 24 }}>
@@ -34,16 +34,28 @@ export default function DashboardPage() {
         </Button>
       </div>
 
+      {!loading && showingYesterday && (
+        <Alert
+          type="info"
+          showIcon
+          message="Todavía no hay ventas registradas hoy"
+          description={`Mostrando el resumen de ayer, ${dayjs(summaryDate).format("dddd D [de] MMMM")}.`}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       <DashboardSummaryCards
         summary={summary}
         stockAlertsCount={stockAlerts.length + warehouseAlerts.length}
         loading={loading}
+        showingYesterday={showingYesterday}
       />
 
       <DashboardCharts
         dailyData={dailyData}
         topProducts={topProducts}
         loading={loading}
+        showingYesterday={showingYesterday}
       />
 
       <DashboardStockAlerts

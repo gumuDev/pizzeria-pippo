@@ -62,9 +62,10 @@ interface Props {
   dailyData: DailyData[];
   topProducts: TopProduct[];
   loading: boolean;
+  showingYesterday?: boolean;
 }
 
-export function DashboardCharts({ dailyData, topProducts, loading }: Props) {
+export function DashboardCharts({ dailyData, topProducts, loading, showingYesterday }: Props) {
   return (
     <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
       <Col xs={24} lg={14}>
@@ -115,7 +116,7 @@ export function DashboardCharts({ dailyData, topProducts, loading }: Props) {
           title={
             <Space>
               <IconFire />
-              Top 5 hoy
+              {showingYesterday ? "Top 5 de ayer" : "Top 5 hoy"}
             </Space>
           }
           size="small"
@@ -132,7 +133,7 @@ export function DashboardCharts({ dailyData, topProducts, loading }: Props) {
             />
           ) : (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 180, color: "#94a3b8" }}>
-              Sin ventas hoy
+              {showingYesterday ? "Sin ventas ayer" : "Sin ventas hoy"}
             </div>
           )}
         </Card>

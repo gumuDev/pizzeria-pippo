@@ -38,15 +38,16 @@ interface Props {
   summary: SalesSummary | null;
   stockAlertsCount: number;
   loading: boolean;
+  showingYesterday?: boolean;
 }
 
-export function DashboardSummaryCards({ summary, stockAlertsCount, loading }: Props) {
+export function DashboardSummaryCards({ summary, stockAlertsCount, loading, showingYesterday }: Props) {
   return (
     <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
       <Col xs={24} sm={12} lg={6}>
         <Card>
           <Statistic
-            title="Ventas hoy"
+            title={showingYesterday ? "Ventas de ayer" : "Ventas hoy"}
             value={summary?.total ?? 0}
             prefix={<IconDollar />}
             suffix="Bs"
@@ -59,7 +60,7 @@ export function DashboardSummaryCards({ summary, stockAlertsCount, loading }: Pr
       <Col xs={24} sm={12} lg={6}>
         <Card>
           <Statistic
-            title="Órdenes hoy"
+            title={showingYesterday ? "Órdenes de ayer" : "Órdenes hoy"}
             value={summary?.count ?? 0}
             prefix={<IconShopping />}
             loading={loading}

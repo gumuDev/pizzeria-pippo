@@ -29,6 +29,14 @@ export function dayOfWeekInBolivia(): number {
 }
 
 /**
+ * Returns yesterday's date string in Bolivia local time (YYYY-MM-DD).
+ */
+export function yesterdayInBolivia(): string {
+  const yesterday = new Date(nowInBolivia().getTime() - 24 * 60 * 60 * 1000);
+  return yesterday.toISOString().split("T")[0];
+}
+
+/**
  * Converts a UTC Date to Bolivia local Date object.
  */
 export function toBoliviaDate(utcDate: Date): Date {

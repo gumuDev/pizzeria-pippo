@@ -33,4 +33,8 @@ export interface DashboardData {
   dailyData: DailyData[];
   stockAlerts: StockAlert[];
   warehouseAlerts: WarehouseAlert[];
+  // Fecha real que representan summary/topProducts — "hoy" salvo que no
+  // hubiera ventas registradas todavía, en cuyo caso cae a "ayer".
+  summaryDate: string;
+  showingYesterday: boolean;
 }
