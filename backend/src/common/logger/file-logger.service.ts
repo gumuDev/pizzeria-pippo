@@ -5,7 +5,13 @@ import { todayInBolivia } from '../utils/timezone';
 
 const LOG_DIR = join(process.cwd(), 'logs');
 
-mkdirSync(LOG_DIR, { recursive: true });
+// Vercel (and other serverless hosts) give a read-only filesystem outside
+// /tmp — file logging only makes sense for local dev there.
+const canWriteToFile = !process.env.VERCEL;
+
+if (canWriteToFile) {
+  mkdirSync(LOG_DIR, { recursive: true });
+}
 
 // One file per business day (Bolivia time) so `logs/` doesn't grow into a single
 // unbounded file — computed on every write, so it rotates naturally past midnight
@@ -20,6 +26,7 @@ function stripAnsi(text: string): string {
 }
 
 function writeToFile(level: string, message: unknown, context?: string) {
+  if (!canWriteToFile) return;
   const timestamp = new Date().toISOString();
   const text = typeof message === 'string' ? message : JSON.stringify(message, null, 2);
   const line = `[${timestamp}] [${level}]${context ? ` [${context}]` : ''} ${stripAnsi(text)}\n`;
