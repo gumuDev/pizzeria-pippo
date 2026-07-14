@@ -1,0 +1,56 @@
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { CurrentUserPayload } from '../auth/types/jwt.types';
+import { OrdersService } from './orders.service';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { GetDayOrdersQueryDto } from './dto/get-day-orders-query.dto';
+import { GetKitchenOrdersQueryDto } from './dto/get-kitchen-orders-query.dto';
+import { CancelOrderDto } from './dto/cancel-order.dto';
+
+@UseGuards(JwtAuthGuard)
+@Controller('orders')
+export class OrdersController {
+  constructor(private readonly ordersService: OrdersService) {}
+
+  @Post()
+  async create(
+    @Body() dto: CreateOrderDto,
+    @CurrentUser() user: CurrentUserPayload,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.ordersService.create(dto, user);
+    // 200 for an idempotency-key hit (order already existed), 201 for a new order
+    res.status(result.duplicate ? 200 : 201);
+    return { order_id: result.order_id, daily_number: result.daily_number };
+  }
+
+  @Get()
+  getDayOrders(@Query() query: GetDayOrdersQueryDto) {
+    return this.ordersService.getDayOrders(query.branchId, query.date);
+  }
+
+  @Get('kitchen')
+  getPendingKitchenOrders(@Query() query: GetKitchenOrdersQueryDto) {
+    return this.ordersService.getPendingKitchenOrders(query.branchId);
+  }
+
+  @Post(':id/ready')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'cajero', 'cocinero')
+  markReady(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.ordersService.markReady(id, user);
+  }
+
+  @Post(':id/cancel')
+  cancelOrder(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CancelOrderDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.ordersService.cancelOrder(id, dto, user);
+  }
+}

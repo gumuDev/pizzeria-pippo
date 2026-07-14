@@ -1,0 +1,98 @@
+"use client";
+
+import { Tabs } from "antd";
+import { BellOutlined, RobotOutlined, FireOutlined, PrinterOutlined, MobileOutlined } from "@ant-design/icons";
+import { TelegramSettingsForm } from "@/features/settings/components/TelegramSettingsForm";
+import { KitchenSettingsForm } from "@/features/settings/components/KitchenSettingsForm";
+import { PrinterSettingsForm } from "@/features/settings/components/PrinterSettingsForm";
+import { BotSettingsForm } from "@/features/telegram-bot/components/BotSettingsForm";
+import { AuthorizedChatsTable } from "@/features/telegram-bot/components/AuthorizedChatsTable";
+import { ChatModal } from "@/features/telegram-bot/components/ChatModal";
+import { useTelegramChats } from "@/features/telegram-bot/hooks/useTelegramChats";
+import { DevicesTable } from "@/features/devices/components/DevicesTable";
+import { DeviceModal } from "@/features/devices/components/DeviceModal";
+import { DeviceApiKeyModal } from "@/features/devices/components/DeviceApiKeyModal";
+import { useDevices } from "@/features/devices/hooks/useDevices";
+
+function BotTab() {
+  const { chats, loading, modalOpen, editing, openCreate, openEdit, closeModal, handleSave, handleToggleActive, handleDelete } = useTelegramChats();
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <BotSettingsForm />
+      <AuthorizedChatsTable
+        chats={chats}
+        loading={loading}
+        onCreate={openCreate}
+        onEdit={openEdit}
+        onToggleActive={handleToggleActive}
+        onDelete={handleDelete}
+      />
+      <ChatModal open={modalOpen} editing={editing} onClose={closeModal} onSave={handleSave} />
+    </div>
+  );
+}
+
+function DevicesTab() {
+  const {
+    devices, branches, loading, saving, modalOpen, editing, newApiKey,
+    openCreate, openEdit, closeModal, closeApiKeyModal, handleSubmit, handleToggleActive, handleDelete,
+  } = useDevices();
+  return (
+    <div>
+      <DevicesTable
+        devices={devices}
+        branches={branches}
+        loading={loading}
+        onCreate={openCreate}
+        onEdit={openEdit}
+        onToggleActive={handleToggleActive}
+        onDelete={handleDelete}
+      />
+      <DeviceModal
+        open={modalOpen}
+        editing={editing}
+        branches={branches}
+        saving={saving}
+        onClose={closeModal}
+        onSubmit={handleSubmit}
+      />
+      <DeviceApiKeyModal apiKey={newApiKey} onClose={closeApiKeyModal} />
+    </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <div className="p-6">
+      <Tabs
+        items={[
+          {
+            key: "notifications",
+            label: <span><BellOutlined /> Notificaciones</span>,
+            children: <TelegramSettingsForm />,
+          },
+          {
+            key: "kitchen",
+            label: <span><FireOutlined /> Cocina</span>,
+            children: <KitchenSettingsForm />,
+          },
+          {
+            key: "bot",
+            label: <span><RobotOutlined /> Bot de IA</span>,
+            children: <BotTab />,
+          },
+          {
+            key: "printer",
+            label: <span><PrinterOutlined /> Impresora</span>,
+            children: <PrinterSettingsForm />,
+          },
+          {
+            key: "devices",
+            label: <span><MobileOutlined /> Dispositivos</span>,
+            children: <DevicesTab />,
+          },
+        ]}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,234 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { dateRangeFrom, dateRangeTo, toBoliviaDate } from '../common/utils/timezone';
+import type { ReportQueryDto } from './dto/report-query.dto';
+import type { CashierReportQueryDto } from './dto/cashier-report-query.dto';
+import type { OrdersReportQueryDto } from './dto/orders-report-query.dto';
+import type { CashierReportResult, TopProductResult } from './types/report-result.types';
+import type { OrderReportResult } from './types/order-report-result.types';
+
+@Injectable()
+export class ReportsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  private buildWhere(query: ReportQueryDto) {
+    return {
+      cancelledAt: null,
+      ...(query.branchId && { branchId: query.branchId }),
+      ...((query.from || query.to) && {
+        createdAt: {
+          ...(query.from && { gte: new Date(dateRangeFrom(query.from)) }),
+          ...(query.to && { lte: new Date(dateRangeTo(query.to)) }),
+        },
+      }),
+    };
+  }
+
+  async getSales(query: ReportQueryDto) {
+    const orders = await this.prisma.order.findMany({
+      where: this.buildWhere(query),
+      select: { total: true, orderType: true },
+    });
+
+    const total = orders.reduce((sum, o) => sum + o.total.toNumber(), 0);
+    const count = orders.length;
+    const avg = count > 0 ? total / count : 0;
+
+    const dineIn = orders.filter((o) => o.orderType === 'dine_in');
+    const takeaway = orders.filter((o) => o.orderType === 'takeaway');
+
+    return {
+      total,
+      count,
+      avg,
+      by_order_type: {
+        dine_in: {
+          total: dineIn.reduce((sum, o) => sum + o.total.toNumber(), 0),
+          count: dineIn.length,
+        },
+        takeaway: {
+          total: takeaway.reduce((sum, o) => sum + o.total.toNumber(), 0),
+          count: takeaway.length,
+        },
+      },
+    };
+  }
+
+  async getDaily(query: ReportQueryDto): Promise<{ date: string; total: number }[]> {
+    const orders = await this.prisma.order.findMany({
+      where: this.buildWhere(query),
+      select: { total: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const map: Record<string, number> = {};
+    for (const order of orders) {
+      const localDate = toBoliviaDate(order.createdAt);
+      const date = localDate.toISOString().split('T')[0];
+      map[date] = (map[date] ?? 0) + order.total.toNumber();
+    }
+
+    return Object.entries(map)
+      .map(([date, total]) => ({ date, total }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  async getTopProducts(query: ReportQueryDto): Promise<TopProductResult[]> {
+    const items = await this.prisma.orderItem.findMany({
+      where: { order: this.buildWhere(query) },
+      include: { variant: { include: { product: true } } },
+    });
+
+    const map: Record<string, TopProductResult> = {};
+    for (const item of items) {
+      const { variant } = item;
+      if (!map[variant.id]) {
+        map[variant.id] = {
+          variant_id: variant.id,
+          product_name: variant.product.name,
+          variant_name: variant.name,
+          category: variant.product.category,
+          qty: 0,
+          revenue: 0,
+        };
+      }
+      map[variant.id].qty += item.qty;
+      map[variant.id].revenue += item.unitPrice.toNumber() * item.qty - item.discountApplied.toNumber();
+    }
+
+    return Object.values(map).sort((a, b) => b.qty - a.qty);
+  }
+
+  async getCashiers(query: CashierReportQueryDto): Promise<CashierReportResult[]> {
+    const orders = await this.prisma.order.findMany({
+      where: {
+        ...this.buildWhere(query),
+        ...(query.cashierId && { cashierId: query.cashierId }),
+      },
+      include: {
+        cashier: true,
+        items: { include: { variant: { include: { product: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const cashierMap: Record<string, CashierReportResult> = {};
+    for (const order of orders) {
+      const cid = order.cashierId;
+      if (!cashierMap[cid]) {
+        cashierMap[cid] = {
+          cashier_id: cid,
+          cashier_name: order.cashier?.fullName ?? 'Desconocido',
+          orders: 0,
+          total: 0,
+          items: [],
+        };
+      }
+      cashierMap[cid].orders += 1;
+      cashierMap[cid].total += order.total.toNumber();
+
+      for (const item of order.items) {
+        const { variant } = item;
+        const revenue = item.unitPrice.toNumber() * item.qty - item.discountApplied.toNumber();
+        const existing = cashierMap[cid].items.find((i) => i.variant_id === variant.id);
+        if (existing) {
+          existing.qty += item.qty;
+          existing.revenue += revenue;
+        } else {
+          cashierMap[cid].items.push({
+            variant_id: variant.id,
+            product_name: variant.product.name,
+            variant_name: variant.name,
+            category: variant.product.category,
+            qty: item.qty,
+            revenue,
+          });
+        }
+      }
+    }
+
+    return Object.values(cashierMap).sort((a, b) => b.total - a.total);
+  }
+
+  async getOrders(query: OrdersReportQueryDto): Promise<{ data: OrderReportResult[]; total: number }> {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const where = this.buildOrdersHistoryWhere(query);
+
+    const [orders, total] = await this.prisma.$transaction([
+      this.prisma.order.findMany({
+        where,
+        include: {
+          branch: true,
+          cashier: true,
+          items: { include: { variant: { include: { product: true } } } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return { data: orders.map((order) => this.mapOrderToReportResult(order)), total };
+  }
+
+  // Unlike buildWhere (used by the aggregate reports), the order history
+  // shows cancelled orders too — the UI displays their cancel reason instead
+  // of hiding them.
+  private buildOrdersHistoryWhere(query: OrdersReportQueryDto) {
+    return {
+      ...(query.branchId && { branchId: query.branchId }),
+      ...((query.from || query.to) && {
+        createdAt: {
+          ...(query.from && { gte: new Date(dateRangeFrom(query.from)) }),
+          ...(query.to && { lte: new Date(dateRangeTo(query.to)) }),
+        },
+      }),
+    };
+  }
+
+  private mapOrderToReportResult(order: {
+    id: string;
+    dailyNumber: number;
+    total: { toNumber(): number };
+    createdAt: Date;
+    branchId: string;
+    paymentMethod: string | null;
+    orderType: string;
+    cancelledAt: Date | null;
+    cancelReason: string | null;
+    branch: { name: string } | null;
+    cashier: { fullName: string | null } | null;
+    items: {
+      qty: number;
+      unitPrice: { toNumber(): number };
+      discountApplied: { toNumber(): number };
+      promoLabel: string | null;
+      variant: { name: string; product: { name: string; category: string } } | null;
+    }[];
+  }): OrderReportResult {
+    return {
+      id: order.id,
+      daily_number: order.dailyNumber,
+      total: order.total.toNumber(),
+      created_at: order.createdAt.toISOString(),
+      branch_id: order.branchId,
+      cashier_name: order.cashier?.fullName ?? '—',
+      payment_method: order.paymentMethod,
+      order_type: order.orderType,
+      cancelled_at: order.cancelledAt?.toISOString() ?? null,
+      cancel_reason: order.cancelReason,
+      branches: order.branch ? { name: order.branch.name } : null,
+      order_items: order.items.map((item) => ({
+        qty: item.qty,
+        unit_price: item.unitPrice.toNumber(),
+        discount_applied: item.discountApplied.toNumber(),
+        promo_label: item.promoLabel,
+        product_variants: item.variant
+          ? { name: item.variant.name, products: { name: item.variant.product.name, category: item.variant.product.category } }
+          : null,
+      })),
+    };
+  }
+}

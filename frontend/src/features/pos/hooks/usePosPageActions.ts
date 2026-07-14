@@ -1,0 +1,142 @@
+"use client";
+
+import { useState } from "react";
+import { message } from "antd";
+import { PosService } from "../services/pos.service";
+import type { usePosCart } from "./usePosCart";
+import type { usePaymentValidation } from "./usePaymentValidation";
+import type { Product, TicketData, OrderType, Variant, PosTab } from "../types/pos.types";
+import type { CartItem, FlavorItem } from "@/lib/promotions";
+
+interface Params {
+  branchId: string;
+  isMobile: boolean;
+  products: Product[];
+  getVariantPrice: (variant: Variant, branchId: string) => number;
+  cart: ReturnType<typeof usePosCart>;
+  broadcast: (event: string) => void;
+  fetchDayOrders: (branchId: string) => void;
+  refreshProducts: () => void;
+  paymentValidation: ReturnType<typeof usePaymentValidation>;
+  setActiveTab: (tab: PosTab) => void;
+}
+
+export function usePosPageActions({
+  branchId, isMobile, products, getVariantPrice, cart,
+  broadcast, fetchDayOrders, refreshProducts, paymentValidation, setActiveTab,
+}: Params) {
+  const [variantModal, setVariantModal] = useState<Product | null>(null);
+  const [paymentModal, setPaymentModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "qr" | null>(null);
+  const [ticket, setTicket] = useState<TicketData | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
+  const [validationModalOpen, setValidationModalOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<"catalog" | "cart">("catalog");
+
+  const handleProductClick = (product: Product) => {
+    const variants = product.product_variants ?? [];
+    if (variants.length === 1) {
+      cart.addToCart(product, variants[0], getVariantPrice(variants[0], branchId));
+      if (isMobile) setMobileView("cart");
+    } else {
+      setVariantModal(product);
+    }
+  };
+
+  const handleVariantSelect = (product: Product, variant: Variant, flavors?: FlavorItem[]) => {
+    cart.addToCart(product, variant, getVariantPrice(variant, branchId), flavors);
+    setVariantModal(null);
+    if (isMobile) setMobileView("cart");
+  };
+
+  const handlePromoItems = (items: CartItem[]) => {
+    cart.addItemsToCart(items);
+    if (isMobile) { setActiveTab("sale"); setMobileView("cart"); }
+  };
+
+  const handlePromoSingleVariant = (variantId: string, qty: number) => {
+    for (const p of products) {
+      const v = p.product_variants.find((pv) => pv.id === variantId);
+      if (v) {
+        for (let i = 0; i < qty; i++) cart.addToCart(p, v, getVariantPrice(v, branchId));
+        if (isMobile) { setActiveTab("sale"); setMobileView("cart"); }
+        return;
+      }
+    }
+  };
+
+  const handlePaymentConfirm = (orderType: OrderType, method: "efectivo" | "qr" | null) => {
+    setPaymentMethod(method);
+    cart.setOrderType(orderType);
+    setIdempotencyKey(crypto.randomUUID());
+    setPaymentModal(false);
+    setConfirmModal(true);
+  };
+
+  const handleConfirmSale = async () => {
+    if (!branchId) {
+      message.error("No hay sucursal seleccionada.");
+      return;
+    }
+    if (!cart.orderType) {
+      message.error("Seleccioná el tipo de pedido antes de confirmar.");
+      return;
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    setConfirmLoading(true);
+    try {
+      const result = await PosService.confirmSale(branchId, cart.discountedCart, cart.total, paymentMethod, cart.orderType, controller.signal, idempotencyKey ?? undefined);
+
+      if (result.ok) {
+        broadcast("ORDER_COMPLETE");
+        cart.suppressNextClear();
+        setConfirmModal(false);
+        setPaymentMethod(null);
+        setIdempotencyKey(null);
+        setActiveTab("sale");
+        setTicket({ orderId: result.order_id!, dailyNumber: result.daily_number!, items: cart.discountedCart, total: cart.total, paymentMethod, orderType: cart.orderType });
+        cart.clearCart();
+        fetchDayOrders(branchId);
+        refreshProducts();
+      } else {
+        message.error(`Error al confirmar venta: ${result.error}`, 5);
+      }
+    } finally {
+      clearTimeout(timeout);
+      setConfirmLoading(false);
+    }
+  };
+
+  const handleValidatePayment = () => {
+    setValidationModalOpen(true);
+    paymentValidation.start(cart.total);
+  };
+
+  const handleValidationConfirm = () => {
+    paymentValidation.cancel();
+    setValidationModalOpen(false);
+    handleConfirmSale();
+  };
+
+  const handleValidationCancel = () => {
+    paymentValidation.cancel();
+    setValidationModalOpen(false);
+  };
+
+  return {
+    variantModal, setVariantModal,
+    paymentModal, setPaymentModal,
+    confirmModal, setConfirmModal,
+    paymentMethod, setPaymentMethod,
+    ticket, setTicket,
+    confirmLoading,
+    validationModalOpen,
+    mobileView, setMobileView,
+    handleProductClick, handleVariantSelect, handlePromoItems, handlePromoSingleVariant,
+    handlePaymentConfirm, handleConfirmSale,
+    handleValidatePayment, handleValidationConfirm, handleValidationCancel,
+  };
+}

@@ -1,0 +1,126 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { Button, Tag, Typography } from "antd";
+import { LogoutOutlined, ShoppingCartOutlined, UnorderedListOutlined, BarChartOutlined, GiftOutlined } from "@ant-design/icons";
+import { formatTimeBolivia } from "@/lib/timezone";
+import { useIsMobile } from "@/lib/useIsMobile";
+import type { Branch, Identity, PosTab } from "../types/pos.types";
+
+const { Text } = Typography;
+
+interface Props {
+  identity: Identity;
+  branches: Branch[];
+  activeTab: PosTab;
+  pendingCount: number;
+  promoCount: number;
+  onTabChange: (tab: PosTab) => void;
+  onLogout: () => void;
+  printerSlot?: React.ReactNode;
+}
+
+export function PosHeader({ identity, branches, activeTab, pendingCount, promoCount, onTabChange, onLogout, printerSlot }: Props) {
+  const branchName = branches.find((b) => b.id === identity.branch_id)?.name;
+  const [currentTime, setCurrentTime] = useState("");
+  const isMobile = useIsMobile();
+
+  useEffect(() => {
+    const tick = () => setCurrentTime(formatTimeBolivia(new Date()));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const tabBtn = (tab: PosTab, label: string, icon: React.ReactNode, badge?: number) => (
+    <button
+      onClick={() => onTabChange(tab)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
+        padding: isMobile ? "8px 10px" : "6px 16px",
+        border: "none",
+        borderBottom: activeTab === tab ? "2px solid #ea580c" : "2px solid transparent",
+        background: "transparent",
+        color: activeTab === tab ? "#ea580c" : "#6b7280",
+        fontWeight: activeTab === tab ? 700 : 500,
+        fontSize: isMobile ? 12 : 14,
+        cursor: "pointer",
+        transition: "color 0.15s",
+        position: "relative",
+        flexShrink: 0,
+      }}
+    >
+      {icon}
+      {!isMobile && label}
+      {isMobile && tab === "orders" && "Pedidos"}
+      {isMobile && tab === "sale" && "Venta"}
+      {isMobile && tab === "summary" && "Resumen"}
+      {badge != null && badge > 0 && (
+        <span style={{ background: "#ef4444", color: "#fff", fontSize: 10, borderRadius: 10, padding: "1px 5px", marginLeft: 2 }}>
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+
+  if (isMobile) {
+    return (
+      <div style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+        {/* Mobile top row: logo + time + logout */}
+        <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+          <Image src="/pippo.jpg" alt="Pippo" width={28} height={28} style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+          <Text strong style={{ fontSize: 13, color: "#ea580c", flexShrink: 0 }}>Pippo POS</Text>
+          <Tag color="blue" style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>{identity.name.split(" ")[0]}</Tag>
+          <div style={{ flex: 1 }} />
+          <Text style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 600, color: "#374151", flexShrink: 0 }}>{currentTime}</Text>
+          {printerSlot}
+          <Button
+            size="small"
+            icon={<LogoutOutlined />}
+            onClick={onLogout}
+            style={{ flexShrink: 0, padding: "0 8px" }}
+          />
+        </div>
+        {/* Mobile tabs row */}
+        <div style={{ display: "flex", borderTop: "1px solid #f3f4f6" }}>
+          {tabBtn("sale", "Venta", <ShoppingCartOutlined />)}
+          {tabBtn("promos", "Promos", <GiftOutlined />, promoCount)}
+          {tabBtn("orders", "Pedidos", <UnorderedListOutlined />, pendingCount)}
+          {tabBtn("summary", "Resumen", <BarChartOutlined />)}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+      {/* Top row */}
+      <div style={{ padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Image src="/pippo.jpg" alt="Pippo Pizza" width={34} height={34} style={{ borderRadius: "50%", objectFit: "cover" }} />
+            <Text strong style={{ fontSize: 16, color: "#ea580c" }}>Pizzería Pippo — POS</Text>
+          </div>
+          <Tag color="blue" style={{ margin: 0 }}>{identity.name}</Tag>
+          {identity.branch_id && <Tag color="green" style={{ margin: 0 }}>{branchName ?? "Sucursal"}</Tag>}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Text style={{ fontFamily: "monospace", fontSize: 16, fontWeight: 600, color: "#374151" }}>{currentTime}</Text>
+          {printerSlot}
+          <Button icon={<LogoutOutlined />} onClick={onLogout}>Salir</Button>
+        </div>
+      </div>
+
+      {/* Tabs row */}
+      <div style={{ display: "flex", paddingLeft: 12, gap: 4, marginTop: -2 }}>
+        {tabBtn("sale", "Venta", <ShoppingCartOutlined />)}
+        {tabBtn("promos", "Promociones", <GiftOutlined />, promoCount)}
+        {tabBtn("orders", "Pedidos del día", <UnorderedListOutlined />, pendingCount)}
+        {tabBtn("summary", "Resumen", <BarChartOutlined />)}
+      </div>
+    </div>
+  );
+}

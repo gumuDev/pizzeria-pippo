@@ -1,0 +1,414 @@
+// Prisma schema — refleja a mano las tablas reales de docs/database/schema-base.sql
+// (no se corrió `prisma db pull` todavía: falta un DATABASE_URL real, ver backend/.env)
+//
+// Alcance actual: tablas de reports (Fase 1), ingredients/products/stock/
+// warehouse/promotions/branches/variant_types/users/app_settings (Fase 3).
+// El resto de tablas (order_item_flavors, telegram_*, etc.) se agregan
+// cuando les toque su fase de migración.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Branch {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  address   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  profiles                 Profile[]
+  orders                   Order[]
+  promotions               Promotion[]
+  branchPrices             BranchPrice[]
+  branchStock              BranchStock[]
+  stockMovements           StockMovement[]
+  branchProductStock       BranchProductStock[]
+  productStockMovements    ProductStockMovement[]
+  warehouseMovements       WarehouseMovement[]
+  warehouseProductMovements WarehouseProductMovement[]
+  devices                  Device[]
+
+  @@map("branches")
+}
+
+model Device {
+  id         String    @id @default(uuid()) @db.Uuid
+  branchId   String    @map("branch_id") @db.Uuid
+  name       String
+  apiKeyHash String    @map("api_key_hash")
+  isActive   Boolean   @default(true) @map("is_active")
+  lastSeenAt DateTime? @map("last_seen_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("devices")
+}
+
+model Business {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  profiles    Profile[]
+  appSettings AppSetting[]
+
+  @@map("businesses")
+}
+
+model Profile {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  isBanned     Boolean  @default(false) @map("is_banned")
+  role         String
+  branchId     String?  @map("branch_id") @db.Uuid
+  fullName     String?  @map("full_name")
+  createdAt    DateTime @default(now()) @map("created_at")
+  businessId   String?  @map("business_id") @db.Uuid
+
+  branch   Branch?   @relation(fields: [branchId], references: [id])
+  business Business? @relation(fields: [businessId], references: [id])
+  orders   Order[]
+
+  @@map("profiles")
+}
+
+model AppSetting {
+  key        String
+  value      String   @default("")
+  updatedAt  DateTime @default(now()) @map("updated_at")
+  // La columna real es nullable (multi-tenant "a medias"), pero en la
+  // práctica toda fila existente ya tiene business_id — Prisma exige un
+  // campo requerido para poder usarlo en un @@unique compuesto. El service
+  // siempre resuelve y escribe el business_id del usuario autenticado.
+  businessId String   @map("business_id") @db.Uuid
+
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@unique([businessId, key])
+  @@map("app_settings")
+}
+
+model TelegramAuthorizedChat {
+  id        String   @id @default(uuid()) @db.Uuid
+  chatId    String   @unique @map("chat_id")
+  type      String
+  label     String   @default("")
+  plan      String   @default("basic")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("telegram_authorized_chats")
+}
+
+model TelegramUsage {
+  id           String   @id @default(uuid()) @db.Uuid
+  chatId       String   @map("chat_id")
+  date         DateTime @db.Date
+  messageCount Int      @default(0) @map("message_count")
+  updatedAt    DateTime @default(now()) @map("updated_at")
+
+  @@unique([chatId, date])
+  @@map("telegram_usage")
+}
+
+model Ingredient {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  unit         String
+  createdAt    DateTime @default(now()) @map("created_at")
+  isActive     Boolean  @default(true) @map("is_active")
+  isSharedUse  Boolean  @default(false) @map("is_shared_use")
+
+  recipes            Recipe[]
+  branchStock        BranchStock[]
+  warehouseStock     WarehouseStock?
+  stockMovements     StockMovement[]
+  warehouseMovements WarehouseMovement[]
+
+  @@map("ingredients")
+}
+
+model VariantType {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String    @unique
+  sortOrder Int       @default(0) @map("sort_order")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime? @default(now()) @map("created_at")
+
+  @@map("variant_types")
+}
+
+model Product {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  category    String
+  description String?
+  imageUrl    String?  @map("image_url")
+  productType String   @default("made") @map("product_type")
+  createdAt   DateTime @default(now()) @map("created_at")
+  isActive    Boolean  @default(true) @map("is_active")
+
+  variants ProductVariant[]
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id        String   @id @default(uuid()) @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  name      String
+  basePrice Decimal  @map("base_price")
+  createdAt DateTime @default(now()) @map("created_at")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  product                   Product                    @relation(fields: [productId], references: [id])
+  branchPrices              BranchPrice[]
+  recipes                   Recipe[]
+  orderItems                OrderItem[]
+  orderItemFlavors          OrderItemFlavor[]
+  promotionRules            PromotionRule[]
+  branchStock               BranchProductStock[]
+  stockMovements            ProductStockMovement[]
+  warehouseStock            WarehouseProductStock?
+  warehouseMovements        WarehouseProductMovement[]
+
+  @@map("product_variants")
+}
+
+model BranchPrice {
+  id        String   @id @default(uuid()) @db.Uuid
+  branchId  String   @map("branch_id") @db.Uuid
+  variantId String   @map("variant_id") @db.Uuid
+  price     Decimal
+  createdAt DateTime @default(now()) @map("created_at")
+
+  branch  Branch         @relation(fields: [branchId], references: [id])
+  variant ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@map("branch_prices")
+}
+
+model Recipe {
+  id             String  @id @default(uuid()) @db.Uuid
+  variantId      String  @map("variant_id") @db.Uuid
+  ingredientId   String  @map("ingredient_id") @db.Uuid
+  quantity       Decimal
+  applyCondition String  @default("always") @map("apply_condition")
+
+  variant    ProductVariant @relation(fields: [variantId], references: [id])
+  ingredient Ingredient     @relation(fields: [ingredientId], references: [id])
+
+  @@map("recipes")
+}
+
+model BranchStock {
+  id           String   @id @default(uuid()) @db.Uuid
+  branchId     String   @map("branch_id") @db.Uuid
+  ingredientId String   @map("ingredient_id") @db.Uuid
+  quantity     Decimal  @default(0)
+  minQuantity  Decimal  @default(0) @map("min_quantity")
+  updatedAt    DateTime @default(now()) @map("updated_at")
+
+  branch     Branch     @relation(fields: [branchId], references: [id])
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@map("branch_stock")
+}
+
+model StockMovement {
+  id           String   @id @default(uuid()) @db.Uuid
+  branchId     String   @map("branch_id") @db.Uuid
+  ingredientId String   @map("ingredient_id") @db.Uuid
+  quantity     Decimal
+  type         String
+  origin       String?
+  notes        String?
+  createdBy    String?  @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  branch     Branch     @relation(fields: [branchId], references: [id])
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@map("stock_movements")
+}
+
+model BranchProductStock {
+  id          String   @id @default(uuid()) @db.Uuid
+  branchId    String   @map("branch_id") @db.Uuid
+  variantId   String   @map("variant_id") @db.Uuid
+  quantity    Decimal  @default(0)
+  minQuantity Decimal  @default(0) @map("min_quantity")
+  updatedAt   DateTime @default(now()) @map("updated_at")
+
+  branch  Branch         @relation(fields: [branchId], references: [id])
+  variant ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@unique([branchId, variantId])
+  @@map("branch_product_stock")
+}
+
+model ProductStockMovement {
+  id        String   @id @default(uuid()) @db.Uuid
+  branchId  String   @map("branch_id") @db.Uuid
+  variantId String   @map("variant_id") @db.Uuid
+  quantity  Decimal
+  type      String
+  notes     String?
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  branch  Branch         @relation(fields: [branchId], references: [id])
+  variant ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@map("product_stock_movements")
+}
+
+model WarehouseStock {
+  id           String   @id @default(uuid()) @db.Uuid
+  ingredientId String   @unique @map("ingredient_id") @db.Uuid
+  quantity     Decimal  @default(0)
+  minQuantity  Decimal  @default(0) @map("min_quantity")
+  updatedAt    DateTime @default(now()) @map("updated_at")
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@map("warehouse_stock")
+}
+
+model WarehouseMovement {
+  id           String   @id @default(uuid()) @db.Uuid
+  ingredientId String   @map("ingredient_id") @db.Uuid
+  quantity     Decimal
+  type         String
+  branchId     String?  @map("branch_id") @db.Uuid
+  notes        String?
+  createdBy    String?  @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+  branch     Branch?    @relation(fields: [branchId], references: [id])
+
+  @@map("warehouse_movements")
+}
+
+model WarehouseProductStock {
+  id          String   @id @default(uuid()) @db.Uuid
+  variantId   String   @unique @map("variant_id") @db.Uuid
+  quantity    Decimal  @default(0)
+  minQuantity Decimal  @default(0) @map("min_quantity")
+  updatedAt   DateTime @default(now()) @map("updated_at")
+
+  variant ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@map("warehouse_product_stock")
+}
+
+model WarehouseProductMovement {
+  id        String   @id @default(uuid()) @db.Uuid
+  variantId String   @map("variant_id") @db.Uuid
+  quantity  Decimal
+  type      String
+  branchId  String?  @map("branch_id") @db.Uuid
+  notes     String?
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  variant ProductVariant @relation(fields: [variantId], references: [id])
+  branch  Branch?        @relation(fields: [branchId], references: [id])
+
+  @@map("warehouse_product_movements")
+}
+
+model Promotion {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  type       String
+  daysOfWeek Int[]    @map("days_of_week")
+  startDate  DateTime @map("start_date") @db.Date
+  endDate    DateTime @map("end_date") @db.Date
+  branchId   String?  @map("branch_id") @db.Uuid
+  active     Boolean  @default(true)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  branch Branch?         @relation(fields: [branchId], references: [id])
+  rules  PromotionRule[]
+
+  @@map("promotions")
+}
+
+model PromotionRule {
+  id              String   @id @default(uuid()) @db.Uuid
+  promotionId     String   @map("promotion_id") @db.Uuid
+  variantId       String?  @map("variant_id") @db.Uuid
+  buyQty          Int?     @map("buy_qty")
+  getQty          Int?     @map("get_qty")
+  discountPercent Decimal? @map("discount_percent")
+  comboPrice      Decimal? @map("combo_price")
+  category        String?
+  variantSize     String?  @map("variant_size")
+
+  promotion Promotion       @relation(fields: [promotionId], references: [id])
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@map("promotion_rules")
+}
+
+model Order {
+  id            String    @id @default(uuid()) @db.Uuid
+  branchId      String    @map("branch_id") @db.Uuid
+  cashierId     String    @map("cashier_id") @db.Uuid
+  total         Decimal
+  createdAt     DateTime  @default(now()) @map("created_at")
+  kitchenStatus String    @default("pending") @map("kitchen_status")
+  dailyNumber   Int       @default(0) @map("daily_number")
+  paymentMethod String?   @map("payment_method")
+  orderType     String    @default("dine_in") @map("order_type")
+  cancelledAt   DateTime? @map("cancelled_at")
+  cancelledBy   String?   @map("cancelled_by") @db.Uuid
+  cancelReason  String?   @map("cancel_reason")
+  idempotencyKey String?  @unique @map("idempotency_key")
+
+  branch  Branch      @relation(fields: [branchId], references: [id])
+  cashier Profile     @relation(fields: [cashierId], references: [id])
+  items   OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id               String  @id @default(uuid()) @db.Uuid
+  orderId          String  @map("order_id") @db.Uuid
+  variantId        String  @map("variant_id") @db.Uuid
+  qty              Int
+  unitPrice        Decimal @map("unit_price")
+  discountApplied  Decimal @default(0) @map("discount_applied")
+  qtyPhysical      Int     @default(1) @map("qty_physical")
+  promoLabel       String? @map("promo_label")
+
+  order   Order              @relation(fields: [orderId], references: [id])
+  variant ProductVariant     @relation(fields: [variantId], references: [id])
+  flavors OrderItemFlavor[]
+
+  @@map("order_items")
+}
+
+model OrderItemFlavor {
+  id          String  @id @default(uuid()) @db.Uuid
+  orderItemId String  @map("order_item_id") @db.Uuid
+  variantId   String  @map("variant_id") @db.Uuid
+  proportion  Decimal @default(0.5)
+
+  orderItem OrderItem      @relation(fields: [orderItemId], references: [id])
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@map("order_item_flavors")
+}
