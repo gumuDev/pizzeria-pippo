@@ -36,6 +36,7 @@ export class IngredientsService {
         unit: row.unit as never,
         created_at: row.createdAt.toISOString(),
         is_active: row.isActive,
+        is_shared_use: row.isSharedUse,
       })),
       total,
       page,
@@ -45,7 +46,7 @@ export class IngredientsService {
 
   async create(dto: CreateIngredientDto) {
     const row = await this.prisma.ingredient.create({
-      data: { name: dto.name, unit: dto.unit },
+      data: { name: dto.name, unit: dto.unit, isSharedUse: dto.is_shared_use ?? false },
     });
     return { id: row.id };
   }
@@ -60,6 +61,7 @@ export class IngredientsService {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.unit !== undefined && { unit: dto.unit }),
         ...(dto.is_active !== undefined && { isActive: dto.is_active }),
+        ...(dto.is_shared_use !== undefined && { isSharedUse: dto.is_shared_use }),
       },
     });
   }

@@ -14,4 +14,8 @@ export class UpdateIngredientDto {
   @IsOptional()
   @IsBoolean()
   is_active?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  is_shared_use?: boolean;
 }

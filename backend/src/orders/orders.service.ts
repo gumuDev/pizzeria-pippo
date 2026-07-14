@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PromotionsService } from '../promotions/promotions.service';
@@ -26,6 +26,8 @@ type PrismaTransaction = Prisma.TransactionClient;
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly promotionsService: PromotionsService,
@@ -40,7 +42,7 @@ export class OrdersService {
 
     const variants = await this.prisma.productVariant.findMany({
       where: { id: { in: variantIds } },
-      include: { branchPrices: true, recipes: true, product: true },
+      include: { branchPrices: true, recipes: { include: { ingredient: true } }, product: true },
     });
     const variantById = new Map(variants.map((v) => [v.id, v]));
 
@@ -87,6 +89,7 @@ export class OrdersService {
         ingredient_id: r.ingredientId,
         quantity: r.quantity.toNumber(),
         apply_condition: r.applyCondition,
+        is_shared_use: r.ingredient.isSharedUse,
       }));
     }
 
@@ -97,6 +100,12 @@ export class OrdersService {
       flavors: d.flavors?.map((f) => ({ variant_id: f.variant_id, proportion: f.proportion })),
     }));
     const deductions = computeStockDeductions(stockItems, recipesByVariant, dto.order_type);
+    if (deductions.incomplete_recipe_variant_ids.length > 0) {
+      this.logger.warn(
+        `Pedido con sabor(es) sin receta configurada: ${deductions.incomplete_recipe_variant_ids.join(', ')}. ` +
+          `La venta se procesó igual, pero revisar la configuración de esas variantes.`,
+      );
+    }
 
     // 6. Apply order + items + flavors + stock in ONE transaction — reuses the
     // existing create_order_atomic SQL function (see plan doc for why this
@@ -288,7 +297,7 @@ export class OrdersService {
     const variantIds = Array.from(new Set(order.items.map((i) => i.variantId).concat(flavorVariantIds)));
     const variants = await this.prisma.productVariant.findMany({
       where: { id: { in: variantIds } },
-      include: { recipes: true, product: true },
+      include: { recipes: { include: { ingredient: true } }, product: true },
     });
     const variantById = new Map(variants.map((v) => [v.id, v]));
 
@@ -298,6 +307,7 @@ export class OrdersService {
         ingredient_id: r.ingredientId,
         quantity: r.quantity.toNumber(),
         apply_condition: r.applyCondition,
+        is_shared_use: r.ingredient.isSharedUse,
       }));
     }
 

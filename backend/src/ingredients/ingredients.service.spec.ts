@@ -46,16 +46,52 @@ describe('IngredientsService', () => {
 
     it('mapea las filas al shape de @pippo/shared con fechas como string', async () => {
       prisma.ingredient.findMany.mockResolvedValue([
-        { id: '1', name: 'Harina', unit: 'kg', isActive: true, createdAt: new Date('2026-01-01T00:00:00.000Z') },
+        {
+          id: '1',
+          name: 'Harina',
+          unit: 'kg',
+          isActive: true,
+          isSharedUse: false,
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
       ]);
       prisma.ingredient.count.mockResolvedValue(1);
 
       const result = await service.list({});
 
       expect(result.data).toEqual([
-        { id: '1', name: 'Harina', unit: 'kg', created_at: '2026-01-01T00:00:00.000Z', is_active: true },
+        {
+          id: '1',
+          name: 'Harina',
+          unit: 'kg',
+          created_at: '2026-01-01T00:00:00.000Z',
+          is_active: true,
+          is_shared_use: false,
+        },
       ]);
       expect(result.total).toBe(1);
+    });
+  });
+
+  describe('create', () => {
+    it('crea con is_shared_use=false por defecto si no se envía', async () => {
+      prisma.ingredient.create.mockResolvedValue({ id: '1' });
+
+      await service.create({ name: 'Caja Familiar', unit: 'unidad' });
+
+      expect(prisma.ingredient.create).toHaveBeenCalledWith({
+        data: { name: 'Caja Familiar', unit: 'unidad', isSharedUse: false },
+      });
+    });
+
+    it('crea con is_shared_use=true cuando se envía', async () => {
+      prisma.ingredient.create.mockResolvedValue({ id: '1' });
+
+      await service.create({ name: 'Caja Familiar', unit: 'unidad', is_shared_use: true });
+
+      expect(prisma.ingredient.create).toHaveBeenCalledWith({
+        data: { name: 'Caja Familiar', unit: 'unidad', isSharedUse: true },
+      });
     });
   });
 
@@ -85,6 +121,15 @@ describe('IngredientsService', () => {
       expect(prisma.ingredient.update).toHaveBeenCalledWith({
         where: { id: '1' },
         data: { name: 'Harina 000' },
+      });
+    });
+
+    it('actualiza is_shared_use cuando se envía', async () => {
+      await service.update('1', { is_shared_use: true });
+
+      expect(prisma.ingredient.update).toHaveBeenCalledWith({
+        where: { id: '1' },
+        data: { isSharedUse: true },
       });
     });
   });

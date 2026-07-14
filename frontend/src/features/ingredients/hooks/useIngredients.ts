@@ -58,13 +58,13 @@ export function useIngredients() {
 
   const openEdit = (record: Ingredient) => {
     setEditing(record);
-    form.setFieldsValue({ name: record.name, unit: record.unit });
+    form.setFieldsValue({ name: record.name, unit: record.unit, is_shared_use: record.is_shared_use });
     setModalOpen(true);
   };
 
   const closeModal = () => setModalOpen(false);
 
-  const handleSubmit = async (values: { name: string; unit: string }) => {
+  const handleSubmit = async (values: { name: string; unit: string; is_shared_use?: boolean }) => {
     setSaving(true);
     const result = editing
       ? await IngredientsService.updateIngredient(editing.id, values)

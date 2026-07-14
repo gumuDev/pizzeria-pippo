@@ -1,4 +1,4 @@
-import { IsIn, IsNotEmpty, IsString } from 'class-validator';
+import { IsBoolean, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 const UNITS = ['g', 'kg', 'ml', 'l', 'unidad'] as const;
 
@@ -9,4 +9,8 @@ export class CreateIngredientDto {
 
   @IsIn(UNITS)
   unit: (typeof UNITS)[number];
+
+  @IsOptional()
+  @IsBoolean()
+  is_shared_use?: boolean;
 }

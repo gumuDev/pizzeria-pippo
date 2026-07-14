@@ -97,11 +97,12 @@ model AppSetting {
 }
 
 model Ingredient {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  unit      String
-  createdAt DateTime @default(now()) @map("created_at")
-  isActive  Boolean  @default(true) @map("is_active")
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  unit         String
+  createdAt    DateTime @default(now()) @map("created_at")
+  isActive     Boolean  @default(true) @map("is_active")
+  isSharedUse  Boolean  @default(false) @map("is_shared_use")
 
   recipes            Recipe[]
   branchStock        BranchStock[]

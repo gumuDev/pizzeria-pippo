@@ -26,7 +26,7 @@ export const IngredientsService = {
     return res.json();
   },
 
-  async createIngredient(values: { name: string; unit: string }): Promise<{ ok: boolean; error?: string }> {
+  async createIngredient(values: { name: string; unit: string; is_shared_use?: boolean }): Promise<{ ok: boolean; error?: string }> {
     const res = await nestFetch(API_ENDPOINTS.ingredients.base, { method: "POST", body: JSON.stringify(values) });
     if (!res.ok) {
       const data = await res.json();
@@ -35,7 +35,7 @@ export const IngredientsService = {
     return { ok: true };
   },
 
-  async updateIngredient(id: string, values: { name: string; unit: string }): Promise<{ ok: boolean; error?: string }> {
+  async updateIngredient(id: string, values: { name: string; unit: string; is_shared_use?: boolean }): Promise<{ ok: boolean; error?: string }> {
     const res = await nestFetch(API_ENDPOINTS.ingredients.byId(id), { method: "PATCH", body: JSON.stringify(values) });
     if (!res.ok) {
       const data = await res.json();

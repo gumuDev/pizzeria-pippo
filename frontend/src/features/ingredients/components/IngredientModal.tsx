@@ -1,6 +1,6 @@
 "use client";
 
-import { Modal, Form, Input, Select, Button } from "antd";
+import { Modal, Form, Input, Select, Checkbox, Button } from "antd";
 import type { FormInstance } from "antd";
 import { UNIT_OPTIONS } from "../constants/ingredient.constants";
 import type { Ingredient } from "../types/ingredient.types";
@@ -11,7 +11,7 @@ interface Props {
   saving: boolean;
   form: FormInstance;
   onClose: () => void;
-  onSubmit: (values: { name: string; unit: string }) => void;
+  onSubmit: (values: { name: string; unit: string; is_shared_use?: boolean }) => void;
 }
 
 export function IngredientModal({ open, editing, saving, form, onClose, onSubmit }: Props) {
@@ -29,6 +29,12 @@ export function IngredientModal({ open, editing, saving, form, onClose, onSubmit
         </Form.Item>
         <Form.Item label="Unidad de medida" name="unit" rules={[{ required: true, message: "Seleccioná la unidad" }]}>
           <Select placeholder="Seleccionar unidad" options={UNIT_OPTIONS} />
+        </Form.Item>
+        <Form.Item name="is_shared_use" valuePropName="checked">
+          <Checkbox>
+            Se descuenta completo por pedido, no por sabor
+            <div className="text-xs text-gray-400">Usar para cajas/empaques — no aplica a masa, queso, toppings</div>
+          </Checkbox>
         </Form.Item>
         <div className="flex justify-end gap-2 mt-4">
           <Button onClick={onClose}>Cancelar</Button>

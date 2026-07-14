@@ -6,4 +6,5 @@ export interface Ingredient {
   unit: IngredientUnit;
   created_at: string;
   is_active: boolean;
+  is_shared_use: boolean;
 }

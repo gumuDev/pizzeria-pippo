@@ -70,3 +70,6 @@ mobile/**/build/
 mobile/**/local.properties
 mobile/**/.idea/
 mobile/**/*.iml
+
+# Backup script credentials
+docs/database/backup/.env

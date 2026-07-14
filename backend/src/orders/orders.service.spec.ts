@@ -49,7 +49,7 @@ describe('OrdersService', () => {
     basePrice: decimal(70),
     isActive: true,
     branchPrices: [{ branchId: 'b1', price: decimal(75) }],
-    recipes: [{ ingredientId: 'i-masa', quantity: decimal(1), applyCondition: 'always' }],
+    recipes: [{ ingredientId: 'i-masa', quantity: decimal(1), applyCondition: 'always', ingredient: { isSharedUse: false } }],
     product: { name: 'Hawaiana', category: 'pizza', productType: 'made', isActive: true },
   };
 
