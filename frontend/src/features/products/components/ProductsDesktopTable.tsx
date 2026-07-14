@@ -5,7 +5,7 @@ import type { MouseEvent } from "react";
 import { Table, Button, Space, Tag, Typography, Tooltip, Dropdown, Modal } from "antd";
 import {
   EditOutlined, StopOutlined, CheckCircleOutlined, DollarOutlined,
-  DeleteOutlined, CopyOutlined, MoreOutlined,
+  DeleteOutlined, MoreOutlined,
 } from "@ant-design/icons";
 import { CATEGORY_OPTIONS, CATEGORY_COLORS } from "../constants/product.constants";
 import { ProductImage } from "./ProductImage";
