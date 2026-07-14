@@ -88,6 +88,17 @@ export class SettingsService {
     return Object.fromEntries(rows.map((r) => [r.key, r.value]));
   }
 
+  // Used by the Telegram webhook, which has no user JWT (Telegram calls it
+  // directly). Only one business exists today, so it's resolved without a
+  // user context — the Telegram bot config is effectively global, matching
+  // telegram_authorized_chats/telegram_usage (also without business_id).
+  async getRawSettingsForFirstBusiness(keys: string[]): Promise<Record<string, string>> {
+    const business = await this.prisma.business.findFirst();
+    if (!business) return {};
+    const rows = await this.prisma.appSetting.findMany({ where: { businessId: business.id, key: { in: keys } } });
+    return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  }
+
   async saveRawSettings(user: CurrentUserPayload, updates: { key: string; value: string }[]): Promise<void> {
     const businessId = this.resolveBusinessId(user);
     await Promise.all(

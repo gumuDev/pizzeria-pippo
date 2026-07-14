@@ -8,6 +8,7 @@ describe('SettingsService', () => {
   let service: SettingsService;
   let prisma: {
     appSetting: { findMany: jest.Mock; findUnique: jest.Mock; upsert: jest.Mock };
+    business: { findFirst: jest.Mock };
   };
 
   const admin: CurrentUserPayload = {
@@ -30,6 +31,7 @@ describe('SettingsService', () => {
   beforeEach(async () => {
     prisma = {
       appSetting: { findMany: jest.fn(), findUnique: jest.fn(), upsert: jest.fn() },
+      business: { findFirst: jest.fn() },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -124,6 +126,29 @@ describe('SettingsService', () => {
         where: { businessId: 'biz1', key: { in: ['ai_provider', 'telegram_ai_model'] } },
       });
       expect(result).toEqual({ ai_provider: 'anthropic', telegram_ai_model: 'claude-haiku-4-5-20251001' });
+    });
+  });
+
+  describe('getRawSettingsForFirstBusiness', () => {
+    it('resuelve el business_id tomando el único negocio existente, sin usuario', async () => {
+      prisma.business.findFirst.mockResolvedValue({ id: 'biz1' });
+      prisma.appSetting.findMany.mockResolvedValue([{ key: 'telegram_webhook_secret', value: 'shh' }]);
+
+      const result = await service.getRawSettingsForFirstBusiness(['telegram_webhook_secret']);
+
+      expect(prisma.appSetting.findMany).toHaveBeenCalledWith({
+        where: { businessId: 'biz1', key: { in: ['telegram_webhook_secret'] } },
+      });
+      expect(result).toEqual({ telegram_webhook_secret: 'shh' });
+    });
+
+    it('devuelve un objeto vacío si no existe ningún negocio', async () => {
+      prisma.business.findFirst.mockResolvedValue(null);
+
+      const result = await service.getRawSettingsForFirstBusiness(['telegram_webhook_secret']);
+
+      expect(result).toEqual({});
+      expect(prisma.appSetting.findMany).not.toHaveBeenCalled();
     });
   });
 

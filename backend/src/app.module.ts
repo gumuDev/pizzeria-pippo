@@ -19,6 +19,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { StorageModule } from './storage/storage.module';
 import { DevicesModule } from './devices/devices.module';
 import { PaymentValidationModule } from './payment-validation/payment-validation.module';
+import { TelegramModule } from './telegram/telegram.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { PaymentValidationModule } from './payment-validation/payment-validation
     StorageModule,
     DevicesModule,
     PaymentValidationModule,
+    TelegramModule,
   ],
   controllers: [AppController],
   providers: [AppService],

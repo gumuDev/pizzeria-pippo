@@ -96,6 +96,29 @@ model AppSetting {
   @@map("app_settings")
 }
 
+model TelegramAuthorizedChat {
+  id        String   @id @default(uuid()) @db.Uuid
+  chatId    String   @unique @map("chat_id")
+  type      String
+  label     String   @default("")
+  plan      String   @default("basic")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("telegram_authorized_chats")
+}
+
+model TelegramUsage {
+  id           String   @id @default(uuid()) @db.Uuid
+  chatId       String   @map("chat_id")
+  date         DateTime @db.Date
+  messageCount Int      @default(0) @map("message_count")
+  updatedAt    DateTime @default(now()) @map("updated_at")
+
+  @@unique([chatId, date])
+  @@map("telegram_usage")
+}
+
 model Ingredient {
   id           String   @id @default(uuid()) @db.Uuid
   name         String

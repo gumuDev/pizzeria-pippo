@@ -1,11 +1,6 @@
-import { getToken } from "@/lib/auth";
 import { nestFetch } from "@/lib/nestFetch";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { AuthorizedChat, ChatFormValues } from "@/features/telegram-bot/types";
-
-async function getAuthHeader(): Promise<HeadersInit> {
-  return { Authorization: `Bearer ${await getToken()}` };
-}
 
 export async function getBotSettings(keys: string[]): Promise<Record<string, string>> {
   const res = await nestFetch(API_ENDPOINTS.settings.rawByKeys(keys));
@@ -22,17 +17,14 @@ export async function saveBotSettings(updates: { key: string; value: string; upd
 }
 
 export async function getAuthorizedChats(): Promise<AuthorizedChat[]> {
-  const headers = await getAuthHeader();
-  const res = await fetch("/api/telegram/chats", { headers });
+  const res = await nestFetch(API_ENDPOINTS.telegram.chats);
   if (!res.ok) throw new Error("Error al cargar los chats");
   return res.json();
 }
 
 export async function createAuthorizedChat(values: ChatFormValues): Promise<AuthorizedChat> {
-  const headers = await getAuthHeader();
-  const res = await fetch("/api/telegram/chats", {
+  const res = await nestFetch(API_ENDPOINTS.telegram.chats, {
     method: "POST",
-    headers: { ...headers, "Content-Type": "application/json" },
     body: JSON.stringify(values),
   });
   if (!res.ok) throw new Error("Error al crear el chat");
@@ -43,10 +35,8 @@ export async function updateAuthorizedChat(
   id: string,
   values: Partial<Pick<AuthorizedChat, "label" | "plan" | "is_active">>
 ): Promise<AuthorizedChat> {
-  const headers = await getAuthHeader();
-  const res = await fetch(`/api/telegram/chats/${id}`, {
+  const res = await nestFetch(API_ENDPOINTS.telegram.chatById(id), {
     method: "PUT",
-    headers: { ...headers, "Content-Type": "application/json" },
     body: JSON.stringify(values),
   });
   if (!res.ok) throw new Error("Error al actualizar el chat");
@@ -54,7 +44,6 @@ export async function updateAuthorizedChat(
 }
 
 export async function deleteAuthorizedChat(id: string): Promise<void> {
-  const headers = await getAuthHeader();
-  const res = await fetch(`/api/telegram/chats/${id}`, { method: "DELETE", headers });
+  const res = await nestFetch(API_ENDPOINTS.telegram.chatById(id), { method: "DELETE" });
   if (!res.ok) throw new Error("Error al revocar el chat");
 }

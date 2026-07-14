@@ -97,4 +97,8 @@ export const API_ENDPOINTS = {
     base: "/devices",
     byId: (id: string) => `/devices/${id}`,
   },
+  telegram: {
+    chats: "/telegram/chats",
+    chatById: (id: string) => `/telegram/chats/${id}`,
+  },
 };

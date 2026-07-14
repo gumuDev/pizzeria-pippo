@@ -6,3 +6,4 @@ export * from "./models/user";
 export * from "./models/promotion";
 export * from "./models/order";
 export * from "./models/stock";
+export * from "./models/telegram";
