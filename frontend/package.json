@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node -e \"require('fs').copyFileSync(require.resolve('react-scan/dist/auto.global.js'), 'public/react-scan.js')\"",
+    "predev": "npm run build --workspace=@pippo/shared && node -e \"require('fs').copyFileSync(require.resolve('react-scan/dist/auto.global.js'), 'public/react-scan.js')\"",
     "dev": "next dev",
     "dev:prod": "dotenv -e .env.production -- next dev",
+    "prebuild": "npm run build --workspace=@pippo/shared",
     "build": "next build",
     "build:local": "dotenv -e .env.local -- next build",
     "analyze": "ANALYZE=true dotenv -e .env.local -- next build",
