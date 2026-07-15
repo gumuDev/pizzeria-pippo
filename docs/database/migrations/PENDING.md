@@ -7,14 +7,13 @@
 
 ## Pendientes de aplicar
 
-| # | Archivo | Qué hace | Depende de |
-|---|---------|----------|------------|
-| 1 | `033_create_order_atomic.sql` | Función transaccional `create_order_atomic`: orden + items + sabores + stock en una sola transacción, con lock para el `daily_number`. **Requerida ANTES del deploy del refactor de `/api/orders`** | `028`, `029`, `030` (ya aplicadas) |
+Ninguna — todas las migraciones hasta `042` están aplicadas en producción (confirmado 2026-07-15).
 
 ## Aplicadas en producción
 
 > Confirmado el 2026-06-10: las migraciones `023`–`032` ya están aplicadas en producción
 > (028–032 confirmadas por Luis; 023–027 verificadas contra `schema-production.sql` del 2026-06-07).
+> Confirmado el 2026-07-15: `033`–`042` también aplicadas (Fase 7/8 de la migración a NestJS + fix de bug 05 + feature de pago online).
 
 | # | Archivo | Qué hace |
 |---|---------|----------|
@@ -28,6 +27,16 @@
 | ✅ | `030_add_product_type.sql` | Agrega columna `product_type` a `products` (`made` / `resale`) |
 | ✅ | `031_fix_product_type_reset.sql` | Resetea todos los `product_type` a `made` para asignación manual |
 | ✅ | `032_fix_rls_security_warnings.sql` | Elimina políticas inseguras con `user_metadata`; estabiliza todas las llamadas a `auth.uid()` y `get_user_role()` con `(select ...)` |
+| ✅ | `033_create_order_atomic.sql` | Función transaccional `create_order_atomic`: orden + items + sabores + stock en una sola transacción, con lock para el `daily_number` |
+| ✅ | `034_businesses_multitenant.sql` | Tabla `businesses` + columnas `business_id` en `profiles`/`app_settings` |
+| ✅ | `035_profiles_auth_columns.sql` | Agrega `email`/`password_hash`/`is_banned` a `profiles` (Fase 7 NestJS) |
+| ✅ | `036_profiles_backfill_auth.sql` | Backfill de email/password/baneo desde `auth.users` |
+| ✅ | `037_profiles_drop_auth_fks.sql` | Corta el vínculo de `profiles` con `auth.users` de Supabase |
+| ✅ | `038_devices_table.sql` | Tabla `devices` para validación automática de pago QR/Yape |
+| ✅ | `039_ingredient_shared_use.sql` | Agrega `is_shared_use` a `ingredients` (fix bug 05, stock mitad y mitad) |
+| ✅ | `040_businesses_backfill.sql` | Backfill de `businesses` + `business_id` en filas existentes |
+| ✅ | `041_orders_payment_method_online.sql` | Agrega `"online"` como valor válido de `payment_method` |
+| ✅ | `042_orders_payment_provider.sql` | Agrega `payment_provider` a `orders` (feature pago online / PedidosYa) |
 
 ---
 

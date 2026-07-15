@@ -6,9 +6,12 @@
 -- punto y el archivo original se perdió; origen: commit histórico 4ca1995
 -- "multi-business adaptation").
 --
--- -- Ya aplicado en Supabase el 2026-07-05 (fecha en que se encontró y
--- documentó el drift, no la fecha real de aplicación original, que se
--- desconoce).
+-- -- NO estaba aplicado en producción pese a lo que decía esta nota
+-- originalmente. Confirmado el 2026-07-15 contra un dump real de
+-- producción del 2026-07-14: no existe la tabla `businesses` ni las
+-- columnas `business_id`. Pendiente de aplicar junto con el backfill
+-- de 040_businesses_backfill.sql (esta migración no inserta ningún
+-- negocio ni completa los valores existentes).
 --
 -- Encontrado al migrar los módulos Usuarios y Configuración a NestJS:
 -- `profiles`, `app_settings` y `products` tienen columna `business_id`
