@@ -3,11 +3,12 @@
 import { Card, Table, Tag, Tooltip, Typography, Button } from "antd";
 import { StopOutlined } from "@ant-design/icons";
 import { formatDateTimeBolivia } from "@/lib/timezone";
+import { PAYMENT_PROVIDERS } from "@pippo/shared";
 import { OrderItemsTable } from "./OrderItemsTable";
 import { OrdersMobileList } from "./OrdersMobileList";
-import { OrdersSummary } from "./OrdersSummary";
+import { OrdersStatsRow } from "./OrdersStatsRow";
 import { useIsMobile } from "@/lib/useIsMobile";
-import type { Order } from "../types/reports.types";
+import type { Order, SalesSummary } from "../types/reports.types";
 
 const { Text } = Typography;
 
@@ -24,6 +25,7 @@ interface Props {
   ordersPageSize: number;
   loading: boolean;
   exporting: boolean;
+  summary: SalesSummary | null;
   onPageChange: (page: number, pageSize: number) => void;
   onExport: () => void;
   onCancel: (order: Order) => void;
@@ -64,10 +66,17 @@ function buildOrderColumns(onCancel: (order: Order) => void) {
       title: "Pago",
       dataIndex: "payment_method",
       key: "payment_method",
-      render: (m: string | null) =>
-        m === "efectivo" ? <Tag color="green">💵 Efectivo</Tag>
-        : m === "qr" ? <Tag color="blue">📱 QR</Tag>
-        : <Text type="secondary">—</Text>,
+      render: (m: string | null, o: Order) => {
+        if (m === "efectivo") return <Tag color="green">💵 Efectivo</Tag>;
+        if (m === "qr") return <Tag color="blue">📱 QR</Tag>;
+        if (m === "online") {
+          const known = o.payment_provider
+            ? PAYMENT_PROVIDERS[o.payment_provider as keyof typeof PAYMENT_PROVIDERS]
+            : undefined;
+          return <Tag color="geekblue">{known ? `${known.emoji} ${known.label}` : "🌐 Online"}</Tag>;
+        }
+        return <Text type="secondary">—</Text>;
+      },
     },
     {
       title: "Total",
@@ -102,7 +111,7 @@ function buildOrderColumns(onCancel: (order: Order) => void) {
   ];
 }
 
-export function OrdersTable({ orders, ordersTotal, ordersPage, ordersPageSize, loading, exporting, onPageChange, onExport, onCancel }: Props) {
+export function OrdersTable({ orders, ordersTotal, ordersPage, ordersPageSize, loading, exporting, summary, onPageChange, onExport, onCancel }: Props) {
   const isMobile = useIsMobile();
 
   if (isMobile) {
@@ -114,6 +123,7 @@ export function OrdersTable({ orders, ordersTotal, ordersPage, ordersPageSize, l
         ordersPageSize={ordersPageSize}
         loading={loading}
         exporting={exporting}
+        summary={summary}
         onPageChange={onPageChange}
         onExport={onExport}
       />
@@ -123,35 +133,37 @@ export function OrdersTable({ orders, ordersTotal, ordersPage, ordersPageSize, l
   const columns = buildOrderColumns(onCancel);
 
   return (
-    <Card
-      size="small"
-      extra={
-        <Button icon={<IconExcel />} loading={exporting} disabled={orders.length === 0} onClick={onExport}>
-          Exportar Excel
-        </Button>
-      }
-    >
-      <Table
-        dataSource={orders}
-        rowKey="id"
-        loading={loading}
+    <>
+      <OrdersStatsRow summary={summary} loading={loading} />
+      <Card
         size="small"
-        rowClassName={(o) => o.cancelled_at ? "opacity-60 bg-gray-50" : ""}
-        pagination={{
-          current: ordersPage,
-          pageSize: ordersPageSize,
-          total: ordersTotal,
-          showSizeChanger: true,
-          pageSizeOptions: ["10", "20", "50"],
-          showTotal: (t) => `${t} ventas`,
-          onChange: onPageChange,
-        }}
-        expandable={{
-          expandedRowRender: (order) => <OrderItemsTable items={order.order_items} />,
-        }}
-        columns={columns}
-      />
-      <OrdersSummary orders={orders} />
-    </Card>
+        extra={
+          <Button icon={<IconExcel />} loading={exporting} disabled={orders.length === 0} onClick={onExport}>
+            Exportar Excel
+          </Button>
+        }
+      >
+        <Table
+          dataSource={orders}
+          rowKey="id"
+          loading={loading}
+          size="small"
+          rowClassName={(o) => o.cancelled_at ? "opacity-60 bg-gray-50" : ""}
+          pagination={{
+            current: ordersPage,
+            pageSize: ordersPageSize,
+            total: ordersTotal,
+            showSizeChanger: true,
+            pageSizeOptions: ["10", "20", "50"],
+            showTotal: (t) => `${t} ventas`,
+            onChange: onPageChange,
+          }}
+          expandable={{
+            expandedRowRender: (order) => <OrderItemsTable items={order.order_items} />,
+          }}
+          columns={columns}
+        />
+      </Card>
+    </>
   );
 }

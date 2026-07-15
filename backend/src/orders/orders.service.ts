@@ -116,6 +116,7 @@ export class OrdersService {
       cashier_id: user.id,
       total: serverTotal,
       payment_method: dto.payment_method ?? null,
+      payment_provider: dto.payment_provider ?? null,
       order_type: dto.order_type,
       idempotency_key: dto.idempotency_key ?? null,
       day_start: dateRangeFrom(today),
@@ -177,6 +178,7 @@ export class OrdersService {
       total: order.total.toNumber(),
       kitchen_status: order.kitchenStatus,
       payment_method: order.paymentMethod,
+      payment_provider: order.paymentProvider,
       order_type: order.orderType,
       cancelled_at: order.cancelledAt?.toISOString() ?? null,
       order_items: order.items.map((item) => ({

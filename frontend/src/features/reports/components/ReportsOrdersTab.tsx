@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { useOrdersReport } from "../hooks/useOrdersReport";
-import type { Order } from "../types/reports.types";
+import type { Order, SalesSummary } from "../types/reports.types";
 
 const OrdersTable = dynamic(() =>
   import("./OrdersTable").then(m => m.OrdersTable)
@@ -10,11 +10,12 @@ const OrdersTable = dynamic(() =>
 
 interface Props {
   ordersReport: ReturnType<typeof useOrdersReport>;
+  summary: SalesSummary | null;
   buildParams: () => string;
   onCancel: (order: Order) => void;
 }
 
-export function ReportsOrdersTab({ ordersReport, buildParams, onCancel }: Props) {
+export function ReportsOrdersTab({ ordersReport, summary, buildParams, onCancel }: Props) {
   return (
     <OrdersTable
       orders={ordersReport.orders}
@@ -23,6 +24,7 @@ export function ReportsOrdersTab({ ordersReport, buildParams, onCancel }: Props)
       ordersPageSize={ordersReport.ordersPageSize}
       loading={ordersReport.loading}
       exporting={ordersReport.exporting}
+      summary={summary}
       onPageChange={(p, ps) => {
         ordersReport.setOrdersPage(p);
         ordersReport.setOrdersPageSize(ps);

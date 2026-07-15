@@ -371,6 +371,7 @@ model Order {
   kitchenStatus String    @default("pending") @map("kitchen_status")
   dailyNumber   Int       @default(0) @map("daily_number")
   paymentMethod String?   @map("payment_method")
+  paymentProvider String? @map("payment_provider")
   orderType     String    @default("dine_in") @map("order_type")
   cancelledAt   DateTime? @map("cancelled_at")
   cancelledBy   String?   @map("cancelled_by") @db.Uuid

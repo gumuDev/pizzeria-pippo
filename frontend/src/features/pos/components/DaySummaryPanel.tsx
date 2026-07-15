@@ -26,6 +26,7 @@ export function DaySummaryPanel({ dayOrders }: Props) {
   const takeawayCount = activeOrders.filter((o) => o.order_type === "takeaway").length;
   const efectivoTotal = activeOrders.filter((o) => o.payment_method === "efectivo").reduce((s, o) => s + Number(o.total), 0);
   const qrTotal = activeOrders.filter((o) => o.payment_method === "qr").reduce((s, o) => s + Number(o.total), 0);
+  const onlineTotal = activeOrders.filter((o) => o.payment_method === "online").reduce((s, o) => s + Number(o.total), 0);
 
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: 24, background: "#f5f5f5" }}>
@@ -78,6 +79,12 @@ export function DaySummaryPanel({ dayOrders }: Props) {
           icon={<span style={{ fontSize: 28 }}>📱</span>}
           label="QR"
           value={`Bs ${qrTotal.toFixed(2)}`}
+          valueColor="#374151"
+        />
+        <SummaryCard
+          icon={<span style={{ fontSize: 28 }}>🌐</span>}
+          label="Online"
+          value={`Bs ${onlineTotal.toFixed(2)}`}
           valueColor="#374151"
         />
       </div>

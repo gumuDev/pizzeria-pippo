@@ -20,7 +20,11 @@ export function useReportsPage() {
     const params = buildParams();
     if (activeTab === "general") sales.fetch(params, selectedBranch);
     if (activeTab === "cajeros") cashier.fetch(params);
-    if (activeTab === "ventas") { ordersReport.setOrdersPage(1); ordersReport.fetch(params, 1); }
+    if (activeTab === "ventas") {
+      sales.fetch(params, selectedBranch);
+      ordersReport.setOrdersPage(1);
+      ordersReport.fetch(params, 1);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, selectedBranch, filters.dateRange]);
 

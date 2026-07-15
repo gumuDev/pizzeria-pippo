@@ -27,7 +27,7 @@ export class ReportsService {
   async getSales(query: ReportQueryDto) {
     const orders = await this.prisma.order.findMany({
       where: this.buildWhere(query),
-      select: { total: true, orderType: true },
+      select: { total: true, orderType: true, paymentMethod: true },
     });
 
     const total = orders.reduce((sum, o) => sum + o.total.toNumber(), 0);
@@ -37,18 +37,30 @@ export class ReportsService {
     const dineIn = orders.filter((o) => o.orderType === 'dine_in');
     const takeaway = orders.filter((o) => o.orderType === 'takeaway');
 
+    const byMethod = (method: string) => orders.filter((o) => o.paymentMethod === method);
+    const sumTotal = (rows: typeof orders) => rows.reduce((sum, o) => sum + o.total.toNumber(), 0);
+
     return {
       total,
       count,
       avg,
       by_order_type: {
         dine_in: {
-          total: dineIn.reduce((sum, o) => sum + o.total.toNumber(), 0),
+          total: sumTotal(dineIn),
           count: dineIn.length,
         },
         takeaway: {
-          total: takeaway.reduce((sum, o) => sum + o.total.toNumber(), 0),
+          total: sumTotal(takeaway),
           count: takeaway.length,
+        },
+      },
+      by_payment_method: {
+        efectivo: { total: sumTotal(byMethod('efectivo')), count: byMethod('efectivo').length },
+        qr: { total: sumTotal(byMethod('qr')), count: byMethod('qr').length },
+        online: { total: sumTotal(byMethod('online')), count: byMethod('online').length },
+        sin_especificar: {
+          total: sumTotal(orders.filter((o) => !o.paymentMethod)),
+          count: orders.filter((o) => !o.paymentMethod).length,
         },
       },
     };
@@ -195,6 +207,7 @@ export class ReportsService {
     createdAt: Date;
     branchId: string;
     paymentMethod: string | null;
+    paymentProvider: string | null;
     orderType: string;
     cancelledAt: Date | null;
     cancelReason: string | null;
@@ -216,6 +229,7 @@ export class ReportsService {
       branch_id: order.branchId,
       cashier_name: order.cashier?.fullName ?? '—',
       payment_method: order.paymentMethod,
+      payment_provider: order.paymentProvider,
       order_type: order.orderType,
       cancelled_at: order.cancelledAt?.toISOString() ?? null,
       cancel_reason: order.cancelReason,

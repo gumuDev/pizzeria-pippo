@@ -29,9 +29,9 @@ describe('ReportsService', () => {
   describe('getSales', () => {
     it('sums totals and splits by order type', async () => {
       prisma.order.findMany.mockResolvedValue([
-        { total: decimal(100), orderType: 'dine_in' },
-        { total: decimal(50), orderType: 'takeaway' },
-        { total: decimal(25), orderType: 'takeaway' },
+        { total: decimal(100), orderType: 'dine_in', paymentMethod: 'efectivo' },
+        { total: decimal(50), orderType: 'takeaway', paymentMethod: 'qr' },
+        { total: decimal(25), orderType: 'takeaway', paymentMethod: null },
       ]);
 
       const result = await service.getSales({});
@@ -41,6 +41,24 @@ describe('ReportsService', () => {
       expect(result.avg).toBeCloseTo(58.33, 1);
       expect(result.by_order_type.dine_in).toEqual({ total: 100, count: 1 });
       expect(result.by_order_type.takeaway).toEqual({ total: 75, count: 2 });
+    });
+
+    it('splits totals by payment method, including online', async () => {
+      prisma.order.findMany.mockResolvedValue([
+        { total: decimal(100), orderType: 'dine_in', paymentMethod: 'efectivo' },
+        { total: decimal(50), orderType: 'takeaway', paymentMethod: 'qr' },
+        { total: decimal(30), orderType: 'takeaway', paymentMethod: 'online' },
+        { total: decimal(25), orderType: 'takeaway', paymentMethod: null },
+      ]);
+
+      const result = await service.getSales({});
+
+      expect(result.by_payment_method).toEqual({
+        efectivo: { total: 100, count: 1 },
+        qr: { total: 50, count: 1 },
+        online: { total: 30, count: 1 },
+        sin_especificar: { total: 25, count: 1 },
+      });
     });
 
     it('returns zeroed summary when there are no orders', async () => {
@@ -55,6 +73,12 @@ describe('ReportsService', () => {
         by_order_type: {
           dine_in: { total: 0, count: 0 },
           takeaway: { total: 0, count: 0 },
+        },
+        by_payment_method: {
+          efectivo: { total: 0, count: 0 },
+          qr: { total: 0, count: 0 },
+          online: { total: 0, count: 0 },
+          sin_especificar: { total: 0, count: 0 },
         },
       });
     });

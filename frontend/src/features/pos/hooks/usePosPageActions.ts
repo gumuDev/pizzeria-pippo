@@ -28,7 +28,8 @@ export function usePosPageActions({
   const [variantModal, setVariantModal] = useState<Product | null>(null);
   const [paymentModal, setPaymentModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "qr" | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "qr" | "online" | null>(null);
+  const [paymentProvider, setPaymentProvider] = useState<string | null>(null);
   const [ticket, setTicket] = useState<TicketData | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
@@ -67,8 +68,9 @@ export function usePosPageActions({
     }
   };
 
-  const handlePaymentConfirm = (orderType: OrderType, method: "efectivo" | "qr" | null) => {
+  const handlePaymentConfirm = (orderType: OrderType, method: "efectivo" | "qr" | "online" | null, provider: string | null) => {
     setPaymentMethod(method);
+    setPaymentProvider(provider);
     cart.setOrderType(orderType);
     setIdempotencyKey(crypto.randomUUID());
     setPaymentModal(false);
@@ -88,16 +90,17 @@ export function usePosPageActions({
     const timeout = setTimeout(() => controller.abort(), 15000);
     setConfirmLoading(true);
     try {
-      const result = await PosService.confirmSale(branchId, cart.discountedCart, cart.total, paymentMethod, cart.orderType, controller.signal, idempotencyKey ?? undefined);
+      const result = await PosService.confirmSale(branchId, cart.discountedCart, cart.total, paymentMethod, paymentProvider, cart.orderType, controller.signal, idempotencyKey ?? undefined);
 
       if (result.ok) {
         broadcast("ORDER_COMPLETE");
         cart.suppressNextClear();
         setConfirmModal(false);
         setPaymentMethod(null);
+        setPaymentProvider(null);
         setIdempotencyKey(null);
         setActiveTab("sale");
-        setTicket({ orderId: result.order_id!, dailyNumber: result.daily_number!, items: cart.discountedCart, total: cart.total, paymentMethod, orderType: cart.orderType });
+        setTicket({ orderId: result.order_id!, dailyNumber: result.daily_number!, items: cart.discountedCart, total: cart.total, paymentMethod, paymentProvider, orderType: cart.orderType });
         cart.clearCart();
         fetchDayOrders(branchId);
         refreshProducts();
@@ -131,6 +134,7 @@ export function usePosPageActions({
     paymentModal, setPaymentModal,
     confirmModal, setConfirmModal,
     paymentMethod, setPaymentMethod,
+    paymentProvider, setPaymentProvider,
     ticket, setTicket,
     confirmLoading,
     validationModalOpen,

@@ -2,18 +2,30 @@
 
 import { Modal, Button, Tag, Typography } from "antd";
 import { ArrowLeftOutlined, CheckOutlined } from "@ant-design/icons";
+import { PAYMENT_PROVIDERS } from "@pippo/shared";
 import type { DiscountedItem } from "@/lib/promotions";
 
 const { Text } = Typography;
 
 type OrderType = "dine_in" | "takeaway";
 
+function paymentLabel(method: "efectivo" | "qr" | "online" | null, provider: string | null): string {
+  if (method === "efectivo") return "💵 Efectivo";
+  if (method === "qr") return "📱 QR";
+  if (method === "online") {
+    const known = provider ? PAYMENT_PROVIDERS[provider as keyof typeof PAYMENT_PROVIDERS] : undefined;
+    return known ? `${known.emoji} ${known.label}` : "🌐 Pago online";
+  }
+  return "";
+}
+
 interface Props {
   open: boolean;
   discountedCart: DiscountedItem[];
   total: number;
   totalDiscount: number;
-  paymentMethod: "efectivo" | "qr" | null;
+  paymentMethod: "efectivo" | "qr" | "online" | null;
+  paymentProvider: string | null;
   orderType: OrderType | null;
   loading: boolean;
   onConfirm: () => void;
@@ -21,7 +33,7 @@ interface Props {
   onValidatePayment?: () => void;
 }
 
-export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, paymentMethod, orderType, loading, onConfirm, onCancel, onValidatePayment }: Props) {
+export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, paymentMethod, paymentProvider, orderType, loading, onConfirm, onCancel, onValidatePayment }: Props) {
   return (
     <Modal
       title={
@@ -78,7 +90,7 @@ export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, p
           </span>
           {paymentMethod && (
             <span className="inline-flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1 text-sm">
-              {paymentMethod === "efectivo" ? "💵 Efectivo" : "📱 QR"}
+              {paymentLabel(paymentMethod, paymentProvider)}
             </span>
           )}
         </div>

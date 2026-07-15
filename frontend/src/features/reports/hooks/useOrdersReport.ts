@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import dayjs from "dayjs";
 import { UTC_OFFSET_HOURS } from "@/lib/timezone";
+import { PAYMENT_PROVIDERS } from "@pippo/shared";
 import { ReportsService } from "../services/reports.service";
 import type { Order } from "../types/reports.types";
 
@@ -33,7 +34,13 @@ export function useOrdersReport() {
         Sucursal: order.branches?.name ?? "—",
         Cajero: order.cashier_name,
         Tipo: order.order_type === "takeaway" ? "Para llevar" : "Comer aquí",
-        Pago: order.payment_method === "efectivo" ? "Efectivo" : order.payment_method === "qr" ? "QR" : "—",
+        Pago: order.payment_method === "efectivo" ? "Efectivo"
+          : order.payment_method === "qr" ? "QR"
+          : order.payment_method === "online"
+          ? (order.payment_provider
+              ? PAYMENT_PROVIDERS[order.payment_provider as keyof typeof PAYMENT_PROVIDERS]?.label ?? "Online"
+              : "Online")
+          : "—",
         Producto: item.product_variants?.products?.name ?? "—",
         Variante: item.product_variants?.name ?? "—",
         Cantidad: item.qty,

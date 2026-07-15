@@ -46,7 +46,7 @@ export function PosModals({
       <PaymentModal
         open={actions.paymentModal}
         total={cart.total}
-        onClose={() => { actions.setPaymentModal(false); actions.setPaymentMethod(null); }}
+        onClose={() => { actions.setPaymentModal(false); actions.setPaymentMethod(null); actions.setPaymentProvider(null); }}
         onConfirm={actions.handlePaymentConfirm}
       />
       <ConfirmSaleModal
@@ -55,10 +55,11 @@ export function PosModals({
         total={cart.total}
         totalDiscount={cart.totalDiscount}
         paymentMethod={actions.paymentMethod}
+        paymentProvider={actions.paymentProvider}
         orderType={cart.orderType}
         loading={actions.confirmLoading}
         onConfirm={actions.handleConfirmSale}
-        onCancel={() => { actions.setConfirmModal(false); actions.setPaymentMethod(null); }}
+        onCancel={() => { actions.setConfirmModal(false); actions.setPaymentMethod(null); actions.setPaymentProvider(null); }}
         onValidatePayment={actions.handleValidatePayment}
       />
       <PaymentValidationModal

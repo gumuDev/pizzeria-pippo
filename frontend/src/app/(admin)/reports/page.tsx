@@ -42,6 +42,7 @@ export default function ReportsPage() {
             children: (
               <ReportsOrdersTab
                 ordersReport={ordersReport}
+                summary={sales.summary}
                 buildParams={filters.buildParams}
                 onCancel={cancellation.openCancelModal}
               />

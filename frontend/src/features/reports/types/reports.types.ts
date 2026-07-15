@@ -9,6 +9,12 @@ export interface SalesSummary {
     dine_in: { total: number; count: number };
     takeaway: { total: number; count: number };
   };
+  by_payment_method: {
+    efectivo: { total: number; count: number };
+    qr: { total: number; count: number };
+    online: { total: number; count: number };
+    sin_especificar: { total: number; count: number };
+  };
 }
 export interface TopProduct {
   variant_id: string;
@@ -50,7 +56,8 @@ export interface Order {
   created_at: string;
   branch_id: string;
   cashier_name: string;
-  payment_method: "efectivo" | "qr" | null;
+  payment_method: "efectivo" | "qr" | "online" | null;
+  payment_provider: string | null;
   order_type: "dine_in" | "takeaway";
   cancelled_at: string | null;
   cancel_reason: string | null;

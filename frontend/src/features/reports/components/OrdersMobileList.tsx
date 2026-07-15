@@ -3,8 +3,8 @@
 import { Card, Tag, Typography, Collapse, Button } from "antd";
 import { formatDateTimeBolivia } from "@/lib/timezone";
 import { OrderItemsTable } from "./OrderItemsTable";
-import { OrdersSummary } from "./OrdersSummary";
-import type { Order } from "../types/reports.types";
+import { OrdersStatsRow } from "./OrdersStatsRow";
+import type { Order, SalesSummary } from "../types/reports.types";
 
 const { Text } = Typography;
 
@@ -21,12 +21,15 @@ interface Props {
   ordersPageSize: number;
   loading: boolean;
   exporting: boolean;
+  summary: SalesSummary | null;
   onPageChange: (page: number, pageSize: number) => void;
   onExport: () => void;
 }
 
-export function OrdersMobileList({ orders, ordersTotal, ordersPage, ordersPageSize, loading, exporting, onPageChange, onExport }: Props) {
+export function OrdersMobileList({ orders, ordersTotal, ordersPage, ordersPageSize, loading, exporting, summary, onPageChange, onExport }: Props) {
   return (
+    <>
+    <OrdersStatsRow summary={summary} loading={loading} />
     <Card
       size="small"
       extra={
@@ -63,6 +66,8 @@ export function OrdersMobileList({ orders, ordersTotal, ordersPage, ordersPageSi
                           ? <Tag color="green" style={{ margin: 0, fontSize: 10 }}>💵</Tag>
                           : order.payment_method === "qr"
                           ? <Tag color="blue" style={{ margin: 0, fontSize: 10 }}>📱</Tag>
+                          : order.payment_method === "online"
+                          ? <Tag color="geekblue" style={{ margin: 0, fontSize: 10 }}>🌐</Tag>
                           : null}
                       </div>
                       <Text style={{ fontSize: 12, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block", maxWidth: 200 }}>{nombres}</Text>
@@ -96,9 +101,9 @@ export function OrdersMobileList({ orders, ordersTotal, ordersPage, ordersPageSi
               </button>
             </div>
           </div>
-          <OrdersSummary orders={orders} />
         </>
       )}
     </Card>
+    </>
   );
 }

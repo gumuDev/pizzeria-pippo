@@ -61,7 +61,8 @@ export const PosService = {
     branchId: string,
     discountedCart: DiscountedItem[],
     total: number,
-    paymentMethod: "efectivo" | "qr" | null,
+    paymentMethod: "efectivo" | "qr" | "online" | null,
+    paymentProvider: string | null,
     orderType: OrderType,
     signal?: AbortSignal,
     idempotencyKey?: string
@@ -74,6 +75,7 @@ export const PosService = {
           branch_id: branchId,
           total,
           payment_method: paymentMethod,
+          payment_provider: paymentProvider,
           order_type: orderType,
           idempotency_key: idempotencyKey ?? null,
           // The server recalculates prices, promos and physical units from

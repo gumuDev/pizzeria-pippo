@@ -2,9 +2,20 @@
 
 import { Modal, Button, Tag, Typography, Divider } from "antd";
 import { PrinterOutlined } from "@ant-design/icons";
+import { PAYMENT_PROVIDERS } from "@pippo/shared";
 import type { TicketData } from "../types/pos.types";
 
 const { Text } = Typography;
+
+function paymentLabel(method: TicketData["paymentMethod"], provider: string | null): string {
+  if (method === "efectivo") return "💵 Efectivo";
+  if (method === "qr") return "📱 QR";
+  if (method === "online") {
+    const known = provider ? PAYMENT_PROVIDERS[provider as keyof typeof PAYMENT_PROVIDERS] : undefined;
+    return known ? `${known.emoji} ${known.label}` : "🌐 Pago online";
+  }
+  return "—";
+}
 
 interface Props {
   ticket: TicketData | null;
@@ -68,11 +79,7 @@ export function TicketModal({ ticket, onClose, onPrint, printing, canPrint }: Pr
           </div>
           <div className="flex justify-between">
             <Text type="secondary">Método de pago</Text>
-            <Text>
-              {ticket.paymentMethod === "efectivo" ? "💵 Efectivo"
-                : ticket.paymentMethod === "qr" ? "📱 QR"
-                : "—"}
-            </Text>
+            <Text>{paymentLabel(ticket.paymentMethod, ticket.paymentProvider)}</Text>
           </div>
         </div>
       )}

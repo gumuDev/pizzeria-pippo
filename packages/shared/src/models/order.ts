@@ -1,5 +1,7 @@
+import type { PaymentProvider } from "../constants/payment-providers";
+
 export type OrderType = "dine_in" | "takeaway";
-export type PaymentMethod = "efectivo" | "qr";
+export type PaymentMethod = "efectivo" | "qr" | "online";
 export type KitchenStatus = "pending" | "ready";
 
 export interface OrderItem {
@@ -22,6 +24,7 @@ export interface Order {
   kitchen_status: KitchenStatus;
   daily_number: number;
   payment_method: PaymentMethod | null;
+  payment_provider: PaymentProvider | null;
   order_type: OrderType;
   cancelled_at: string | null;
   cancelled_by: string | null;

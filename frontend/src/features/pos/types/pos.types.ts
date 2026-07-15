@@ -42,7 +42,8 @@ export interface DayOrder {
   created_at: string;
   total: number;
   kitchen_status: string;
-  payment_method: "efectivo" | "qr" | null;
+  payment_method: "efectivo" | "qr" | "online" | null;
+  payment_provider: string | null;
   order_type: OrderType;
   cancelled_at: string | null;
   order_items: {
@@ -56,6 +57,7 @@ export interface TicketData {
   dailyNumber: number;
   items: DiscountedItem[];
   total: number;
-  paymentMethod: "efectivo" | "qr" | null;
+  paymentMethod: "efectivo" | "qr" | "online" | null;
+  paymentProvider: string | null;
   orderType: OrderType;
 }

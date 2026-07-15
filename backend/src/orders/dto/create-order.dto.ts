@@ -12,6 +12,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { PAYMENT_PROVIDERS } from '@pippo/shared';
 import { OrderItemInputDto } from './order-item-input.dto';
 
 export class CreateOrderDto {
@@ -23,8 +24,12 @@ export class CreateOrderDto {
   total!: number;
 
   @IsOptional()
-  @IsIn(['efectivo', 'qr'])
-  payment_method?: 'efectivo' | 'qr' | null;
+  @IsIn(['efectivo', 'qr', 'online'])
+  payment_method?: 'efectivo' | 'qr' | 'online' | null;
+
+  @IsOptional()
+  @IsIn(Object.keys(PAYMENT_PROVIDERS))
+  payment_provider?: string | null;
 
   @IsIn(['dine_in', 'takeaway'])
   order_type!: 'dine_in' | 'takeaway';

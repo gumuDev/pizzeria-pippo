@@ -5,6 +5,7 @@ export interface DayOrderResult {
   total: number;
   kitchen_status: string;
   payment_method: string | null;
+  payment_provider: string | null;
   order_type: string;
   cancelled_at: string | null;
   order_items: {

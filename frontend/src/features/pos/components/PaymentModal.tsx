@@ -1,19 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Modal, Button, Typography } from "antd";
+import { Modal, Button, Checkbox, Typography } from "antd";
 import { CheckCircleFilled, ArrowRightOutlined } from "@ant-design/icons";
+import { PAYMENT_PROVIDERS } from "@pippo/shared";
 
 const { Text } = Typography;
 
+// Only one online provider exists today, so the checkbox is hardcoded to it —
+// once a second provider (e.g. a payment gateway) exists, this becomes a picker.
+const ONLINE_PROVIDER = "pedidos_ya" as const;
+
 type OrderType = "dine_in" | "takeaway";
-type PaymentMethod = "efectivo" | "qr" | null;
+type PaymentMethod = "efectivo" | "qr" | "online" | null;
 
 interface Props {
   open: boolean;
   total: number;
   onClose: () => void;
-  onConfirm: (orderType: OrderType, paymentMethod: PaymentMethod) => void;
+  onConfirm: (orderType: OrderType, paymentMethod: PaymentMethod, paymentProvider: string | null) => void;
 }
 
 interface OptionCardProps {
@@ -58,18 +63,29 @@ function OptionCard({ selected, emoji, label, accent, onClick }: OptionCardProps
 export function PaymentModal({ open, total, onClose, onConfirm }: Props) {
   const [orderType, setOrderType] = useState<OrderType | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
+  const [onlinePayment, setOnlinePayment] = useState(false);
 
-  const handleClose = () => {
+  const reset = () => {
     setOrderType(null);
     setPaymentMethod(null);
+    setOnlinePayment(false);
+  };
+
+  const handleClose = () => {
+    reset();
     onClose();
+  };
+
+  const handleToggleOnlinePayment = (checked: boolean) => {
+    setOnlinePayment(checked);
+    setOrderType(checked ? "takeaway" : null);
+    setPaymentMethod(null);
   };
 
   const handleConfirm = () => {
     if (!orderType) return;
-    onConfirm(orderType, paymentMethod);
-    setOrderType(null);
-    setPaymentMethod(null);
+    onConfirm(orderType, onlinePayment ? "online" : paymentMethod, onlinePayment ? ONLINE_PROVIDER : null);
+    reset();
   };
 
   return (
@@ -92,8 +108,21 @@ export function PaymentModal({ open, total, onClose, onConfirm }: Props) {
           <Text strong className="!text-orange-700 text-2xl">Bs {total.toFixed(2)}</Text>
         </div>
 
+        {/* Online payment shortcut — skips order-type/payment-method pickers and the QR validation step */}
+        <div className="flex items-start gap-2.5 bg-blue-50 rounded-lg px-3 py-2.5">
+          <Checkbox checked={onlinePayment} onChange={(e) => handleToggleOnlinePayment(e.target.checked)} className="mt-0.5" />
+          <div>
+            <Text strong className="block text-sm">
+              Pedido de {PAYMENT_PROVIDERS[ONLINE_PROVIDER].label} (pago ya recibido)
+            </Text>
+            <Text type="secondary" className="text-xs block">
+              Se registra para llevar, con pago online — sin pasar por validación de QR.
+            </Text>
+          </div>
+        </div>
+
         {/* Order type — required */}
-        <div>
+        <div style={onlinePayment ? { opacity: 0.4, pointerEvents: "none" } : undefined}>
           <Text strong className="block mb-2">¿Cómo va el pedido? <Text type="danger">*</Text></Text>
           <div className="flex gap-3">
             <OptionCard
@@ -117,7 +146,7 @@ export function PaymentModal({ open, total, onClose, onConfirm }: Props) {
         </div>
 
         {/* Payment method — optional */}
-        <div>
+        <div style={onlinePayment ? { opacity: 0.4, pointerEvents: "none" } : undefined}>
           <Text strong className="block mb-2">¿Cómo pagó el cliente? <Text type="secondary" className="font-normal">(opcional)</Text></Text>
           <div className="flex gap-3">
             <OptionCard

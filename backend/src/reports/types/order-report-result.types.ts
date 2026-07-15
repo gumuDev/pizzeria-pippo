@@ -14,6 +14,7 @@ export interface OrderReportResult {
   branch_id: string;
   cashier_name: string;
   payment_method: string | null;
+  payment_provider: string | null;
   order_type: string;
   cancelled_at: string | null;
   cancel_reason: string | null;
