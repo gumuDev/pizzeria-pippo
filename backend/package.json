@@ -7,9 +7,12 @@
   "license": "UNLICENSED",
   "scripts": {
     "postinstall": "prisma generate",
+    "prebuild": "npm run build --workspace=@pippo/shared",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "prestart": "npm run build --workspace=@pippo/shared",
     "start": "nest start",
+    "prestart:dev": "npm run build --workspace=@pippo/shared",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
