@@ -101,4 +101,8 @@ export const API_ENDPOINTS = {
     chats: "/telegram/chats",
     chatById: (id: string) => `/telegram/chats/${id}`,
   },
+  public: {
+    pizzas: "/public/pizzas",
+    branches: "/public/branches",
+  },
 };

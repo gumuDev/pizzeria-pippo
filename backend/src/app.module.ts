@@ -20,6 +20,7 @@ import { StorageModule } from './storage/storage.module';
 import { DevicesModule } from './devices/devices.module';
 import { PaymentValidationModule } from './payment-validation/payment-validation.module';
 import { TelegramModule } from './telegram/telegram.module';
+import { PublicMenuModule } from './public-menu/public-menu.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { TelegramModule } from './telegram/telegram.module';
     DevicesModule,
     PaymentValidationModule,
     TelegramModule,
+    PublicMenuModule,
   ],
   controllers: [AppController],
   providers: [AppService],
