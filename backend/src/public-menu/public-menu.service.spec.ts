@@ -64,12 +64,14 @@ describe('PublicMenuService', () => {
 
   describe('listBranches', () => {
     it('only queries active branches', async () => {
-      prisma.branch.findMany.mockResolvedValue([{ id: 'b1', name: 'Centro', address: 'Av. Siempre Viva 123' }]);
+      prisma.branch.findMany.mockResolvedValue([
+        { id: 'b1', name: 'Centro', address: 'Av. Siempre Viva 123', phone: '67106933' },
+      ]);
 
       const result = await service.listBranches();
 
       expect(prisma.branch.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { isActive: true } }));
-      expect(result).toEqual([{ id: 'b1', name: 'Centro', address: 'Av. Siempre Viva 123' }]);
+      expect(result).toEqual([{ id: 'b1', name: 'Centro', address: 'Av. Siempre Viva 123', phone: '67106933' }]);
     });
   });
 });

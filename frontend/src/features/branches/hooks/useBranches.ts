@@ -32,7 +32,7 @@ export function useBranches() {
 
   const openEdit = (record: Branch) => {
     setEditing(record);
-    form.setFieldsValue({ name: record.name, address: record.address ?? "" });
+    form.setFieldsValue({ name: record.name, address: record.address ?? "", phone: record.phone ?? "" });
     setModalOpen(true);
   };
 
@@ -40,7 +40,7 @@ export function useBranches() {
 
   const closeBlockModal = () => setBlockModal(null);
 
-  const handleSubmit = async (values: { name: string; address?: string }) => {
+  const handleSubmit = async (values: { name: string; address?: string; phone?: string }) => {
     setSaving(true);
     const result = editing
       ? await BranchesService.updateBranch(editing.id, values)

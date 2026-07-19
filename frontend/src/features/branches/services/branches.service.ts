@@ -9,7 +9,7 @@ export const BranchesService = {
     return res.json();
   },
 
-  async createBranch(values: { name: string; address?: string }): Promise<{ ok: boolean; error?: string }> {
+  async createBranch(values: { name: string; address?: string; phone?: string }): Promise<{ ok: boolean; error?: string }> {
     const res = await nestFetch(API_ENDPOINTS.branches.base, { method: "POST", body: JSON.stringify(values) });
     if (!res.ok) {
       const data = await res.json();
@@ -18,7 +18,7 @@ export const BranchesService = {
     return { ok: true };
   },
 
-  async updateBranch(id: string, values: { name: string; address?: string }): Promise<{ ok: boolean; error?: string }> {
+  async updateBranch(id: string, values: { name: string; address?: string; phone?: string }): Promise<{ ok: boolean; error?: string }> {
     const res = await nestFetch(API_ENDPOINTS.branches.byId(id), { method: "PUT", body: JSON.stringify(values) });
     if (!res.ok) {
       const data = await res.json();

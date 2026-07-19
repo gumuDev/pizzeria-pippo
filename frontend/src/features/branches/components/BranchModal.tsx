@@ -10,7 +10,7 @@ interface Props {
   saving: boolean;
   form: FormInstance;
   onClose: () => void;
-  onSubmit: (values: { name: string; address?: string }) => void;
+  onSubmit: (values: { name: string; address?: string; phone?: string }) => void;
 }
 
 export function BranchModal({ open, editing, saving, form, onClose, onSubmit }: Props) {
@@ -28,6 +28,9 @@ export function BranchModal({ open, editing, saving, form, onClose, onSubmit }: 
         </Form.Item>
         <Form.Item label="Dirección" name="address">
           <Input placeholder="Ej: Av. Corrientes 1234" />
+        </Form.Item>
+        <Form.Item label="Teléfono" name="phone">
+          <Input placeholder="Ej: 67106933" />
         </Form.Item>
         <div className="flex justify-end gap-2 mt-4">
           <Button onClick={onClose}>Cancelar</Button>

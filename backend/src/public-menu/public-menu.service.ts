@@ -36,7 +36,7 @@ export class PublicMenuService {
   async listBranches(): Promise<PublicBranch[]> {
     const branches = await this.prisma.branch.findMany({
       where: { isActive: true },
-      select: { id: true, name: true, address: true },
+      select: { id: true, name: true, address: true, phone: true },
       orderBy: { name: 'asc' },
     });
 

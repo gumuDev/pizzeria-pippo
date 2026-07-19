@@ -19,6 +19,7 @@ CREATE TABLE public.branches (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name text NOT NULL,
   address text,
+  phone text,
   created_at timestamp with time zone DEFAULT now(),
   is_active boolean DEFAULT true,
   CONSTRAINT branches_pkey PRIMARY KEY (id)

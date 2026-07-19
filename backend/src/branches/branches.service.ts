@@ -26,12 +26,12 @@ export class BranchesService {
   }
 
   async create(dto: CreateBranchDto): Promise<Branch> {
-    const row = await this.prisma.branch.create({ data: { name: dto.name, address: dto.address } });
+    const row = await this.prisma.branch.create({ data: { name: dto.name, address: dto.address, phone: dto.phone } });
     return this.mapBranch(row);
   }
 
   async update(id: string, dto: UpdateBranchDto): Promise<void> {
-    await this.prisma.branch.update({ where: { id }, data: { name: dto.name, address: dto.address } });
+    await this.prisma.branch.update({ where: { id }, data: { name: dto.name, address: dto.address, phone: dto.phone } });
   }
 
   async setActive(id: string, isActive: boolean): Promise<void> {
@@ -86,11 +86,12 @@ export class BranchesService {
     }
   }
 
-  private mapBranch(row: { id: string; name: string; address: string | null; createdAt: Date; isActive: boolean }): Branch {
+  private mapBranch(row: { id: string; name: string; address: string | null; phone: string | null; createdAt: Date; isActive: boolean }): Branch {
     return {
       id: row.id,
       name: row.name,
       address: row.address,
+      phone: row.phone,
       created_at: row.createdAt.toISOString(),
       is_active: row.isActive,
     };
