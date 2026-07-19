@@ -1,6 +1,7 @@
 "use client";
 
-import { Select, Tag } from "antd";
+import { Button, Input, Select, Tag } from "antd";
+import { FileExcelOutlined, SearchOutlined } from "@ant-design/icons";
 import type { Branch } from "../types/stock.types";
 
 const IconWarning = () => (
@@ -15,9 +16,17 @@ interface Props {
   branches: Branch[];
   selectedBranch: string;
   onSelectedBranchChange: (branchId: string) => void;
+  search: string;
+  onSearchChange: (value: string) => void;
+  exporting: boolean;
+  onExport: () => void;
+  exportDisabled: boolean;
 }
 
-export function StockPageHeader({ isMobile, alertCount, branches, selectedBranch, onSelectedBranchChange }: Props) {
+export function StockPageHeader({
+  isMobile, alertCount, branches, selectedBranch, onSelectedBranchChange,
+  search, onSearchChange, exporting, onExport, exportDisabled,
+}: Props) {
   return (
     <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", gap: 12, marginBottom: 20 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -28,13 +37,32 @@ export function StockPageHeader({ isMobile, alertCount, branches, selectedBranch
           </Tag>
         )}
       </div>
-      <Select
-        value={selectedBranch}
-        onChange={onSelectedBranchChange}
-        options={branches.map((b) => ({ value: b.id, label: b.name }))}
-        style={{ width: isMobile ? "100%" : 200 }}
-        placeholder="Seleccionar sucursal"
-      />
+      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 12 }}>
+        <Input
+          placeholder="Buscar por nombre..."
+          prefix={<SearchOutlined />}
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          allowClear
+          style={{ width: isMobile ? "100%" : 220 }}
+        />
+        <Select
+          value={selectedBranch}
+          onChange={onSelectedBranchChange}
+          options={branches.map((b) => ({ value: b.id, label: b.name }))}
+          style={{ width: isMobile ? "100%" : 200 }}
+          placeholder="Seleccionar sucursal"
+        />
+        <Button
+          icon={<FileExcelOutlined />}
+          loading={exporting}
+          disabled={exportDisabled}
+          onClick={onExport}
+          style={{ width: isMobile ? "100%" : undefined }}
+        >
+          Exportar Excel
+        </Button>
+      </div>
     </div>
   );
 }

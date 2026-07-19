@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Form, message } from "antd";
+import dayjs from "dayjs";
 import { StockService } from "../services/stock.service";
 import { useIngredientStockData } from "./useIngredientStockData";
 import { useProductStockData } from "./useProductStockData";
@@ -91,15 +92,26 @@ export function useStock() {
     });
   }, []);
 
+  const [search, setSearch] = useState("");
+  const [exportingStock, setExportingStock] = useState(false);
+
   const ing = useIngredientStockData(selectedBranch, pageHistory, PAGE_SIZE);
   const prod = useProductStockData(selectedBranch, pageHistory, PAGE_SIZE);
 
   const { stock, totalStock, loadingStock } = ing;
   const { productStock, loadingProductStock, productVariants } = prod;
 
-  const unifiedStock = buildUnifiedStock(stock, productStock);
+  const unifiedStockRaw = buildUnifiedStock(stock, productStock);
   const loadingUnifiedStock = loadingStock || loadingProductStock;
-  const alertsCount = unifiedStock.filter((r) => r.quantity <= r.min_quantity).length;
+  // Cuenta de alertas sobre TODO el stock, no solo lo filtrado por búsqueda.
+  const alertsCount = unifiedStockRaw.filter((r) => r.quantity <= r.min_quantity).length;
+
+  const searchLower = search.trim().toLowerCase();
+  const unifiedStock = searchLower
+    ? unifiedStockRaw.filter(
+        (r) => r.name.toLowerCase().includes(searchLower) || r.secondaryName?.toLowerCase().includes(searchLower),
+      )
+    : unifiedStockRaw;
 
   const unifiedMovements = buildUnifiedMovements(ing.movements, prod.movements);
   const totalHistory = ing.totalMovements + prod.totalMovements;
@@ -172,9 +184,33 @@ export function useStock() {
     if (ok) { setProductMinQtyOpen(false); prod.refreshProductStock(); }
   };
 
+  // Exporta lo que está actualmente visible en la tabla (respeta la búsqueda
+  // por nombre), no todo el stock de la sucursal sin filtrar.
+  const exportStockToExcel = async () => {
+    setExportingStock(true);
+    const rows = unifiedStock.map((r) => ({
+      Tipo: r.origin === "insumo" ? "Insumo" : "Reventa",
+      Nombre: r.name,
+      Variante: r.secondaryName ?? "",
+      Unidad: r.unit,
+      "Stock actual": r.quantity,
+      "Stock mínimo": r.min_quantity,
+      Estado: r.quantity <= r.min_quantity ? "Stock bajo" : "OK",
+    }));
+
+    const XLSX = await import("xlsx");
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Stock");
+    XLSX.writeFile(wb, `stock_${dayjs().format("YYYY-MM-DD")}.xlsx`);
+    setExportingStock(false);
+  };
+
   return {
     branches, ingredients, stock, totalStock,
     unifiedStock, loadingUnifiedStock, alertsCount,
+    search, setSearch,
+    exportingStock, exportStockToExcel,
     selectedBranch, setSelectedBranch: handleBranchChange,
     pageHistory, setPageHistory,
     PAGE_SIZE,

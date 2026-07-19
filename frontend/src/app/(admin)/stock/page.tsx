@@ -12,6 +12,8 @@ export default function StockPage() {
   const {
     branches, ingredients, alertsCount,
     unifiedStock, loadingUnifiedStock,
+    search, setSearch,
+    exportingStock, exportStockToExcel,
     selectedBranch, setSelectedBranch,
     PAGE_SIZE,
     minQtyOpen, setMinQtyOpen, editingStock,
@@ -39,6 +41,11 @@ export default function StockPage() {
         branches={branches}
         selectedBranch={selectedBranch}
         onSelectedBranchChange={setSelectedBranch}
+        search={search}
+        onSearchChange={setSearch}
+        exporting={exportingStock}
+        onExport={exportStockToExcel}
+        exportDisabled={unifiedStock.length === 0}
       />
       <StockTabs
         isMobile={isMobile}
