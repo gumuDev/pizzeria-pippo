@@ -1,3 +1,4 @@
+import { buildWhatsAppGeneralLink } from "../constants/landing.constants";
 import type { PublicBranch } from "../types/landing.types";
 
 function BranchCard({ branch }: { branch: PublicBranch }) {
@@ -13,7 +14,17 @@ function BranchCard({ branch }: { branch: PublicBranch }) {
       )}
       <div className="p-5">
         <h3 className="font-[var(--font-landing-heading)] font-bold text-lg text-[#1c1b1b] mb-1">{branch.name}</h3>
-        {branch.address && <p className="font-[var(--font-landing-body)] text-sm text-[#5b403b]">{branch.address}</p>}
+        {branch.address && <p className="font-[var(--font-landing-body)] text-sm text-[#5b403b] mb-3">{branch.address}</p>}
+        {branch.phone && (
+          <a
+            href={buildWhatsAppGeneralLink(branch.phone)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-center bg-[#1c1b1b] text-white font-[var(--font-landing-body)] font-semibold text-sm px-4 py-2 rounded-xl hover:bg-[#b62409] transition-colors"
+          >
+            WhatsApp: {branch.phone}
+          </a>
+        )}
       </div>
     </div>
   );

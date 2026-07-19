@@ -1,7 +1,11 @@
 import Image from "next/image";
 import { buildWhatsAppGeneralLink } from "../constants/landing.constants";
 
-export function LandingHero() {
+interface Props {
+  phone: string;
+}
+
+export function LandingHero({ phone }: Props) {
   return (
     <section id="inicio" className="pt-28 pb-16 px-5 md:px-10 bg-[#fcf9f8]">
       <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-10 items-center">
@@ -16,7 +20,7 @@ export function LandingHero() {
             Elegí tu pizza favorita y pedila directo por WhatsApp — te confirmamos tiempo de entrega y sucursal más cercana al toque.
           </p>
           <a
-            href={buildWhatsAppGeneralLink()}
+            href={buildWhatsAppGeneralLink(phone)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block bg-[#b62409] text-white font-[var(--font-landing-body)] font-bold px-8 py-4 rounded-full shadow-lg shadow-[#b62409]/20 hover:bg-[#93000a] transition-colors"

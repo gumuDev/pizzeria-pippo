@@ -10,18 +10,18 @@ import { LandingFooter } from "@/features/landing/components/LandingFooter";
 import { headingFont, bodyFont } from "@/features/landing/lib/landing-fonts";
 
 export default function RootPage() {
-  const { pizzas, branches, loading } = useLandingData();
+  const { pizzas, branches, loading, primaryPhone } = useLandingData();
 
   return (
     <div className={`${headingFont.variable} ${bodyFont.variable}`}>
-      <LandingHeader />
+      <LandingHeader phone={primaryPhone} />
       <main>
-        <LandingHero />
-        <PizzaSection pizzas={pizzas} loading={loading} />
+        <LandingHero phone={primaryPhone} />
+        <PizzaSection pizzas={pizzas} loading={loading} branches={branches} />
         <LocationSection branches={branches} loading={loading} />
         <AboutSection />
       </main>
-      <LandingFooter />
+      <LandingFooter phone={primaryPhone} />
     </div>
   );
 }
