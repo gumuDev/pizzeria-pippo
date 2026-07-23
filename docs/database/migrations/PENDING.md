@@ -10,6 +10,7 @@
 | # | Archivo | Qué hace |
 |---|---------|----------|
 | ⏳ | `044_order_payments_mixed.sql` | Pago mixto en el POS: tabla `order_payments` + `payment_method = 'mixto'` + rewrite de `create_order_atomic` |
+| ⏳ | `045_fix_product_stock_movements_user_fkey.sql` | Repunta `product_stock_movements.created_by` y `warehouse_product_movements.created_by` de `auth.users(id)` a `profiles(id)` — cajeros creados desde el panel de Usuarios no tienen fila en `auth.users` y rompían con foreign key violation al vender productos de reventa |
 
 ## Aplicadas en producción
 
