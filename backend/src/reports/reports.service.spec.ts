@@ -8,7 +8,7 @@ describe('ReportsService', () => {
   let service: ReportsService;
   let prisma: {
     order: { findMany: jest.Mock; count: jest.Mock };
-    orderItem: { findMany: jest.Mock };
+    orderItem: { findMany: jest.Mock; groupBy: jest.Mock };
     orderPayment: { findMany: jest.Mock };
     $transaction: jest.Mock;
   };
@@ -16,7 +16,7 @@ describe('ReportsService', () => {
   beforeEach(async () => {
     prisma = {
       order: { findMany: jest.fn(), count: jest.fn() },
-      orderItem: { findMany: jest.fn() },
+      orderItem: { findMany: jest.fn(), groupBy: jest.fn() },
       orderPayment: { findMany: jest.fn() },
       $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
     };
@@ -129,6 +129,7 @@ describe('ReportsService', () => {
   describe('getTopProducts', () => {
     it('aggregates qty and revenue per variant', async () => {
       const variant = { id: 'v1', name: 'Familiar', product: { name: 'Napolitana', category: 'pizza' } };
+      prisma.orderItem.groupBy.mockResolvedValue([{ variantId: 'v1', _sum: { qty: 3 } }]);
       prisma.orderItem.findMany.mockResolvedValue([
         { qty: 2, unitPrice: decimal(50), discountApplied: decimal(0), variant },
         { qty: 1, unitPrice: decimal(50), discountApplied: decimal(10), variant },
@@ -136,9 +137,42 @@ describe('ReportsService', () => {
 
       const result = await service.getTopProducts({});
 
+      expect(prisma.orderItem.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ variantId: { in: ['v1'] } }) }),
+      );
       expect(result).toEqual([
         { variant_id: 'v1', product_name: 'Napolitana', variant_name: 'Familiar', category: 'pizza', qty: 3, revenue: 140 },
       ]);
+    });
+
+    it('no consulta detalle si no hay ventas en el período (groupBy vacío)', async () => {
+      prisma.orderItem.groupBy.mockResolvedValue([]);
+
+      const result = await service.getTopProducts({});
+
+      expect(result).toEqual([]);
+      expect(prisma.orderItem.findMany).not.toHaveBeenCalled();
+    });
+
+    it('el ranking del top 5 lo define el groupBy (LIMIT en la base), no un slice en memoria', async () => {
+      const ranking = Array.from({ length: 5 }, (_, i) => ({ variantId: `v${i}`, _sum: { qty: 8 - i } }));
+      prisma.orderItem.groupBy.mockResolvedValue(ranking);
+      prisma.orderItem.findMany.mockResolvedValue(
+        ranking.map(({ variantId }, i) => ({
+          qty: 8 - i,
+          unitPrice: decimal(10),
+          discountApplied: decimal(0),
+          variant: { id: variantId, name: 'Única', product: { name: `Producto ${i}`, category: 'pizza' } },
+        })),
+      );
+
+      const result = await service.getTopProducts({});
+
+      expect(prisma.orderItem.groupBy).toHaveBeenCalledWith(
+        expect.objectContaining({ by: ['variantId'], take: 5, orderBy: { _sum: { qty: 'desc' } } }),
+      );
+      expect(result).toHaveLength(5);
+      expect(result.map((r) => r.variant_id)).toEqual(['v0', 'v1', 'v2', 'v3', 'v4']);
     });
   });
 

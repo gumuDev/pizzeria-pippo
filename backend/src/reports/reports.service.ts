@@ -100,8 +100,22 @@ export class ReportsService {
   }
 
   async getTopProducts(query: ReportQueryDto): Promise<TopProductResult[]> {
-    const items = await this.prisma.orderItem.findMany({
+    // Rank in the DB first (GROUP BY + LIMIT) instead of pulling every order_item
+    // of the period into Node just to sort and slice — this is what made the
+    // endpoint the slowest of the reports page (it scaled with total monthly
+    // sales, not with the 5 rows actually shown).
+    const topVariants = await this.prisma.orderItem.groupBy({
+      by: ['variantId'],
       where: { order: this.buildWhere(query) },
+      _sum: { qty: true },
+      orderBy: { _sum: { qty: 'desc' } },
+      take: 5,
+    });
+    if (topVariants.length === 0) return [];
+
+    const variantIds = topVariants.map((v) => v.variantId);
+    const items = await this.prisma.orderItem.findMany({
+      where: { order: this.buildWhere(query), variantId: { in: variantIds } },
       include: { variant: { include: { product: true } } },
     });
 
@@ -122,7 +136,8 @@ export class ReportsService {
       map[variant.id].revenue += item.unitPrice.toNumber() * item.qty - item.discountApplied.toNumber();
     }
 
-    return Object.values(map).sort((a, b) => b.qty - a.qty);
+    // groupBy already ranked these — keep that order instead of re-sorting.
+    return variantIds.map((id) => map[id]).filter(Boolean);
   }
 
   async getCashiers(query: CashierReportQueryDto): Promise<CashierReportResult[]> {
