@@ -31,8 +31,15 @@ export function StockPurchaseForm({ form, ingredients, isNewIngredient, onIngred
             onChange={onIngredientChange}
           />
         </Form.Item>
-        <Form.Item label="Cantidad" name="quantity" rules={[{ required: true, message: "Requerido" }]}>
-          <InputNumber min={0.001} style={{ width: "100%" }} placeholder="Ej: 500" />
+        <Form.Item
+          label="Cantidad"
+          name="quantity"
+          rules={[
+            { required: true, message: "Requerido" },
+            { type: "number", min: 0.001, message: "La cantidad debe ser mayor a 0" },
+          ]}
+        >
+          <InputNumber style={{ width: "100%" }} placeholder="Ej: 500" />
         </Form.Item>
         {isNewIngredient && (
           <Form.Item

@@ -71,8 +71,11 @@ export default function WarehousePurchasePage() {
         )}
 
         <Form.Item label={`Cantidad a ingresar${selectedUnit ? ` (${selectedUnit})` : ""}`} name="quantity"
-          rules={[{ required: true, message: "Ingresá la cantidad" }]}>
-          <InputNumber min={0.001} style={{ width: "100%" }} placeholder={isIngredient ? "Ej: 5000" : "Ej: 24"} addonAfter={selectedUnit || undefined} />
+          rules={[
+            { required: true, message: "Ingresá la cantidad" },
+            { type: "number", min: 0.001, message: "La cantidad debe ser mayor a 0" },
+          ]}>
+          <InputNumber style={{ width: "100%" }} placeholder={isIngredient ? "Ej: 5000" : "Ej: 24"} addonAfter={selectedUnit || undefined} />
         </Form.Item>
 
         <Form.Item label={`Stock mínimo${selectedUnit ? ` (${selectedUnit})` : ""}`} name="min_quantity"
