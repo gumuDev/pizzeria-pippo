@@ -12,4 +12,5 @@ export interface DayOrderResult {
     qty: number;
     product_variants: { name: string; products: { name: string } | null } | null;
   }[];
+  payments: { method: string; amount: number }[];
 }

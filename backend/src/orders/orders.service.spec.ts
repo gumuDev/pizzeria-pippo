@@ -215,6 +215,7 @@ describe('OrdersService', () => {
           orderType: 'dine_in',
           cancelledAt: null,
           items: [{ qty: 1, variant: { name: 'Familiar', product: { name: 'Hawaiana' } } }],
+          payments: [],
         },
         {
           id: 'o2',
@@ -226,6 +227,7 @@ describe('OrdersService', () => {
           orderType: 'takeaway',
           cancelledAt: new Date('2026-07-05T17:05:00Z'),
           items: [],
+          payments: [],
         },
       ]);
 
@@ -245,6 +247,7 @@ describe('OrdersService', () => {
         order_type: 'dine_in',
         cancelled_at: null,
         order_items: [{ qty: 1, product_variants: { name: 'Familiar', products: { name: 'Hawaiana' } } }],
+        payments: [],
       });
       expect(result[1].cancelled_at).toBe('2026-07-05T17:05:00.000Z');
     });
@@ -255,6 +258,33 @@ describe('OrdersService', () => {
       await service.getDayOrders('b1');
 
       expect(prisma.order.findMany).toHaveBeenCalled();
+    });
+
+    it('incluye el desglose de payments en una orden con pago mixto', async () => {
+      prisma.order.findMany.mockResolvedValue([
+        {
+          id: 'o3',
+          dailyNumber: 6,
+          createdAt: new Date('2026-07-05T19:00:00Z'),
+          total: decimal(30),
+          kitchenStatus: 'ready',
+          paymentMethod: 'mixto',
+          orderType: 'dine_in',
+          cancelledAt: null,
+          items: [],
+          payments: [
+            { method: 'efectivo', amount: decimal(10) },
+            { method: 'qr', amount: decimal(20) },
+          ],
+        },
+      ]);
+
+      const result = await service.getDayOrders('b1', '2026-07-05');
+
+      expect(result[0].payments).toEqual([
+        { method: 'efectivo', amount: 10 },
+        { method: 'qr', amount: 20 },
+      ]);
     });
   });
 

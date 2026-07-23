@@ -24,8 +24,19 @@ export function DaySummaryPanel({ dayOrders }: Props) {
   const readyCount = activeOrders.filter((o) => o.kitchen_status === "ready").length;
   const dineInCount = activeOrders.filter((o) => o.order_type === "dine_in").length;
   const takeawayCount = activeOrders.filter((o) => o.order_type === "takeaway").length;
-  const efectivoTotal = activeOrders.filter((o) => o.payment_method === "efectivo").reduce((s, o) => s + Number(o.total), 0);
-  const qrTotal = activeOrders.filter((o) => o.payment_method === "qr").reduce((s, o) => s + Number(o.total), 0);
+  // Las órdenes "mixto" no calzan con ningún filtro de método puntual — sus
+  // dos piernas (efectivo/qr) viven en order.payments y hay que sumarlas
+  // ahí, si no quedan afuera de las 3 tarjetas de método pese a contar en
+  // el total del día.
+  const mixedOrders = activeOrders.filter((o) => o.payment_method === "mixto");
+  const sumMixedLeg = (method: "efectivo" | "qr") =>
+    mixedOrders
+      .flatMap((o) => o.payments ?? [])
+      .filter((p) => p.method === method)
+      .reduce((s, p) => s + p.amount, 0);
+
+  const efectivoTotal = activeOrders.filter((o) => o.payment_method === "efectivo").reduce((s, o) => s + Number(o.total), 0) + sumMixedLeg("efectivo");
+  const qrTotal = activeOrders.filter((o) => o.payment_method === "qr").reduce((s, o) => s + Number(o.total), 0) + sumMixedLeg("qr");
   const onlineTotal = activeOrders.filter((o) => o.payment_method === "online").reduce((s, o) => s + Number(o.total), 0);
 
   return (

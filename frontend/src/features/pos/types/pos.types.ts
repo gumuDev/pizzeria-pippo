@@ -58,6 +58,7 @@ export interface DayOrder {
     qty: number;
     product_variants: { name: string; products: { name: string } | null } | null;
   }[];
+  payments: SplitPayment[];
 }
 
 export interface TicketData {

@@ -182,6 +182,7 @@ export class OrdersService {
       orderBy: { createdAt: 'desc' },
       include: {
         items: { include: { variant: { include: { product: true } } } },
+        payments: true,
       },
     });
 
@@ -201,6 +202,7 @@ export class OrdersService {
           ? { name: item.variant.name, products: item.variant.product ? { name: item.variant.product.name } : null }
           : null,
       })),
+      payments: order.payments.map((p) => ({ method: p.method, amount: p.amount.toNumber() })),
     }));
   }
 
