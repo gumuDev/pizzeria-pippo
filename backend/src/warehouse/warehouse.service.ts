@@ -17,7 +17,7 @@ export class WarehouseService {
   async list(query: ListWarehouseStockQueryDto): Promise<WarehouseStockListResult> {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
-    const where = query.ingredientId ? { ingredientId: query.ingredientId } : {};
+    const where = { ...(query.ingredientId ? { ingredientId: query.ingredientId } : {}), ingredient: { isActive: true } };
 
     const [rows, total] = await Promise.all([
       this.prisma.warehouseStock.findMany({

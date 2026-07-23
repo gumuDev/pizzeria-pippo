@@ -73,7 +73,7 @@ export function ProductsMobileList({ products, loading, total, page, pageSize, o
                   <Tag color={product.product_type === "resale" ? "purple" : "orange"} style={{ margin: 0 }}>
                     {product.product_type === "resale" ? "Reventa" : "Elaboración"}
                   </Tag>
-                  {product.product_variants?.map((v) => (
+                  {product.product_variants?.filter((v) => v.is_active).map((v) => (
                     <Tag key={v.id} style={{ margin: 0 }}>{v.name}</Tag>
                   ))}
                 </div>

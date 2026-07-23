@@ -86,7 +86,7 @@ export function ProductsDesktopTable({ products, loading, page, pageSize, total,
       key: "variants",
       render: (_: unknown, record: Product) => (
         <Space>
-          {record.product_variants?.map((v) => <Tag key={v.id}>{v.name}</Tag>)}
+          {record.product_variants?.filter((v) => v.is_active).map((v) => <Tag key={v.id}>{v.name}</Tag>)}
         </Space>
       ),
     },

@@ -34,7 +34,7 @@ describe('StockService', () => {
       await service.list({ branchId: 'b1' });
 
       expect(prisma.branchStock.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { branchId: 'b1' } }),
+        expect.objectContaining({ where: { branchId: 'b1', ingredient: { isActive: true } } }),
       );
     });
 

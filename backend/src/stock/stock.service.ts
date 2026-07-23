@@ -15,7 +15,7 @@ export class StockService {
   async list(query: ListStockQueryDto): Promise<StockListResult> {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
-    const where = query.branchId ? { branchId: query.branchId } : {};
+    const where = { ...(query.branchId ? { branchId: query.branchId } : {}), ingredient: { isActive: true } };
 
     const [rows, total] = await Promise.all([
       this.prisma.branchStock.findMany({
@@ -32,7 +32,7 @@ export class StockService {
   }
 
   async getAlerts(query: ListAlertsQueryDto): Promise<StockRow[]> {
-    const where = query.branchId ? { branchId: query.branchId } : {};
+    const where = { ...(query.branchId ? { branchId: query.branchId } : {}), ingredient: { isActive: true } };
     const rows = await this.prisma.branchStock.findMany({
       where,
       include: { ingredient: true, branch: true },
