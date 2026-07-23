@@ -2,7 +2,8 @@
 
 import { Button, Select, InputNumber, Typography } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
-import type { Ingredient, Variant, RecipeItem } from "../types/product.types";
+import { useIngredientSearch } from "../hooks/useIngredientSearch";
+import type { Variant, RecipeItem, Ingredient } from "../types/product.types";
 
 const { Text } = Typography;
 
@@ -14,10 +15,9 @@ const CONDITION_OPTIONS = [
 
 interface Props {
   variants: Variant[];
-  ingredients: Ingredient[];
   saving: boolean;
   editing: boolean;
-  onAddRecipeItem: (variantIndex: number, ingredientId?: string) => void;
+  onAddRecipeItem: (variantIndex: number, ingredient?: Ingredient) => void;
   onUpdateRecipeItem: (variantIndex: number, recipeIndex: number, field: keyof RecipeItem, value: string | number) => void;
   onRemoveRecipeItem: (variantIndex: number, recipeIndex: number) => void;
   onPrev: () => void;
@@ -28,7 +28,7 @@ interface Props {
 // (ver ProductFormPage: isMade && currentStep === 2) — no hace falta
 // preguntar de nuevo si usa ingredientes, ya se eligió en el paso 1.
 export function ProductStepRecipes({
-  variants, ingredients, saving, editing,
+  variants, saving, editing,
   onAddRecipeItem, onUpdateRecipeItem, onRemoveRecipeItem,
   onPrev, onSave,
 }: Props) {
@@ -40,7 +40,6 @@ export function ProductStepRecipes({
             key={vi}
             variant={variant}
             variantIndex={vi}
-            ingredients={ingredients}
             onAddRecipeItem={onAddRecipeItem}
             onUpdateRecipeItem={onUpdateRecipeItem}
             onRemoveRecipeItem={onRemoveRecipeItem}
@@ -61,18 +60,19 @@ export function ProductStepRecipes({
 interface CardProps {
   variant: Variant;
   variantIndex: number;
-  ingredients: Ingredient[];
-  onAddRecipeItem: (variantIndex: number, ingredientId?: string) => void;
+  onAddRecipeItem: (variantIndex: number, ingredient?: Ingredient) => void;
   onUpdateRecipeItem: (variantIndex: number, recipeIndex: number, field: keyof RecipeItem, value: string | number) => void;
   onRemoveRecipeItem: (variantIndex: number, recipeIndex: number) => void;
 }
 
-function VariantRecipeCard({ variant, variantIndex, ingredients, onAddRecipeItem, onUpdateRecipeItem, onRemoveRecipeItem }: CardProps) {
+function VariantRecipeCard({ variant, variantIndex, onAddRecipeItem, onUpdateRecipeItem, onRemoveRecipeItem }: CardProps) {
   const usedIngredientIds = variant.recipes.map((r) => r.ingredient_id);
+  const { options, loading, search } = useIngredientSearch();
 
   const handleAddIngredient = (ingredientId: string | null) => {
     if (!ingredientId) return;
-    onAddRecipeItem(variantIndex, ingredientId);
+    const ingredient = options.find((i) => i.id === ingredientId);
+    onAddRecipeItem(variantIndex, ingredient);
   };
 
   return (
@@ -88,49 +88,47 @@ function VariantRecipeCard({ variant, variantIndex, ingredients, onAddRecipeItem
         {variant.recipes.length === 0 && (
           <Text type="secondary" style={{ fontSize: 12, fontStyle: "italic" }}>Sin ingredientes aún</Text>
         )}
-        {variant.recipes.map((recipe, ri) => {
-          const ingredient = ingredients.find((i) => i.id === recipe.ingredient_id);
-          return (
-            <div key={ri} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Text style={{ flex: 1, fontSize: 12, minWidth: 0, wordBreak: "break-word" }}>
-                {ingredient ? `${ingredient.name} (${ingredient.unit})` : "—"}
-              </Text>
-              <InputNumber
-                value={recipe.quantity}
-                onChange={(val) => onUpdateRecipeItem(variantIndex, ri, "quantity", val ?? 0)}
-                style={{ width: 70, flexShrink: 0 }}
-                min={0}
-                size="small"
-              />
-              <Select
-                value={recipe.apply_condition ?? "always"}
-                options={CONDITION_OPTIONS}
-                onChange={(val) => onUpdateRecipeItem(variantIndex, ri, "apply_condition", val)}
-                style={{ width: 110, flexShrink: 0 }}
-                size="small"
-              />
-              <Button
-                type="text"
-                danger
-                size="small"
-                icon={<DeleteOutlined />}
-                onClick={() => onRemoveRecipeItem(variantIndex, ri)}
-              />
-            </div>
-          );
-        })}
+        {variant.recipes.map((recipe, ri) => (
+          <div key={ri} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Text style={{ flex: 1, fontSize: 12, minWidth: 0, wordBreak: "break-word" }}>
+              {recipe.ingredients ? `${recipe.ingredients.name} (${recipe.ingredients.unit})` : "—"}
+            </Text>
+            <InputNumber
+              value={recipe.quantity}
+              onChange={(val) => onUpdateRecipeItem(variantIndex, ri, "quantity", val ?? 0)}
+              style={{ width: 70, flexShrink: 0 }}
+              min={0}
+              size="small"
+            />
+            <Select
+              value={recipe.apply_condition ?? "always"}
+              options={CONDITION_OPTIONS}
+              onChange={(val) => onUpdateRecipeItem(variantIndex, ri, "apply_condition", val)}
+              style={{ width: 110, flexShrink: 0 }}
+              size="small"
+            />
+            <Button
+              type="text"
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              onClick={() => onRemoveRecipeItem(variantIndex, ri)}
+            />
+          </div>
+        ))}
       </div>
 
-      {/* Add ingredient */}
+      {/* Add ingredient — server-side search, only the top 10 matches are ever loaded */}
       <Select
         placeholder={<><PlusOutlined style={{ marginRight: 4 }} />Agregar insumo...</>}
         showSearch
         style={{ width: "100%" }}
         size="small"
-        filterOption={(input, option) =>
-          (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-        }
-        options={ingredients
+        filterOption={false}
+        loading={loading}
+        notFoundContent={loading ? "Buscando..." : "Sin resultados"}
+        onSearch={search}
+        options={options
           .filter((i) => !usedIngredientIds.includes(i.id))
           .map((i) => ({ value: i.id, label: `${i.name} (${i.unit})` }))}
         value={null}

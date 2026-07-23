@@ -8,7 +8,7 @@ import { ProductStepGeneral } from "./ProductStepGeneral";
 import { ProductStepVariants } from "./ProductStepVariants";
 import { ProductStepRecipes } from "./ProductStepRecipes";
 import { useProductForm } from "../hooks/useProductForm";
-import type { Product, Ingredient } from "../types/product.types";
+import type { Product } from "../types/product.types";
 
 const { Title } = Typography;
 
@@ -25,10 +25,9 @@ const STEPS_WITHOUT_RECIPES = [
 
 interface Props {
   editing?: Product;
-  ingredients: Ingredient[];
 }
 
-export function ProductFormPage({ editing, ingredients }: Props) {
+export function ProductFormPage({ editing }: Props) {
   const router = useRouter();
   const form = useProductForm(() => router.push("/products"));
   const isMade = form.step1Data.product_type === "made";
@@ -94,7 +93,6 @@ export function ProductFormPage({ editing, ingredients }: Props) {
       {isMade && form.currentStep === 2 && (
         <ProductStepRecipes
           variants={form.variants}
-          ingredients={ingredients}
           saving={form.saving}
           editing={!!editing}
           onAddRecipeItem={form.addRecipeItem}

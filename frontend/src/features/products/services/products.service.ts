@@ -141,7 +141,9 @@ export const ProductsService = {
       .filter((v) => v.is_active !== false)
       .map((v) => ({
         ...v,
-        recipes: v.recipes.filter((r) => r.ingredient_id && r.quantity > 0),
+        recipes: v.recipes
+          .filter((r) => r.ingredient_id && r.quantity > 0)
+          .map(({ ingredient_id, quantity, apply_condition }) => ({ ingredient_id, quantity, apply_condition })),
       }));
     return {
       name: step1Data.name,

@@ -6,6 +6,9 @@ export interface RecipeItem {
   ingredient_id: string;
   quantity: number;
   apply_condition: RecipeApplyCondition;
+  // Denormalized display data, present only on read responses that embed it
+  // (e.g. GET /products/:id/variants) — never sent by the client on write.
+  ingredients?: { name: string; unit: string };
 }
 
 export interface BranchPrice {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import type { Variant, RecipeItem, VariantTypeOption } from "../types/product.types";
+import type { Variant, RecipeItem, VariantTypeOption, Ingredient } from "../types/product.types";
 
 const EMPTY_VARIANT: Variant = { name: "Unidad", base_price: 0, branch_prices: [], recipes: [] };
 
@@ -75,10 +75,15 @@ export function useProductVariants(variantTypeOptions: VariantTypeOption[]) {
     setVariants((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const addRecipeItem = (variantIndex: number, ingredientId = "") => {
+  const addRecipeItem = (variantIndex: number, ingredient?: Ingredient) => {
     updateVariant(variantIndex, "recipes", [
       ...variants[variantIndex].recipes,
-      { ingredient_id: ingredientId, quantity: 0, apply_condition: "always" as const },
+      {
+        ingredient_id: ingredient?.id ?? "",
+        quantity: 0,
+        apply_condition: "always" as const,
+        ingredients: ingredient ? { name: ingredient.name, unit: ingredient.unit } : undefined,
+      },
     ]);
   };
 

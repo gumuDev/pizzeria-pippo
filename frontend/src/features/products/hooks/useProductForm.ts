@@ -53,6 +53,7 @@ export function useProductForm(onSuccess: () => void) {
         ingredient_id: r.ingredient_id,
         quantity: r.quantity,
         apply_condition: r.apply_condition ?? "always",
+        ingredients: r.ingredients,
       })),
       is_active: v.is_active ?? true,
     }));
