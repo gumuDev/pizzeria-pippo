@@ -4,7 +4,7 @@ import { nestFetch } from "@/lib/nestFetch";
 import { API_ENDPOINTS } from "@/lib/api-endpoints";
 import { todayInBolivia } from "@/lib/timezone";
 import { BranchesService } from "@/features/branches/services/branches.service";
-import type { Identity, Product, DayOrder, OrderType } from "../types/pos.types";
+import type { Identity, Product, DayOrder, OrderType, PaymentMethod, SplitPayment } from "../types/pos.types";
 import type { Promotion, DiscountedItem, FlavorItem } from "@/lib/promotions";
 
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL;
@@ -61,11 +61,12 @@ export const PosService = {
     branchId: string,
     discountedCart: DiscountedItem[],
     total: number,
-    paymentMethod: "efectivo" | "qr" | "online" | null,
+    paymentMethod: PaymentMethod,
     paymentProvider: string | null,
     orderType: OrderType,
     signal?: AbortSignal,
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    payments?: SplitPayment[]
   ): Promise<{ ok: boolean; order_id?: string; daily_number?: number; error?: string }> {
     try {
       const res = await nestFetch(API_ENDPOINTS.orders.base, {
@@ -76,6 +77,7 @@ export const PosService = {
           total,
           payment_method: paymentMethod,
           payment_provider: paymentProvider,
+          payments: payments ?? null,
           order_type: orderType,
           idempotency_key: idempotencyKey ?? null,
           // The server recalculates prices, promos and physical units from

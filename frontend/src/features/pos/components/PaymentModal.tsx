@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Modal, Button, Checkbox, Typography } from "antd";
+import { Modal, Button, Checkbox, InputNumber, Typography } from "antd";
 import { CheckCircleFilled, ArrowRightOutlined } from "@ant-design/icons";
 import { PAYMENT_PROVIDERS } from "@pippo/shared";
+import { useIsMobile } from "@/lib/useIsMobile";
+import type { PaymentMethod, SplitPayment } from "../types/pos.types";
 
 const { Text } = Typography;
 
@@ -12,13 +14,17 @@ const { Text } = Typography;
 const ONLINE_PROVIDER = "pedidos_ya" as const;
 
 type OrderType = "dine_in" | "takeaway";
-type PaymentMethod = "efectivo" | "qr" | "online" | null;
 
 interface Props {
   open: boolean;
   total: number;
   onClose: () => void;
-  onConfirm: (orderType: OrderType, paymentMethod: PaymentMethod, paymentProvider: string | null) => void;
+  onConfirm: (
+    orderType: OrderType,
+    paymentMethod: PaymentMethod,
+    paymentProvider: string | null,
+    payments: SplitPayment[] | null,
+  ) => void;
 }
 
 interface OptionCardProps {
@@ -32,27 +38,32 @@ interface OptionCardProps {
 function OptionCard({ selected, emoji, label, accent, onClick }: OptionCardProps) {
   const colors =
     accent === "orange"
-      ? { border: "#f97316", bg: "#fff7ed", text: "#ea580c" }
-      : { border: "#3b82f6", bg: "#eff6ff", text: "#2563eb" };
+      ? { border: "#f97316", bg: "#fff7ed", text: "#ea580c", badge: "#ffedd5" }
+      : { border: "#3b82f6", bg: "#eff6ff", text: "#2563eb", badge: "#dbeafe" };
   return (
     <button
       onClick={onClick}
-      className="flex-1 rounded-lg py-3 px-2 text-center cursor-pointer relative"
+      className="flex-1 rounded-xl py-4 px-3 text-center cursor-pointer relative"
       style={{
-        border: selected ? `2px solid ${colors.border}` : "1px solid #d1d5db",
+        border: selected ? `2px solid ${colors.border}` : "1px solid #e5e7eb",
         background: selected ? colors.bg : "#fff",
         transition: "background 0.15s, border-color 0.15s",
       }}
     >
       {selected && (
         <CheckCircleFilled
-          style={{ position: "absolute", top: 6, right: 8, color: colors.text, fontSize: 16 }}
+          style={{ position: "absolute", top: 8, right: 10, color: colors.text, fontSize: 18 }}
         />
       )}
-      <div className="text-2xl">{emoji}</div>
       <div
-        className="text-sm mt-1"
-        style={{ color: selected ? colors.text : "#374151", fontWeight: selected ? 600 : 400 }}
+        className="mx-auto flex items-center justify-center rounded-lg"
+        style={{ width: 44, height: 44, background: colors.badge, fontSize: 22 }}
+      >
+        {emoji}
+      </div>
+      <div
+        className="text-sm mt-2"
+        style={{ color: selected ? colors.text : "#374151", fontWeight: selected ? 600 : 500 }}
       >
         {label}
       </div>
@@ -61,14 +72,19 @@ function OptionCard({ selected, emoji, label, accent, onClick }: OptionCardProps
 }
 
 export function PaymentModal({ open, total, onClose, onConfirm }: Props) {
+  const isMobile = useIsMobile();
   const [orderType, setOrderType] = useState<OrderType | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
   const [onlinePayment, setOnlinePayment] = useState(false);
+  const [cashAmount, setCashAmount] = useState(0);
+
+  const qrAmount = Math.round((total - cashAmount) * 100) / 100;
 
   const reset = () => {
     setOrderType(null);
     setPaymentMethod(null);
     setOnlinePayment(false);
+    setCashAmount(0);
   };
 
   const handleClose = () => {
@@ -82,106 +98,194 @@ export function PaymentModal({ open, total, onClose, onConfirm }: Props) {
     setPaymentMethod(null);
   };
 
+  const handleSelectMixto = () => {
+    if (paymentMethod === "mixto") {
+      setPaymentMethod(null);
+      return;
+    }
+    setPaymentMethod("mixto");
+    setCashAmount(Math.round((total / 2) * 100) / 100);
+  };
+
+  const mixtoValid = paymentMethod !== "mixto" || (cashAmount > 0 && qrAmount > 0);
+
   const handleConfirm = () => {
-    if (!orderType) return;
-    onConfirm(orderType, onlinePayment ? "online" : paymentMethod, onlinePayment ? ONLINE_PROVIDER : null);
+    if (!orderType || !mixtoValid) return;
+    const payments: SplitPayment[] | null =
+      paymentMethod === "mixto"
+        ? [
+            { method: "efectivo", amount: cashAmount },
+            { method: "qr", amount: qrAmount },
+          ]
+        : null;
+    onConfirm(orderType, onlinePayment ? "online" : paymentMethod, onlinePayment ? ONLINE_PROVIDER : null, payments);
     reset();
   };
+
+  const totalBlock = (
+    <div>
+      <Text type="secondary" className="text-xs block" style={{ letterSpacing: 1 }}>TOTAL DEL PEDIDO</Text>
+      <Text strong className="!text-orange-700" style={{ fontSize: 34, lineHeight: 1.2 }}>Bs {total.toFixed(2)}</Text>
+    </div>
+  );
+
+  const onlineShortcut = (
+    <div className="flex items-start gap-2.5 bg-blue-50 rounded-lg px-3 py-2">
+      <Checkbox checked={onlinePayment} onChange={(e) => handleToggleOnlinePayment(e.target.checked)} className="mt-0.5" />
+      <div>
+        <Text strong className="block text-sm">
+          Pedido de {PAYMENT_PROVIDERS[ONLINE_PROVIDER].label} (pago ya recibido)
+        </Text>
+        <Text type="secondary" className="text-xs block">
+          Se registra para llevar, con pago online — sin pasar por validación de QR.
+        </Text>
+      </div>
+    </div>
+  );
+
+  const orderTypeSection = (
+    <div style={onlinePayment ? { opacity: 0.4, pointerEvents: "none" } : undefined}>
+      <div className="flex items-center gap-2 mb-2">
+        <div style={{ width: 4, height: 16, background: "#ea580c", borderRadius: 2 }} />
+        <Text strong>¿Cómo va el pedido? <Text type="danger">*</Text></Text>
+      </div>
+      <div className="flex gap-3">
+        <OptionCard
+          selected={orderType === "dine_in"}
+          emoji="🍽️"
+          label="Comer aquí"
+          accent="orange"
+          onClick={() => setOrderType("dine_in")}
+        />
+        <OptionCard
+          selected={orderType === "takeaway"}
+          emoji="🥡"
+          label="Para llevar"
+          accent="orange"
+          onClick={() => setOrderType("takeaway")}
+        />
+      </div>
+      {!orderType && (
+        <Text type="secondary" className="text-xs mt-1 block">Seleccioná una opción para continuar</Text>
+      )}
+    </div>
+  );
+
+  const paymentMethodSection = (
+    <div style={onlinePayment ? { opacity: 0.4, pointerEvents: "none" } : undefined}>
+      <div className="flex justify-between items-center mb-2">
+        <div className="flex items-center gap-2">
+          <div style={{ width: 4, height: 16, background: "#2563eb", borderRadius: 2 }} />
+          <Text strong>¿Cómo pagó el cliente?</Text>
+        </div>
+        <Text type="secondary" className="text-xs">(opcional)</Text>
+      </div>
+      <div className="flex gap-3">
+        <OptionCard
+          selected={paymentMethod === "efectivo"}
+          emoji="💵"
+          label="Efectivo"
+          accent="blue"
+          onClick={() => setPaymentMethod(paymentMethod === "efectivo" ? null : "efectivo")}
+        />
+        <OptionCard
+          selected={paymentMethod === "qr"}
+          emoji="📱"
+          label="QR"
+          accent="blue"
+          onClick={() => setPaymentMethod(paymentMethod === "qr" ? null : "qr")}
+        />
+        <OptionCard
+          selected={paymentMethod === "mixto"}
+          emoji="🔀"
+          label="Mixto"
+          accent="blue"
+          onClick={handleSelectMixto}
+        />
+      </div>
+      <Text type="secondary" className="text-xs mt-1 block">Toca de nuevo para quitar la selección</Text>
+
+      {paymentMethod === "mixto" && (
+        <div className="mt-3 bg-gray-50 rounded-lg p-3">
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Text type="secondary" className="text-xs block mb-1" style={{ letterSpacing: 0.5 }}>EFECTIVO RECIBIDO</Text>
+              <InputNumber
+                value={cashAmount}
+                min={0}
+                max={total}
+                style={{ width: "100%" }}
+                onChange={(value) => setCashAmount(Math.min(total, Math.max(0, value ?? 0)))}
+              />
+            </div>
+            <div className="flex-1">
+              <Text type="secondary" className="text-xs block mb-1" style={{ letterSpacing: 0.5 }}>RESTANTE QR</Text>
+              <div style={{ height: 32, display: "flex", alignItems: "center" }}>
+                <Text strong className="text-base">Bs {qrAmount.toFixed(2)}</Text>
+              </div>
+            </div>
+          </div>
+          {!mixtoValid && (
+            <Text type="danger" className="text-xs mt-2 block">Ambos montos deben ser mayores a 0</Text>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <Modal
       title={
-        <div>
-          <div>Tipo de pedido y pago</div>
-          <Text type="secondary" className="text-xs font-normal">Paso 1 de 2</Text>
+        <div className="flex items-center justify-between pr-6">
+          <span>Tipo de pedido y pago</span>
+          <span
+            className="text-xs font-normal"
+            style={{ background: "#fff7ed", color: "#ea580c", borderRadius: 999, padding: "2px 10px" }}
+          >
+            PASO 1 DE 2
+          </span>
         </div>
       }
       open={open}
       onCancel={handleClose}
       footer={null}
-      width={400}
+      width={isMobile ? 420 : 720}
     >
-      <div className="flex flex-col gap-4 mt-3">
-        {/* Total — the cashier reads it out loud when asking for payment */}
-        <div className="flex justify-between items-center bg-orange-50 rounded-lg px-4 py-2.5">
-          <Text className="!text-orange-700">Total del pedido</Text>
-          <Text strong className="!text-orange-700 text-2xl">Bs {total.toFixed(2)}</Text>
+      {isMobile ? (
+        <div className="flex flex-col gap-3 mt-3">
+          <div className="bg-orange-50 rounded-lg px-4 py-3">{totalBlock}</div>
+          {onlineShortcut}
+          {orderTypeSection}
+          {paymentMethodSection}
         </div>
-
-        {/* Online payment shortcut — skips order-type/payment-method pickers and the QR validation step */}
-        <div className="flex items-start gap-2.5 bg-blue-50 rounded-lg px-3 py-2.5">
-          <Checkbox checked={onlinePayment} onChange={(e) => handleToggleOnlinePayment(e.target.checked)} className="mt-0.5" />
-          <div>
-            <Text strong className="block text-sm">
-              Pedido de {PAYMENT_PROVIDERS[ONLINE_PROVIDER].label} (pago ya recibido)
-            </Text>
-            <Text type="secondary" className="text-xs block">
-              Se registra para llevar, con pago online — sin pasar por validación de QR.
-            </Text>
+      ) : (
+        <div className="flex gap-5 mt-3">
+          <div className="flex flex-col gap-3" style={{ width: 200, flexShrink: 0, borderRight: "1px solid #e5e7eb", paddingRight: 20 }}>
+            {totalBlock}
+            {onlineShortcut}
+          </div>
+          <div className="flex-1 flex flex-col gap-3">
+            {orderTypeSection}
+            {paymentMethodSection}
           </div>
         </div>
+      )}
 
-        {/* Order type — required */}
-        <div style={onlinePayment ? { opacity: 0.4, pointerEvents: "none" } : undefined}>
-          <Text strong className="block mb-2">¿Cómo va el pedido? <Text type="danger">*</Text></Text>
-          <div className="flex gap-3">
-            <OptionCard
-              selected={orderType === "dine_in"}
-              emoji="🍽️"
-              label="Comer aquí"
-              accent="orange"
-              onClick={() => setOrderType("dine_in")}
-            />
-            <OptionCard
-              selected={orderType === "takeaway"}
-              emoji="🥡"
-              label="Para llevar"
-              accent="orange"
-              onClick={() => setOrderType("takeaway")}
-            />
-          </div>
-          {!orderType && (
-            <Text type="secondary" className="text-xs mt-1 block">Seleccioná una opción para continuar</Text>
-          )}
-        </div>
-
-        {/* Payment method — optional */}
-        <div style={onlinePayment ? { opacity: 0.4, pointerEvents: "none" } : undefined}>
-          <Text strong className="block mb-2">¿Cómo pagó el cliente? <Text type="secondary" className="font-normal">(opcional)</Text></Text>
-          <div className="flex gap-3">
-            <OptionCard
-              selected={paymentMethod === "efectivo"}
-              emoji="💵"
-              label="Efectivo"
-              accent="blue"
-              onClick={() => setPaymentMethod(paymentMethod === "efectivo" ? null : "efectivo")}
-            />
-            <OptionCard
-              selected={paymentMethod === "qr"}
-              emoji="📱"
-              label="QR"
-              accent="blue"
-              onClick={() => setPaymentMethod(paymentMethod === "qr" ? null : "qr")}
-            />
-          </div>
-          <Text type="secondary" className="text-xs mt-1 block">Toca de nuevo para quitar la selección</Text>
-        </div>
-
-        <Button
-          type="primary"
-          size="large"
-          block
-          disabled={!orderType}
-          onClick={handleConfirm}
-          style={
-            orderType
-              ? { height: 48, fontSize: 16, background: "#ea580c", borderColor: "#ea580c" }
-              : { height: 48, fontSize: 16 }
-          }
-        >
-          Continuar <ArrowRightOutlined />
-        </Button>
-      </div>
+      <Button
+        type="primary"
+        size="large"
+        block
+        disabled={!orderType || !mixtoValid}
+        onClick={handleConfirm}
+        style={{
+          marginTop: 16,
+          ...(orderType
+            ? { height: 48, fontSize: 16, background: "#ea580c", borderColor: "#ea580c" }
+            : { height: 48, fontSize: 16 }),
+        }}
+      >
+        Continuar <ArrowRightOutlined />
+      </Button>
     </Modal>
   );
 }

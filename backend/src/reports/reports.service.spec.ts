@@ -9,6 +9,7 @@ describe('ReportsService', () => {
   let prisma: {
     order: { findMany: jest.Mock; count: jest.Mock };
     orderItem: { findMany: jest.Mock };
+    orderPayment: { findMany: jest.Mock };
     $transaction: jest.Mock;
   };
 
@@ -16,6 +17,7 @@ describe('ReportsService', () => {
     prisma = {
       order: { findMany: jest.fn(), count: jest.fn() },
       orderItem: { findMany: jest.fn() },
+      orderPayment: { findMany: jest.fn() },
       $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
     };
 
@@ -57,7 +59,33 @@ describe('ReportsService', () => {
         efectivo: { total: 100, count: 1 },
         qr: { total: 50, count: 1 },
         online: { total: 30, count: 1 },
+        mixto: { count: 0 },
         sin_especificar: { total: 25, count: 1 },
+      });
+    });
+
+    it('folds split (mixto) orders into the efectivo/qr totals via order_payments', async () => {
+      prisma.order.findMany.mockResolvedValue([
+        { id: 'order-1', total: decimal(100), orderType: 'dine_in', paymentMethod: 'efectivo' },
+        { id: 'order-2', total: decimal(50), orderType: 'takeaway', paymentMethod: 'mixto' },
+      ]);
+      prisma.orderPayment.findMany.mockResolvedValue([
+        { method: 'efectivo', amount: decimal(20) },
+        { method: 'qr', amount: decimal(30) },
+      ]);
+
+      const result = await service.getSales({});
+
+      expect(result.by_payment_method).toEqual({
+        efectivo: { total: 120, count: 1 },
+        qr: { total: 30, count: 0 },
+        online: { total: 0, count: 0 },
+        mixto: { count: 1 },
+        sin_especificar: { total: 0, count: 0 },
+      });
+      expect(prisma.orderPayment.findMany).toHaveBeenCalledWith({
+        where: { orderId: { in: ['order-2'] } },
+        select: { method: true, amount: true },
       });
     });
 
@@ -78,6 +106,7 @@ describe('ReportsService', () => {
           efectivo: { total: 0, count: 0 },
           qr: { total: 0, count: 0 },
           online: { total: 0, count: 0 },
+          mixto: { count: 0 },
           sin_especificar: { total: 0, count: 0 },
         },
       });
@@ -163,6 +192,7 @@ describe('ReportsService', () => {
               variant: { name: 'Familiar', product: { name: 'Napolitana', category: 'pizza' } },
             },
           ],
+          payments: [],
         },
       ]);
       prisma.order.count.mockResolvedValue(1);
@@ -193,6 +223,7 @@ describe('ReportsService', () => {
               product_variants: { name: 'Familiar', products: { name: 'Napolitana', category: 'pizza' } },
             },
           ],
+          payments: [],
         },
       ]);
     });
@@ -212,6 +243,7 @@ describe('ReportsService', () => {
           branch: null,
           cashier: null,
           items: [],
+          payments: [],
         },
       ]);
       prisma.order.count.mockResolvedValue(1);

@@ -69,6 +69,16 @@ function buildOrderColumns(onCancel: (order: Order) => void) {
       render: (m: string | null, o: Order) => {
         if (m === "efectivo") return <Tag color="green">💵 Efectivo</Tag>;
         if (m === "qr") return <Tag color="blue">📱 QR</Tag>;
+        if (m === "mixto") {
+          const breakdown = o.payments
+            .map((p) => `${p.method === "efectivo" ? "💵" : "📱"} Bs ${p.amount.toFixed(2)}`)
+            .join(" + ");
+          return (
+            <Tooltip title={breakdown}>
+              <Tag color="gold">🔀 Mixto</Tag>
+            </Tooltip>
+          );
+        }
         if (m === "online") {
           const known = o.payment_provider
             ? PAYMENT_PROVIDERS[o.payment_provider as keyof typeof PAYMENT_PROVIDERS]

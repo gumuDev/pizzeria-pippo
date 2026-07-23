@@ -14,6 +14,7 @@ import {
 } from 'class-validator';
 import { PAYMENT_PROVIDERS } from '@pippo/shared';
 import { OrderItemInputDto } from './order-item-input.dto';
+import { OrderPaymentInputDto } from './order-payment-input.dto';
 
 export class CreateOrderDto {
   @IsUUID()
@@ -24,12 +25,20 @@ export class CreateOrderDto {
   total!: number;
 
   @IsOptional()
-  @IsIn(['efectivo', 'qr', 'online'])
-  payment_method?: 'efectivo' | 'qr' | 'online' | null;
+  @IsIn(['efectivo', 'qr', 'online', 'mixto'])
+  payment_method?: 'efectivo' | 'qr' | 'online' | 'mixto' | null;
 
   @IsOptional()
   @IsIn(Object.keys(PAYMENT_PROVIDERS))
   payment_provider?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @ValidateNested({ each: true })
+  @Type(() => OrderPaymentInputDto)
+  payments?: OrderPaymentInputDto[] | null;
 
   @IsIn(['dine_in', 'takeaway'])
   order_type!: 'dine_in' | 'takeaway';

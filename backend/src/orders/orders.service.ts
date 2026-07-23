@@ -82,6 +82,19 @@ export class OrdersService {
       throw new ConflictException('Los precios o promociones cambiaron. Actualizá el catálogo e intentá de nuevo.');
     }
 
+    // 4b. Split payment (efectivo + qr) — the two legs must add up to the total and
+    // use different methods; the order itself is stored as payment_method='mixto'.
+    if (dto.payments) {
+      const methods = new Set(dto.payments.map((p) => p.method));
+      if (methods.size !== dto.payments.length) {
+        throw new BadRequestException('El pago mixto no puede repetir el mismo método');
+      }
+      const paymentsSum = round2(dto.payments.reduce((sum, p) => sum + p.amount, 0));
+      if (Math.abs(paymentsSum - serverTotal) > 0.01) {
+        throw new BadRequestException('La suma de los montos del pago mixto no coincide con el total');
+      }
+    }
+
     // 5. Compute stock deductions (pure, unit-tested separately)
     const recipesByVariant: Record<string, RecipeRow[]> = {};
     for (const v of variants) {
@@ -115,8 +128,9 @@ export class OrdersService {
       branch_id: dto.branch_id,
       cashier_id: user.id,
       total: serverTotal,
-      payment_method: dto.payment_method ?? null,
+      payment_method: dto.payments ? 'mixto' : dto.payment_method ?? null,
       payment_provider: dto.payment_provider ?? null,
+      payments: dto.payments ?? [],
       order_type: dto.order_type,
       idempotency_key: dto.idempotency_key ?? null,
       day_start: dateRangeFrom(today),

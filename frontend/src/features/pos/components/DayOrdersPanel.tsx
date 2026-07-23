@@ -57,7 +57,7 @@ export function DayOrdersPanel({ dayOrders, markingReady, onMarkReady, onCancel 
                     <div style={{ flex: 1 }} />
                     <Text strong style={{ color: "#ea580c", fontSize: 14 }}>Bs {Number(order.total).toFixed(2)}</Text>
                     <span style={{ fontSize: 14 }}>
-                      {order.payment_method === "efectivo" ? "💵" : order.payment_method === "qr" ? "📱" : order.payment_method === "online" ? "🌐" : "—"}
+                      {order.payment_method === "efectivo" ? "💵" : order.payment_method === "qr" ? "📱" : order.payment_method === "online" ? "🌐" : order.payment_method === "mixto" ? "🔀" : "—"}
                     </span>
                   </div>
                   {/* Row 2: summary */}
@@ -122,7 +122,7 @@ export function DayOrdersPanel({ dayOrders, markingReady, onMarkReady, onCancel 
                     {order.order_type === "takeaway" ? "🥡 Para llevar" : "🍽️ Local"}
                   </Tag>
                   <span style={{ flexShrink: 0, fontSize: 14 }}>
-                    {order.payment_method === "efectivo" ? "💵" : order.payment_method === "qr" ? "📱" : order.payment_method === "online" ? "🌐" : "—"}
+                    {order.payment_method === "efectivo" ? "💵" : order.payment_method === "qr" ? "📱" : order.payment_method === "online" ? "🌐" : order.payment_method === "mixto" ? "🔀" : "—"}
                   </span>
                 </div>
                 <div style={{ marginLeft: 12, flexShrink: 0, display: "flex", gap: 8, alignItems: "center" }}>

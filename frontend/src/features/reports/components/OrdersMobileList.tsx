@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, Tag, Typography, Collapse, Button } from "antd";
+import { Card, Tag, Tooltip, Typography, Collapse, Button } from "antd";
 import { formatDateTimeBolivia } from "@/lib/timezone";
 import { OrderItemsTable } from "./OrderItemsTable";
 import { OrdersStatsRow } from "./OrdersStatsRow";
@@ -66,6 +66,12 @@ export function OrdersMobileList({ orders, ordersTotal, ordersPage, ordersPageSi
                           ? <Tag color="green" style={{ margin: 0, fontSize: 10 }}>💵</Tag>
                           : order.payment_method === "qr"
                           ? <Tag color="blue" style={{ margin: 0, fontSize: 10 }}>📱</Tag>
+                          : order.payment_method === "mixto"
+                          ? (
+                            <Tooltip title={order.payments.map((p) => `${p.method === "efectivo" ? "💵" : "📱"} Bs ${p.amount.toFixed(2)}`).join(" + ")}>
+                              <Tag color="gold" style={{ margin: 0, fontSize: 10 }}>🔀</Tag>
+                            </Tooltip>
+                          )
                           : order.payment_method === "online"
                           ? <Tag color="geekblue" style={{ margin: 0, fontSize: 10 }}>🌐</Tag>
                           : null}

@@ -72,9 +72,12 @@ export function buildTicketBytes(
     parts.push(encodeLine(line));
   }
   parts.push(CMD.BOLD_OFF);
-  const payment = ticket.paymentMethod
-    ? PAYMENT_METHOD_LABELS[ticket.paymentMethod] ?? ticket.paymentMethod
-    : "-";
+  const payment =
+    ticket.paymentMethod === "mixto" && ticket.payments?.length
+      ? ticket.payments.map((p) => `${PAYMENT_METHOD_LABELS[p.method] ?? p.method} Bs ${p.amount.toFixed(2)}`).join(" + ")
+      : ticket.paymentMethod
+        ? PAYMENT_METHOD_LABELS[ticket.paymentMethod] ?? ticket.paymentMethod
+        : "-";
   parts.push(encodeLine(`Pago: ${payment}`));
 
   // Footer

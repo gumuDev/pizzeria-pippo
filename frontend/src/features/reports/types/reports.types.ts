@@ -13,6 +13,7 @@ export interface SalesSummary {
     efectivo: { total: number; count: number };
     qr: { total: number; count: number };
     online: { total: number; count: number };
+    mixto: { count: number };
     sin_especificar: { total: number; count: number };
   };
 }
@@ -49,6 +50,10 @@ export interface OrderItem {
     products: { name: string; category: string } | null;
   } | null;
 }
+export interface OrderPayment {
+  method: string;
+  amount: number;
+}
 export interface Order {
   id: string;
   daily_number: number;
@@ -56,13 +61,14 @@ export interface Order {
   created_at: string;
   branch_id: string;
   cashier_name: string;
-  payment_method: "efectivo" | "qr" | "online" | null;
+  payment_method: "efectivo" | "qr" | "online" | "mixto" | null;
   payment_provider: string | null;
   order_type: "dine_in" | "takeaway";
   cancelled_at: string | null;
   cancel_reason: string | null;
   branches: { name: string } | null;
   order_items: OrderItem[];
+  payments: OrderPayment[];
 }
 
 export interface ReportFilters {

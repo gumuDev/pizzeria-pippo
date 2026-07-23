@@ -5,7 +5,7 @@ import { message } from "antd";
 import { PosService } from "../services/pos.service";
 import type { usePosCart } from "./usePosCart";
 import type { usePaymentValidation } from "./usePaymentValidation";
-import type { Product, TicketData, OrderType, Variant, PosTab } from "../types/pos.types";
+import type { Product, TicketData, OrderType, Variant, PosTab, PaymentMethod, SplitPayment } from "../types/pos.types";
 import type { CartItem, FlavorItem } from "@/lib/promotions";
 
 interface Params {
@@ -28,8 +28,9 @@ export function usePosPageActions({
   const [variantModal, setVariantModal] = useState<Product | null>(null);
   const [paymentModal, setPaymentModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "qr" | "online" | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
   const [paymentProvider, setPaymentProvider] = useState<string | null>(null);
+  const [payments, setPayments] = useState<SplitPayment[] | null>(null);
   const [ticket, setTicket] = useState<TicketData | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
@@ -68,9 +69,15 @@ export function usePosPageActions({
     }
   };
 
-  const handlePaymentConfirm = (orderType: OrderType, method: "efectivo" | "qr" | "online" | null, provider: string | null) => {
+  const handlePaymentConfirm = (
+    orderType: OrderType,
+    method: PaymentMethod,
+    provider: string | null,
+    splitPayments: SplitPayment[] | null,
+  ) => {
     setPaymentMethod(method);
     setPaymentProvider(provider);
+    setPayments(splitPayments);
     cart.setOrderType(orderType);
     setIdempotencyKey(crypto.randomUUID());
     setPaymentModal(false);
@@ -90,7 +97,7 @@ export function usePosPageActions({
     const timeout = setTimeout(() => controller.abort(), 15000);
     setConfirmLoading(true);
     try {
-      const result = await PosService.confirmSale(branchId, cart.discountedCart, cart.total, paymentMethod, paymentProvider, cart.orderType, controller.signal, idempotencyKey ?? undefined);
+      const result = await PosService.confirmSale(branchId, cart.discountedCart, cart.total, paymentMethod, paymentProvider, cart.orderType, controller.signal, idempotencyKey ?? undefined, payments ?? undefined);
 
       if (result.ok) {
         broadcast("ORDER_COMPLETE");
@@ -98,9 +105,10 @@ export function usePosPageActions({
         setConfirmModal(false);
         setPaymentMethod(null);
         setPaymentProvider(null);
+        setPayments(null);
         setIdempotencyKey(null);
         setActiveTab("sale");
-        setTicket({ orderId: result.order_id!, dailyNumber: result.daily_number!, items: cart.discountedCart, total: cart.total, paymentMethod, paymentProvider, orderType: cart.orderType });
+        setTicket({ orderId: result.order_id!, dailyNumber: result.daily_number!, items: cart.discountedCart, total: cart.total, paymentMethod, paymentProvider, payments, orderType: cart.orderType });
         cart.clearCart();
         fetchDayOrders(branchId);
         refreshProducts();
@@ -135,6 +143,7 @@ export function usePosPageActions({
     confirmModal, setConfirmModal,
     paymentMethod, setPaymentMethod,
     paymentProvider, setPaymentProvider,
+    payments,
     ticket, setTicket,
     confirmLoading,
     validationModalOpen,

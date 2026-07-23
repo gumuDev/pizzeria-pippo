@@ -7,7 +7,9 @@
 
 ## Pendientes de aplicar
 
-Ninguna — todas las migraciones hasta `042` están aplicadas en producción (confirmado 2026-07-15).
+| # | Archivo | Qué hace |
+|---|---------|----------|
+| ⏳ | `044_order_payments_mixed.sql` | Pago mixto en el POS: tabla `order_payments` + `payment_method = 'mixto'` + rewrite de `create_order_atomic` |
 
 ## Aplicadas en producción
 

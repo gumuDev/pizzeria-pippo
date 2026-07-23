@@ -4,14 +4,20 @@ import { Modal, Button, Tag, Typography } from "antd";
 import { ArrowLeftOutlined, CheckOutlined } from "@ant-design/icons";
 import { PAYMENT_PROVIDERS } from "@pippo/shared";
 import type { DiscountedItem } from "@/lib/promotions";
+import type { PaymentMethod, SplitPayment } from "../types/pos.types";
 
 const { Text } = Typography;
 
 type OrderType = "dine_in" | "takeaway";
 
-function paymentLabel(method: "efectivo" | "qr" | "online" | null, provider: string | null): string {
+function paymentLabel(method: PaymentMethod, provider: string | null, payments: SplitPayment[] | null): string {
   if (method === "efectivo") return "💵 Efectivo";
   if (method === "qr") return "📱 QR";
+  if (method === "mixto" && payments?.length) {
+    return payments
+      .map((p) => `${p.method === "efectivo" ? "💵" : "📱"} Bs ${p.amount.toFixed(2)}`)
+      .join(" + ");
+  }
   if (method === "online") {
     const known = provider ? PAYMENT_PROVIDERS[provider as keyof typeof PAYMENT_PROVIDERS] : undefined;
     return known ? `${known.emoji} ${known.label}` : "🌐 Pago online";
@@ -24,8 +30,9 @@ interface Props {
   discountedCart: DiscountedItem[];
   total: number;
   totalDiscount: number;
-  paymentMethod: "efectivo" | "qr" | "online" | null;
+  paymentMethod: PaymentMethod;
   paymentProvider: string | null;
+  payments?: SplitPayment[] | null;
   orderType: OrderType | null;
   loading: boolean;
   onConfirm: () => void;
@@ -33,7 +40,7 @@ interface Props {
   onValidatePayment?: () => void;
 }
 
-export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, paymentMethod, paymentProvider, orderType, loading, onConfirm, onCancel, onValidatePayment }: Props) {
+export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, paymentMethod, paymentProvider, payments, orderType, loading, onConfirm, onCancel, onValidatePayment }: Props) {
   return (
     <Modal
       title={
@@ -78,28 +85,36 @@ export function ConfirmSaleModal({ open, discountedCart, total, totalDiscount, p
     >
       <div className="mt-3">
         {/* Total — what the cashier reads out loud */}
-        <div className="flex justify-between items-center bg-orange-50 rounded-lg px-4 py-3">
-          <Text className="!text-orange-700">Total a cobrar</Text>
-          <Text strong className="!text-orange-700 text-3xl">Bs {total.toFixed(2)}</Text>
-        </div>
-
-        {/* Order type + payment chips — verify before confirming */}
-        <div className="flex gap-2 mt-3">
-          <span className="inline-flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1 text-sm">
-            {orderType === "takeaway" ? "🥡 Para llevar" : "🍽️ Comer aquí"}
-          </span>
-          {paymentMethod && (
-            <span className="inline-flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1 text-sm">
-              {paymentLabel(paymentMethod, paymentProvider)}
+        <div className="flex flex-col items-center gap-3 bg-orange-50 rounded-lg px-4 py-4">
+          <div className="text-center">
+            <Text className="!text-orange-700 block text-sm">Total a cobrar</Text>
+            <Text strong className="!text-orange-700" style={{ fontSize: 34, lineHeight: 1.2 }}>Bs {total.toFixed(2)}</Text>
+          </div>
+          <div className="flex gap-2 flex-wrap justify-center">
+            <span className="inline-flex items-center gap-1 bg-white rounded-full px-3 py-1 text-sm">
+              {orderType === "takeaway" ? "🥡 Para llevar" : "🍽️ Comer aquí"}
             </span>
-          )}
+            {paymentMethod && (
+              <span className="inline-flex items-center gap-1 bg-white rounded-full px-3 py-1 text-sm">
+                {paymentLabel(paymentMethod, paymentProvider, payments ?? null)}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Items */}
-        <div className="mt-3 border-t max-h-56 overflow-y-auto">
+        <Text type="secondary" className="text-xs block mt-4 mb-2" style={{ letterSpacing: 0.5 }}>RESUMEN DE PRODUCTOS</Text>
+        <div className="flex flex-col gap-2 max-h-56 overflow-y-auto">
           {discountedCart.map((item, idx) => (
-            <div key={`${item.variant_id}-${idx}`} className="flex items-center gap-2.5 py-2 border-b last:border-b-0">
-              <span className="min-w-7 h-7 inline-flex items-center justify-center bg-gray-100 rounded font-semibold text-sm">
+            <div
+              key={`${item.variant_id}-${idx}`}
+              className="flex items-center gap-2.5 py-2 px-2.5 rounded-lg"
+              style={{ background: "#eff6ff" }}
+            >
+              <span
+                className="min-w-7 h-7 inline-flex items-center justify-center rounded font-semibold text-sm text-white shrink-0"
+                style={{ background: "#ea580c" }}
+              >
                 {item.qty_physical}×
               </span>
               <div className="flex-1 min-w-0">

@@ -6,6 +6,11 @@ export interface OrderReportItemResult {
   product_variants: { name: string; products: { name: string; category: string } | null } | null;
 }
 
+export interface OrderReportPaymentResult {
+  method: string;
+  amount: number;
+}
+
 export interface OrderReportResult {
   id: string;
   daily_number: number;
@@ -20,4 +25,5 @@ export interface OrderReportResult {
   cancel_reason: string | null;
   branches: { name: string } | null;
   order_items: OrderReportItemResult[];
+  payments: OrderReportPaymentResult[];
 }

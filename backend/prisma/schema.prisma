@@ -379,11 +379,24 @@ model Order {
   cancelReason  String?   @map("cancel_reason")
   idempotencyKey String?  @unique @map("idempotency_key")
 
-  branch  Branch      @relation(fields: [branchId], references: [id])
-  cashier Profile     @relation(fields: [cashierId], references: [id])
+  branch  Branch          @relation(fields: [branchId], references: [id])
+  cashier Profile         @relation(fields: [cashierId], references: [id])
   items   OrderItem[]
+  payments OrderPayment[]
 
   @@map("orders")
+}
+
+model OrderPayment {
+  id        String   @id @default(uuid()) @db.Uuid
+  orderId   String   @map("order_id") @db.Uuid
+  method    String
+  amount    Decimal
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@map("order_payments")
 }
 
 model OrderItem {

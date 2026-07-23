@@ -36,13 +36,21 @@ export type OrderType = "dine_in" | "takeaway";
 
 export type PosTab = "sale" | "promos" | "orders" | "summary";
 
+export type PaymentMethod = "efectivo" | "qr" | "online" | "mixto" | null;
+
+// One leg of a split (mixto) payment — always efectivo or qr, never online.
+export interface SplitPayment {
+  method: "efectivo" | "qr";
+  amount: number;
+}
+
 export interface DayOrder {
   id: string;
   daily_number: number;
   created_at: string;
   total: number;
   kitchen_status: string;
-  payment_method: "efectivo" | "qr" | "online" | null;
+  payment_method: PaymentMethod;
   payment_provider: string | null;
   order_type: OrderType;
   cancelled_at: string | null;
@@ -57,7 +65,8 @@ export interface TicketData {
   dailyNumber: number;
   items: DiscountedItem[];
   total: number;
-  paymentMethod: "efectivo" | "qr" | "online" | null;
+  paymentMethod: PaymentMethod;
   paymentProvider: string | null;
+  payments?: SplitPayment[] | null;
   orderType: OrderType;
 }

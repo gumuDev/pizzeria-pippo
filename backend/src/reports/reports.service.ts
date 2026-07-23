@@ -27,7 +27,7 @@ export class ReportsService {
   async getSales(query: ReportQueryDto) {
     const orders = await this.prisma.order.findMany({
       where: this.buildWhere(query),
-      select: { total: true, orderType: true, paymentMethod: true },
+      select: { id: true, total: true, orderType: true, paymentMethod: true },
     });
 
     const total = orders.reduce((sum, o) => sum + o.total.toNumber(), 0);
@@ -39,6 +39,19 @@ export class ReportsService {
 
     const byMethod = (method: string) => orders.filter((o) => o.paymentMethod === method);
     const sumTotal = (rows: typeof orders) => rows.reduce((sum, o) => sum + o.total.toNumber(), 0);
+
+    // Mixed orders don't carry a single method — their cash/qr split lives in
+    // order_payments, and its two legs get folded into the efectivo/qr totals
+    // below so "cuánto entró en efectivo hoy" stays accurate.
+    const mixedOrders = orders.filter((o) => o.paymentMethod === 'mixto');
+    const mixedPayments = mixedOrders.length
+      ? await this.prisma.orderPayment.findMany({
+          where: { orderId: { in: mixedOrders.map((o) => o.id) } },
+          select: { method: true, amount: true },
+        })
+      : [];
+    const sumMixedLeg = (method: string) =>
+      mixedPayments.filter((p) => p.method === method).reduce((sum, p) => sum + p.amount.toNumber(), 0);
 
     return {
       total,
@@ -55,9 +68,10 @@ export class ReportsService {
         },
       },
       by_payment_method: {
-        efectivo: { total: sumTotal(byMethod('efectivo')), count: byMethod('efectivo').length },
-        qr: { total: sumTotal(byMethod('qr')), count: byMethod('qr').length },
+        efectivo: { total: sumTotal(byMethod('efectivo')) + sumMixedLeg('efectivo'), count: byMethod('efectivo').length },
+        qr: { total: sumTotal(byMethod('qr')) + sumMixedLeg('qr'), count: byMethod('qr').length },
         online: { total: sumTotal(byMethod('online')), count: byMethod('online').length },
+        mixto: { count: mixedOrders.length },
         sin_especificar: {
           total: sumTotal(orders.filter((o) => !o.paymentMethod)),
           count: orders.filter((o) => !o.paymentMethod).length,
@@ -174,6 +188,7 @@ export class ReportsService {
           branch: true,
           cashier: true,
           items: { include: { variant: { include: { product: true } } } },
+          payments: true,
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
@@ -220,6 +235,7 @@ export class ReportsService {
       promoLabel: string | null;
       variant: { name: string; product: { name: string; category: string } } | null;
     }[];
+    payments: { method: string; amount: { toNumber(): number } }[];
   }): OrderReportResult {
     return {
       id: order.id,
@@ -243,6 +259,7 @@ export class ReportsService {
           ? { name: item.variant.name, products: { name: item.variant.product.name, category: item.variant.product.category } }
           : null,
       })),
+      payments: order.payments.map((p) => ({ method: p.method, amount: p.amount.toNumber() })),
     };
   }
 }

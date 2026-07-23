@@ -7,9 +7,12 @@ import type { TicketData } from "../types/pos.types";
 
 const { Text } = Typography;
 
-function paymentLabel(method: TicketData["paymentMethod"], provider: string | null): string {
+function paymentLabel(method: TicketData["paymentMethod"], provider: string | null, payments: TicketData["payments"]): string {
   if (method === "efectivo") return "💵 Efectivo";
   if (method === "qr") return "📱 QR";
+  if (method === "mixto" && payments?.length) {
+    return payments.map((p) => `${p.method === "efectivo" ? "💵" : "📱"} Bs ${p.amount.toFixed(2)}`).join(" + ");
+  }
   if (method === "online") {
     const known = provider ? PAYMENT_PROVIDERS[provider as keyof typeof PAYMENT_PROVIDERS] : undefined;
     return known ? `${known.emoji} ${known.label}` : "🌐 Pago online";
@@ -79,7 +82,7 @@ export function TicketModal({ ticket, onClose, onPrint, printing, canPrint }: Pr
           </div>
           <div className="flex justify-between">
             <Text type="secondary">Método de pago</Text>
-            <Text>{paymentLabel(ticket.paymentMethod, ticket.paymentProvider)}</Text>
+            <Text>{paymentLabel(ticket.paymentMethod, ticket.paymentProvider, ticket.payments)}</Text>
           </div>
         </div>
       )}
