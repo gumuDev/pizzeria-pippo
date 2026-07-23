@@ -26,12 +26,17 @@ export class BranchesService {
   }
 
   async create(dto: CreateBranchDto): Promise<Branch> {
-    const row = await this.prisma.branch.create({ data: { name: dto.name, address: dto.address, phone: dto.phone } });
+    const row = await this.prisma.branch.create({
+      data: { name: dto.name, address: dto.address, phone: dto.phone, expectedStartTime: dto.expected_start_time },
+    });
     return this.mapBranch(row);
   }
 
   async update(id: string, dto: UpdateBranchDto): Promise<void> {
-    await this.prisma.branch.update({ where: { id }, data: { name: dto.name, address: dto.address, phone: dto.phone } });
+    await this.prisma.branch.update({
+      where: { id },
+      data: { name: dto.name, address: dto.address, phone: dto.phone, expectedStartTime: dto.expected_start_time },
+    });
   }
 
   async setActive(id: string, isActive: boolean): Promise<void> {
@@ -86,7 +91,7 @@ export class BranchesService {
     }
   }
 
-  private mapBranch(row: { id: string; name: string; address: string | null; phone: string | null; createdAt: Date; isActive: boolean }): Branch {
+  private mapBranch(row: { id: string; name: string; address: string | null; phone: string | null; createdAt: Date; isActive: boolean; expectedStartTime: string | null }): Branch {
     return {
       id: row.id,
       name: row.name,
@@ -94,6 +99,7 @@ export class BranchesService {
       phone: row.phone,
       created_at: row.createdAt.toISOString(),
       is_active: row.isActive,
+      expected_start_time: row.expectedStartTime,
     };
   }
 }

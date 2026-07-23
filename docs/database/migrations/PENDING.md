@@ -9,17 +9,19 @@
 
 | # | Archivo | Qué hace |
 |---|---------|----------|
-| ⏳ | `044_order_payments_mixed.sql` | Pago mixto en el POS: tabla `order_payments` + `payment_method = 'mixto'` + rewrite de `create_order_atomic` |
-| ⏳ | `045_fix_product_stock_movements_user_fkey.sql` | Repunta `product_stock_movements.created_by` y `warehouse_product_movements.created_by` de `auth.users(id)` a `profiles(id)` — cajeros creados desde el panel de Usuarios no tienen fila en `auth.users` y rompían con foreign key violation al vender productos de reventa |
+| ⏳ | `046_employees_attendance.sql` | Fichaje de empleados con credencial QR: tablas `employees` y `attendance_records` + `branches.expected_start_time` (informativo) |
 
 ## Aplicadas en producción
 
 > Confirmado el 2026-06-10: las migraciones `023`–`032` ya están aplicadas en producción
 > (028–032 confirmadas por Luis; 023–027 verificadas contra `schema-production.sql` del 2026-06-07).
 > Confirmado el 2026-07-15: `033`–`042` también aplicadas (Fase 7/8 de la migración a NestJS + fix de bug 05 + feature de pago online).
+> Confirmado el 2026-07-23: `044`–`045` también aplicadas (pago mixto en el POS + fix del FK de `created_by` en stock de reventa).
 
 | # | Archivo | Qué hace |
 |---|---------|----------|
+| ✅ | `044_order_payments_mixed.sql` | Pago mixto en el POS: tabla `order_payments` + `payment_method = 'mixto'` + rewrite de `create_order_atomic` |
+| ✅ | `045_fix_product_stock_movements_user_fkey.sql` | Repunta `product_stock_movements.created_by` y `warehouse_product_movements.created_by` de `auth.users(id)` a `profiles(id)` — cajeros creados desde el panel de Usuarios no tienen fila en `auth.users` y rompían con foreign key violation al vender productos de reventa |
 | ✅ | `023_fix_variant_size_check.sql` | Elimina CHECK constraint de `variant_size` en `promotion_rules` que bloqueaba tamaños personalizados |
 | ✅ | `024_app_settings.sql` | Crea tabla `app_settings` con RLS + filas iniciales de Telegram |
 | ✅ | `025_telegram_ai_bot.sql` | Crea tablas `telegram_authorized_chats` y `telegram_usage` + nuevas keys en `app_settings` |

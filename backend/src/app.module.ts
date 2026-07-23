@@ -21,6 +21,8 @@ import { DevicesModule } from './devices/devices.module';
 import { PaymentValidationModule } from './payment-validation/payment-validation.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { PublicMenuModule } from './public-menu/public-menu.module';
+import { EmployeesModule } from './employees/employees.module';
+import { AttendanceModule } from './attendance/attendance.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { PublicMenuModule } from './public-menu/public-menu.module';
     PaymentValidationModule,
     TelegramModule,
     PublicMenuModule,
+    EmployeesModule,
+    AttendanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,7 +1,8 @@
 "use client";
 
-import { Modal, Form, Input, Button } from "antd";
+import { Modal, Form, Input, Button, TimePicker } from "antd";
 import type { FormInstance } from "antd";
+import type { Dayjs } from "dayjs";
 import type { Branch } from "../types/branch.types";
 
 interface Props {
@@ -10,7 +11,7 @@ interface Props {
   saving: boolean;
   form: FormInstance;
   onClose: () => void;
-  onSubmit: (values: { name: string; address?: string; phone?: string }) => void;
+  onSubmit: (values: { name: string; address?: string; phone?: string; expected_start_time?: Dayjs }) => void;
 }
 
 export function BranchModal({ open, editing, saving, form, onClose, onSubmit }: Props) {
@@ -31,6 +32,13 @@ export function BranchModal({ open, editing, saving, form, onClose, onSubmit }: 
         </Form.Item>
         <Form.Item label="Teléfono" name="phone">
           <Input placeholder="Ej: 67106933" />
+        </Form.Item>
+        <Form.Item
+          label="Horario de entrada"
+          name="expected_start_time"
+          extra="Solo informativo — se muestra junto al historial de asistencia, no marca tardanzas."
+        >
+          <TimePicker format="HH:mm" style={{ width: "100%" }} placeholder="Ej: 08:00" />
         </Form.Item>
         <div className="flex justify-end gap-2 mt-4">
           <Button onClick={onClose}>Cancelar</Button>

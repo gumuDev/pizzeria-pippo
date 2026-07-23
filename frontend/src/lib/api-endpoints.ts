@@ -97,6 +97,16 @@ export const API_ENDPOINTS = {
     base: "/devices",
     byId: (id: string) => `/devices/${id}`,
   },
+  employees: {
+    list: (qs: string) => `/employees${qs ? `?${qs}` : ""}`,
+    base: "/employees",
+    byId: (id: string) => `/employees/${id}`,
+    credential: (id: string) => `/employees/${id}/credential`,
+  },
+  attendance: {
+    scan: "/attendance/scan",
+    history: (qs: string) => `/attendance/history?${qs}`,
+  },
   telegram: {
     chats: "/telegram/chats",
     chatById: (id: string) => `/telegram/chats/${id}`,

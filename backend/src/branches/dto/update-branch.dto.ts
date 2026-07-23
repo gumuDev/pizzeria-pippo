@@ -11,4 +11,8 @@ export class UpdateBranchDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @IsOptional()
+  @IsString()
+  expected_start_time?: string;
 }

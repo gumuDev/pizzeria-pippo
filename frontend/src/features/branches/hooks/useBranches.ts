@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Form, notification } from "antd";
+import dayjs, { type Dayjs } from "dayjs";
 import { BranchesService } from "../services/branches.service";
 import type { Branch, Cashier } from "../types/branch.types";
 
@@ -32,7 +33,12 @@ export function useBranches() {
 
   const openEdit = (record: Branch) => {
     setEditing(record);
-    form.setFieldsValue({ name: record.name, address: record.address ?? "", phone: record.phone ?? "" });
+    form.setFieldsValue({
+      name: record.name,
+      address: record.address ?? "",
+      phone: record.phone ?? "",
+      expected_start_time: record.expected_start_time ? dayjs(record.expected_start_time, "HH:mm") : undefined,
+    });
     setModalOpen(true);
   };
 
@@ -40,11 +46,12 @@ export function useBranches() {
 
   const closeBlockModal = () => setBlockModal(null);
 
-  const handleSubmit = async (values: { name: string; address?: string; phone?: string }) => {
+  const handleSubmit = async (values: { name: string; address?: string; phone?: string; expected_start_time?: Dayjs }) => {
+    const payload = { ...values, expected_start_time: values.expected_start_time?.format("HH:mm") };
     setSaving(true);
     const result = editing
-      ? await BranchesService.updateBranch(editing.id, values)
-      : await BranchesService.createBranch(values);
+      ? await BranchesService.updateBranch(editing.id, payload)
+      : await BranchesService.createBranch(payload);
 
     if (result.ok) {
       setModalOpen(false);

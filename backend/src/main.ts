@@ -9,7 +9,17 @@ async function bootstrap() {
   // maxAge lets the browser cache the CORS preflight (OPTIONS) response —
   // without it, every single request pays a separate ~250-300ms round trip
   // just to re-confirm the same CORS permissions the browser already has.
-  app.enableCors({ origin: process.env.FRONTEND_URL ?? 'http://localhost:3000', maxAge: 86400 });
+  //
+  // localhost:3000 stays allowed always (normal desktop dev flow) — FRONTEND_URL
+  // is ADDED on top of it, not a replacement, so pointing it at a LAN IP to test
+  // from a phone doesn't break the everyday localhost browser.
+  const allowedOrigins = new Set(['http://localhost:3000', process.env.FRONTEND_URL].filter(Boolean));
+  app.enableCors({
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      callback(null, !origin || allowedOrigins.has(origin));
+    },
+    maxAge: 86400,
+  });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
   await app.listen(process.env.PORT ?? 3333);

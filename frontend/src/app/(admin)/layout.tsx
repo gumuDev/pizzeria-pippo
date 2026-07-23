@@ -25,6 +25,8 @@ import {
   HomeOutlined,
   TagsOutlined,
   SettingOutlined,
+  IdcardOutlined,
+  ScheduleOutlined,
 } from "@ant-design/icons";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "1.0.0";
@@ -124,6 +126,16 @@ export default function AdminLayout({
               create: "/users/create",
               edit: "/users/edit/:id",
               meta: { label: "Usuarios", icon: <TeamOutlined /> },
+            },
+            {
+              name: "employees",
+              list: "/employees",
+              meta: { label: "Empleados", icon: <IdcardOutlined /> },
+            },
+            {
+              name: "attendance",
+              list: "/attendance",
+              meta: { label: "Asistencia", icon: <ScheduleOutlined /> },
             },
             {
               name: "reports",
