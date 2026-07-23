@@ -288,6 +288,33 @@ describe('ProductsService', () => {
         data: [{ branchId: 'b1', variantId: 'v1', price: 22 }],
       });
     });
+
+    it('no recrea recipes si el producto pasa a product_type "resale", aunque el payload las siga mandando', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([{ id: 'v1', name: 'Chica' }]);
+
+      await service.update('p1', {
+        name: 'Muzzarella',
+        category: 'pizza',
+        product_type: 'resale',
+        variants: [{ name: 'Chica', base_price: 20, branch_prices: [], recipes: [{ ingredient_id: 'i1', quantity: 1 }] }],
+      } as never);
+
+      expect(prisma.recipe.deleteMany).toHaveBeenCalledWith({ where: { variantId: 'v1' } });
+      expect(prisma.recipe.createMany).not.toHaveBeenCalled();
+    });
+
+    it('usa el product_type actual en la BD cuando el payload no lo manda, para no dejar pasar recipes en un producto ya resale', async () => {
+      prisma.productVariant.findMany.mockResolvedValue([{ id: 'v1', name: 'Chica' }]);
+      prisma.product.findUnique.mockResolvedValue({ productType: 'resale' });
+
+      await service.update('p1', {
+        name: 'Muzzarella',
+        category: 'pizza',
+        variants: [{ name: 'Chica', base_price: 20, branch_prices: [], recipes: [{ ingredient_id: 'i1', quantity: 1 }] }],
+      } as never);
+
+      expect(prisma.recipe.createMany).not.toHaveBeenCalled();
+    });
   });
 
   describe('setActive', () => {

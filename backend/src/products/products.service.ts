@@ -218,7 +218,7 @@ export class ProductsService {
   async getVariantsWithDetails(productId: string): Promise<ProductVariant[]> {
     const variants = await this.prisma.productVariant.findMany({
       where: { productId },
-      include: { branchPrices: true, recipes: true },
+      include: { branchPrices: true, recipes: { include: { ingredient: true } } },
     });
 
     return variants.map((v) => ({
@@ -237,18 +237,20 @@ export class ProductsService {
         ingredient_id: r.ingredientId,
         quantity: r.quantity.toNumber(),
         apply_condition: r.applyCondition as never,
+        ingredients: { name: r.ingredient.name, unit: r.ingredient.unit },
       })),
     }));
   }
 
   async create(dto: CreateProductDto): Promise<{ id: string }> {
+    const productType = dto.product_type ?? 'made';
     const product = await this.prisma.product.create({
       data: {
         name: dto.name,
         category: dto.category,
         description: dto.description,
         imageUrl: dto.image_url,
-        productType: dto.product_type ?? 'made',
+        productType,
       },
     });
 
@@ -256,7 +258,7 @@ export class ProductsService {
       const createdVariant = await this.prisma.productVariant.create({
         data: { productId: product.id, name: variant.name, basePrice: variant.base_price },
       });
-      await this.replaceVariantExtras(createdVariant.id, variant);
+      await this.replaceVariantExtras(createdVariant.id, variant, productType);
     }
 
     return { id: product.id };
@@ -293,7 +295,7 @@ export class ProductsService {
             data: variant.branchPrices.map((bp) => ({ branchId: bp.branchId, variantId: newVariant.id, price: bp.price })),
           });
         }
-        if (variant.recipes.length) {
+        if (original.productType !== 'resale' && variant.recipes.length) {
           await tx.recipe.createMany({
             data: variant.recipes.map((r) => ({
               variantId: newVariant.id,
@@ -320,6 +322,13 @@ export class ProductsService {
         ...(dto.product_type ? { productType: dto.product_type } : {}),
       },
     });
+
+    // dto.product_type isn't always sent — fall back to the row's current
+    // value so a partial update can't accidentally let stale recipes through.
+    const productType =
+      dto.product_type ??
+      (await this.prisma.product.findUnique({ where: { id }, select: { productType: true } }))?.productType ??
+      'made';
 
     const existingVariants = await this.prisma.productVariant.findMany({
       where: { productId: id },
@@ -350,7 +359,7 @@ export class ProductsService {
         variantId = created.id;
       }
 
-      await this.replaceVariantExtras(variantId, variant);
+      await this.replaceVariantExtras(variantId, variant, productType);
     }
   }
 
@@ -403,6 +412,7 @@ export class ProductsService {
   private async replaceVariantExtras(
     variantId: string,
     variant: { branch_prices: { branch_id: string; price: number }[]; recipes: { ingredient_id: string; quantity: number; apply_condition?: string }[] },
+    productType: string,
   ): Promise<void> {
     // recipes and branch_prices are config — safe to delete and recreate
     await this.prisma.branchPrice.deleteMany({ where: { variantId } });
@@ -414,7 +424,9 @@ export class ProductsService {
       });
     }
 
-    if (variant.recipes.length) {
+    // Resale products are sold as-is — never trust the client to have
+    // cleared stale recipes when switching product_type away from "made".
+    if (productType !== 'resale' && variant.recipes.length) {
       await this.prisma.recipe.createMany({
         data: variant.recipes.map((r) => ({
           variantId,
