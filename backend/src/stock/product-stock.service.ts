@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { ListProductStockQueryDto } from './dto/list-product-stock-query.dto';
 import type { ListProductMovementsQueryDto } from './dto/list-product-movements-query.dto';
@@ -117,20 +117,31 @@ export class ProductStockService {
     });
   }
 
+  // Not every product arrives via a warehouse transfer — some get bought
+  // directly at the branch, so there may be no branch_product_stock row yet.
+  // Adjust upserts (same as purchase()) instead of requiring a prior transfer.
   async adjust(dto: AdjustProductStockDto, userId: string): Promise<{ difference: number }> {
     const existing = await this.prisma.branchProductStock.findUnique({
       where: { branchId_variantId: { branchId: dto.branch_id, variantId: dto.variant_id } },
     });
-    if (!existing) {
-      throw new NotFoundException('Producto no encontrado en esta sucursal');
+
+    const difference = dto.real_quantity - (existing?.quantity.toNumber() ?? 0);
+
+    if (existing) {
+      await this.prisma.branchProductStock.update({
+        where: { id: existing.id },
+        data: { quantity: dto.real_quantity, updatedAt: new Date() },
+      });
+    } else {
+      await this.prisma.branchProductStock.create({
+        data: {
+          branchId: dto.branch_id,
+          variantId: dto.variant_id,
+          quantity: dto.real_quantity,
+          minQuantity: 0,
+        },
+      });
     }
-
-    const difference = dto.real_quantity - existing.quantity.toNumber();
-
-    await this.prisma.branchProductStock.update({
-      where: { id: existing.id },
-      data: { quantity: dto.real_quantity, updatedAt: new Date() },
-    });
 
     await this.prisma.productStockMovement.create({
       data: {

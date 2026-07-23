@@ -1,4 +1,3 @@
-import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProductStockService } from './product-stock.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -112,12 +111,15 @@ describe('ProductStockService', () => {
       expect(result).toEqual({ difference: -3 });
     });
 
-    it('rechaza con 404 si no hay stock registrado para esa variante en la sucursal', async () => {
+    it('crea la fila si el producto nunca pasó por bodega/transferencia en esta sucursal', async () => {
       prisma.branchProductStock.findUnique.mockResolvedValue(null);
 
-      await expect(service.adjust({ branch_id: 'b1', variant_id: 'v1', real_quantity: 5 }, 'u1')).rejects.toThrow(
-        NotFoundException,
-      );
+      const result = await service.adjust({ branch_id: 'b1', variant_id: 'v1', real_quantity: 5 }, 'u1');
+
+      expect(prisma.branchProductStock.create).toHaveBeenCalledWith({
+        data: { branchId: 'b1', variantId: 'v1', quantity: 5, minQuantity: 0 },
+      });
+      expect(result).toEqual({ difference: 5 });
     });
   });
 
